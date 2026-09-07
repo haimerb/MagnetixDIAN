@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:em="urn:oecd:ties:ds:dian:magnetixdian"
+           targetNamespace="urn:oecd:ties:ds:dian:magnetixdian"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+    <xs:element name="MedioMagnetico" type="em:MedioMagneticoType"/>
+
+    <xs:complexType name="MedioMagneticoType">
+        <xs:sequence>
+            <xs:element name="Cuenta" type="em:CuentaType"/>
+            <xs:element name="Informacion" type="em:Informacion1001Type" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="anioGrabeable" type="xs:int" use="required"/>
+        <xs:attribute name="formato" type="xs:string" use="required"/>
+        <xs:attribute name="version" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <!-- Encabezado del informe (datos del declarante) -->
+    <xs:complexType name="CuentaType">
+        <xs:sequence>
+            <xs:element name="TipoInformacion" type="xs:string"/>
+            <xs:element name="Periodo" type="em:PeriodoType"/>
+            <xs:element name="RazonSocial" type="xs:string"/>
+            <xs:element name="TipoDocumento" type="xs:string"/>
+            <xs:element name="NumeroIdentificacion" type="xs:string"/>
+            <xs:element name="DigitoVerificacion" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PeriodoType">
+        <xs:sequence>
+            <xs:element name="Mes" type="xs:int" fixed="12"/>
+            <xs:element name="Anio" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Detalle formato 1001 -->
+    <xs:complexType name="Informacion1001Type">
+        <xs:sequence>
+            <xs:element name="PerReinOtros" type="xs:string">
+                <xs:annotation><xs:documentation>Clave de identificación del beneficiario (DV + NIT)</xs:documentation></xs:annotation>
+            </xs:element>
+            <xs:element name="Concepto" type="xs:string" minOccurs="0"/>
+            <xs:element name="ValorPago" type="xs:decimal"/>
+            <xs:element name="RetencionRenta" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="RetencionIVA" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="RetencionICA" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="RetencionTimbre" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="IVA" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="MayorValorCost" type="xs:decimal" minOccurs="0"/>
+            <xs:element name="NotaCredito" type="xs:decimal" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>
