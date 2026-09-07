@@ -52,7 +52,7 @@ cd backend && MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn spring-boot:run
 cd frontend && npm install && npm run dev
 ```
 
-Checks previos a commit: backend `mvn clean package`; frontend `npm run lint` (0 errores) y `npm run build`. Convenciones en [`AGENTS.md`](AGENTS.md).
+Checks previos a commit: backend `mvn clean package`; frontend `npm run lint` (0 errores) y `npm run build`.
 
 ## Documentación
 
