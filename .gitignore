@@ -1,0 +1,19 @@
+# Dependencias y build
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+
+# Datos locales
+uploads/
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Sistema
+.DS_Store
+Thumbs.db
+*.swp
