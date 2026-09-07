@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: magnetixdian-db
+    environment:
+      POSTGRES_DB: magnetixdian
+      POSTGRES_USER: magnetixdian
+      POSTGRES_PASSWORD: magnetixdian
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U magnetixdian -d magnetixdian"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: magnetixdian-backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/magnetixdian
+      DB_USER: magnetixdian
+      DB_PASSWORD: magnetixdian
+      JWT_SECRET: bWFnbmV0aXhkaWFuLXN1cGVyLXNlY3JldC1rZXktZm9yLWp3dC1zaWduaW5nLTIwMjYtcGt6ZDEyM2ZiYQ==
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: magnetixdian-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads:

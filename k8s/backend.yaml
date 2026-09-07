@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magnetixdian-backend
+  namespace: magnetixdian
+  labels:
+    app: magnetixdian-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: magnetixdian-backend }
+  template:
+    metadata:
+      labels: { app: magnetixdian-backend }
+    spec:
+      containers:
+        - name: backend
+          image: magnetixdian/backend:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8080, name: http }]
+          envFrom:
+            - secretRef: { name: magnetixdian-secrets }
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+            - name: NOTIFICATIONS_ENABLED
+              value: "false"
+          readinessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 25
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: magnetixdian
+spec:
+  selector: { app: magnetixdian-backend }
+  ports:
+    - port: 8080
+      targetPort: 8080

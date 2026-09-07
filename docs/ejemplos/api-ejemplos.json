@@ -1,0 +1,112 @@
+{
+  "documentacion": "Ejemplos de respuestas JSON de la API MagnetixDIAN (formato 1001). Rutas relativas a /api. Todos los endpoints salvo /auth requieren Authorization: Bearer <token>.",
+  "auth": {
+    "POST /auth/login": {
+      "request": { "username": "admin", "password": "admin123" },
+      "response_200": {
+        "accessToken": "eyJhbGciOiJIUzI1NiJ9.<...>.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        "refreshToken": "eyJhbGciOiJIUzI1NiJ9.<...>.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        "username": "admin",
+        "roles": ["ADMIN"]
+      },
+      "response_401": { "mensaje": "Credenciales inválidas" }
+    },
+    "POST /auth/refresh": {
+      "request": { "refreshToken": "<refreshToken>" },
+      "response_200": { "accessToken": "<nuevo>", "refreshToken": "<nuevo>", "username": "admin", "roles": ["ADMIN"] }
+    }
+  },
+  "mediomagnetico": {
+    "GET /mediomagnetico/empresa/1": {
+      "response_200": [
+        {
+          "id": 1,
+          "empresaId": 1,
+          "empresaNit": "900123456",
+          "empresaRazonSocial": "MAGNETIXDIAN SAS",
+          "formato": "1001",
+          "versionFormato": "10",
+          "anioGravable": 2025,
+          "estado": "VALIDADO_CON_ERRORES",
+          "fechaLimite": null,
+          "createdAt": "2026-09-07T01:20:05.135482-05:00",
+          "updatedAt": "2026-09-07T01:31:19.647289-05:00"
+        }
+      ]
+    },
+    "POST /mediomagnetico/1/cargar": {
+      "request_multipart": {
+        "formato": "1001",
+        "anioGravable": "2025",
+        "archivo": "ejemplo-1001.xlsx"
+      },
+      "response_200": { "medioMagneticoId": 1, "registrosCargados": 5 },
+      "response_400": { "mensaje": "El archivo debe ser un Excel válido (.xlsx)" }
+    },
+    "POST /mediomagnetico/1/validar?anioGravable=2025": {
+      "response_200": {
+        "id": 3,
+        "medioMagneticoId": 1,
+        "estado": "COMPLETADA",
+        "erroresTotal": 7,
+        "advertenciasTotal": 1,
+        "registrosValidados": 5,
+        "inicio": "2026-09-07T01:31:19.64-05:00",
+        "fin": "2026-09-07T01:31:19.64-05:00",
+        "errores": [
+          {
+            "linea": 2,
+            "campo": "dv",
+            "valorEsperado": "8",
+            "valorEncontrado": "1",
+            "mensaje": "El dígito de verificación no coincide con el NIT",
+            "severidad": "ERROR"
+          },
+          {
+            "linea": 3,
+            "campo": "dv",
+            "valorEsperado": "5",
+            "valorEncontrado": "8",
+            "mensaje": "El dígito de verificación no coincide con el NIT",
+            "severidad": "ERROR"
+          },
+          {
+            "linea": 4,
+            "campo": "concepto",
+            "valorEsperado": "Concepto válido del catálogo 1001",
+            "valorEncontrado": "9999",
+            "mensaje": "El concepto 9999 no existe en el catálogo del formato 1001",
+            "severidad": "ERROR"
+          },
+          {
+            "linea": 4,
+            "campo": "valorPago",
+            "valorEsperado": "Mayor o igual a 149397.00",
+            "valorEncontrado": "100000.00",
+            "mensaje": "Pago inferior al tope de 3 UVT del año gravable",
+            "severidad": "ADVERTENCIA"
+          },
+          {
+            "linea": 6,
+            "campo": "valorPago",
+            "valorEsperado": "Mayor o igual a 0",
+            "valorEncontrado": "-5000.00",
+            "mensaje": "El valor no puede ser negativo",
+            "severidad": "ERROR"
+          }
+        ]
+      }
+    },
+    "GET /mediomagnetico/1/reporte": {
+      "response_200": "Mismo contrato que validar (última corrida persisitda). 404 si no existe.",
+      "response_404": null
+    },
+    "POST /mediomagnetico/1/generar-xml": {
+      "response_200": "<em:MedioMagnetico ...>...</em:MedioMagnetico>",
+      "response_409": { "mensaje": "Debe validar el medio magnético antes de generar el XML." }
+    },
+    "GET /mediomagnetico/1/xml": {
+      "response_200": "application/xml — Content-Disposition: attachment; filename=medio-magnetico-1001.xml"
+    }
+  }
+}

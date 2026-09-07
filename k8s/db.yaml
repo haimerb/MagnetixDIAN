@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: magnetixdian-pgdata
+  namespace: magnetixdian
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: magnetixdian-db
+  namespace: magnetixdian
+  labels:
+    app: magnetixdian-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: magnetixdian-db }
+  template:
+    metadata:
+      labels: { app: magnetixdian-db }
+    spec:
+      containers:
+        - name: db
+          image: postgres:16-alpine
+          ports: [{ containerPort: 5432 }]
+          envFrom:
+            - secretRef: { name: magnetixdian-secrets }
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "magnetixdian", "-d", "magnetixdian"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: pgdata
+          persistentVolumeClaim: { claimName: magnetixdian-pgdata }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: magnetixdian
+spec:
+  selector: { app: magnetixdian-db }
+  ports:
+    - port: 5432
+      targetPort: 5432
