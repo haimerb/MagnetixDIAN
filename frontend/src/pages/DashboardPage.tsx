@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -11,19 +12,27 @@ import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
 import type { MedioMagnetico } from '../api/client'
 import EstadoChip from '../components/ui/EstadoChip'
+import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
   const [medios, setMedios] = useState<MedioMagnetico[]>([])
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
+    if (empresaId == null) {
+      setMedios([])
+      setCargando(false)
+      return
+    }
+    setCargando(true)
     api
-      .get<MedioMagnetico[]>('/mediomagnetico/empresa/1')
+      .get<MedioMagnetico[]>(`/mediomagnetico/empresa/${empresaId}`)
       .then((res) => setMedios(res.data))
       .catch(() => setMedios([]))
       .finally(() => setCargando(false))
-  }, [])
+  }, [empresaId])
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
@@ -74,6 +83,12 @@ export default function DashboardPage() {
           </Card>
         </Grid>
       </Grid>
+
+      {!cargandoEmpresa && empresaId == null && (
+        <Alert severity="warning">
+          No tiene una empresa asignada. Contacte al administrador para vincular su cuenta a una empresa.
+        </Alert>
+      )}
 
       <Paper variant="outlined">
         <Stack spacing={1} sx={{ p: { xs: 2, md: 3 } }}>

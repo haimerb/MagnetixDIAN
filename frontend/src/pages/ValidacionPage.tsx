@@ -14,9 +14,11 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import { api, type MedioMagnetico, type Validacion, type TercerosResumen } from '../api/client'
+import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 
 export default function ValidacionPage() {
   const { medioId } = useParams()
+  const { empresaId } = useEmpresaActiva()
   const [medio, setMedio] = useState<MedioMagnetico | null>(null)
   const [validacion, setValidacion] = useState<Validacion | null>(null)
   const [terceros, setTerceros] = useState<TercerosResumen | null>(null)
@@ -25,9 +27,9 @@ export default function ValidacionPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (medioId) {
+    if (medioId && empresaId != null) {
       api
-        .get<MedioMagnetico[]>('/mediomagnetico/empresa/1')
+        .get<MedioMagnetico[]>(`/mediomagnetico/empresa/${empresaId}`)
         .then((res) => {
           const encontrado = res.data.find((m) => m.id === Number(medioId))
           if (encontrado) setMedio(encontrado)
@@ -36,7 +38,7 @@ export default function ValidacionPage() {
         .then((res) => setValidacion(res.data))
         .catch(() => undefined)
     }
-  }, [medioId])
+  }, [medioId, empresaId])
 
   useEffect(() => {
     if (medioId) {

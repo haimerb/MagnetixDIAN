@@ -2,6 +2,7 @@ package com.magnetixdian.application;
 
 import com.magnetixdian.infrastructure.persistence.UsuarioJpa;
 import com.magnetixdian.infrastructure.persistence.UsuarioRepository;
+import com.magnetixdian.interfaces.dto.PerfilUsuarioDto;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -59,5 +60,21 @@ public class AuthService {
     }
 
     public record TokenRespuesta(String accessToken, String refreshToken, String username, List<String> roles) {
+    }
+
+    public PerfilUsuarioDto perfil(String username) {
+        UsuarioJpa usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+
+        List<String> roles = usuario.getRoles().stream()
+                .map(r -> r.getCode())
+                .toList();
+
+        Long empresaId = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getId();
+        String empresaNit = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getNit();
+        String empresaRazonSocial = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getRazonSocial();
+
+        return new PerfilUsuarioDto(usuario.getId(), usuario.getUsername(), usuario.getNombre(),
+                usuario.getEmail(), roles, empresaId, empresaNit, empresaRazonSocial);
     }
 }

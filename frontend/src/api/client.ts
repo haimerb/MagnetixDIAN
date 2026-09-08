@@ -47,7 +47,7 @@ export function session() {
   if (!token) return null
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
-    return { username: payload.sub, roles: payload.roles as string[] }
+    return { username: payload.sub, roles: payload.roles as string[], empresaId: null }
   } catch {
     return null
   }
@@ -68,6 +68,17 @@ export type LoginResponse = {
   refreshToken: string
   username: string
   roles: string[]
+}
+
+export type PerfilUsuario = {
+  id: number
+  username: string
+  nombre: string
+  email: string
+  roles: string[]
+  empresaId: number | null
+  empresaNit: string | null
+  empresaRazonSocial: string | null
 }
 
 export type CargaResultado = {

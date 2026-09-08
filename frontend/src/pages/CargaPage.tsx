@@ -13,9 +13,11 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
 import type { CargaResultado } from '../api/client'
+import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 
 export default function CargaPage() {
   const navigate = useNavigate()
+  const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
   const [archivo, setArchivo] = useState<File | null>(null)
   const [anioGravable, setAnioGravable] = useState('2025')
   const [formato, setFormato] = useState('1001')
@@ -50,7 +52,7 @@ export default function CargaPage() {
   }
 
   const onCargar = async () => {
-    if (!archivo) return
+    if (!archivo || empresaId == null) return
     setCargando(true)
     setError(null)
     try {
@@ -58,7 +60,7 @@ export default function CargaPage() {
       form.append('formato', formato)
       form.append('anioGravable', anioGravable)
       form.append('archivo', archivo)
-      const { data } = await api.post<CargaResultado>('/mediomagnetico/1/cargar', form, {
+      const { data } = await api.post<CargaResultado>(`/mediomagnetico/${empresaId}/cargar`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       setResultado(data)
@@ -117,7 +119,7 @@ export default function CargaPage() {
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2 }}>
-        <Button variant="contained" disabled={!archivo || cargando} onClick={onCargar}>
+        <Button variant="contained" disabled={!archivo || cargando || empresaId == null} onClick={onCargar}>
           {cargando ? 'Cargando…' : 'Cargar archivo'}
         </Button>
         {resultado && !error && (
@@ -126,6 +128,12 @@ export default function CargaPage() {
           </Button>
         )}
       </Box>
+
+      {!cargandoEmpresa && empresaId == null && (
+        <Alert severity="warning">
+          No tiene una empresa asignada. Contacte al administrador para vincular su cuenta a una empresa.
+        </Alert>
+      )}
 
       {resultado && !error && (
         <Alert severity="success">

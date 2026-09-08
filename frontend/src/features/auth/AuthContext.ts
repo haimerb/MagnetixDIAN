@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 
-export type Sesion = { username: string; roles: string[] }
+export type Sesion = { username: string; roles: string[]; empresaId: number | null }
 
 export type AuthContextValue = {
   sesion: Sesion | null
