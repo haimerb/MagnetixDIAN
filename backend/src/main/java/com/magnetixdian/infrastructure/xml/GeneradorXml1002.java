@@ -3,7 +3,6 @@ package com.magnetixdian.infrastructure.xml;
 import com.magnetixdian.domain.rule.NitDigitoVerificacionRegla;
 import com.magnetixdian.infrastructure.persistence.MedioMagneticoJpa;
 import com.magnetixdian.infrastructure.persistence.OperacionJpa;
-import com.magnetixdian.infrastructure.persistence.OperacionRepository;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -21,24 +20,15 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Genera el XML del medio magnético formato 1001 conforme al esquema
- * {@code medio-magnetico-1001.xsd} (namespaces DIAN, estructura cuenta +
- * detalle), listo para el prevalidador y presentación MUISCA.
+ * Genera el XML del medio magnético formato 1002 conforme al esquema
+ * {@code medio-magnetico-1002.xsd} (créditos, descuentos, devoluciones y
+ * notas de ajuste), listo para el prevalidador y MUISCA.
  */
 @Component
-public class GeneradorXml1001 {
+public class GeneradorXml1002 {
 
     private static final String NS = "urn:oecd:ties:ds:dian:magnetixdian";
 
-    private final OperacionRepository operacionRepository;
-
-    public GeneradorXml1001(OperacionRepository operacionRepository) {
-        this.operacionRepository = operacionRepository;
-    }
-
-    /**
-     * Genera el documento XML para el medio magnético dado.
-     */
     public String generar(MedioMagneticoJpa medio, List<OperacionJpa> operaciones) {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -61,7 +51,7 @@ public class GeneradorXml1001 {
 
             return serializar(doc);
         } catch (ParserConfigurationException e) {
-            throw new IllegalStateException("No se pudo inicializar el generador XML", e);
+            throw new IllegalStateException("No se pudo inicializar el generador XML 1002", e);
         }
     }
 
@@ -84,17 +74,17 @@ public class GeneradorXml1001 {
     }
 
     private Element detalle(Document doc, OperacionJpa op) {
-        Element info = doc.createElementNS(NS, "em:Informacion");
+        Element info = doc.createElementNS(NS, "em:InformacionCredito");
         add(doc, info, "PerReinOtros", clave(op));
         add(doc, info, "Concepto", op.getConcepto());
-        addValor(doc, info, "ValorPago", op.getValorPago());
+        addValor(doc, info, "ValorMovimiento", op.getValorPago());
+        addValor(doc, info, "ValorNotaCredito", op.getValorNc());
         addValor(doc, info, "RetencionRenta", op.getRetencionRenta());
         addValor(doc, info, "RetencionIVA", op.getRetencionIva());
         addValor(doc, info, "RetencionICA", op.getRetencionIca());
         addValor(doc, info, "RetencionTimbre", op.getRetencionTimbre());
         addValor(doc, info, "IVA", op.getIvaPagado());
-        addValor(doc, info, "MayorValorCost", op.getValorGasto());
-        addValor(doc, info, "NotaCredito", op.getValorNc());
+        addValor(doc, info, "ValorGasto", op.getValorGasto());
         return info;
     }
 

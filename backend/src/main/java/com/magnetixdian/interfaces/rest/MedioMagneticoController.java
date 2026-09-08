@@ -3,6 +3,7 @@ package com.magnetixdian.interfaces.rest;
 import com.magnetixdian.application.ServicioMedioMagnetico;
 import com.magnetixdian.application.ServicioMedioMagnetico.CargaResultado;
 import com.magnetixdian.interfaces.dto.MedioMagneticoDto;
+import com.magnetixdian.interfaces.dto.TercerosResumenDto;
 import com.magnetixdian.interfaces.dto.ValidacionProcesoDto;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,6 +30,15 @@ public class MedioMagneticoController {
 
     public MedioMagneticoController(ServicioMedioMagnetico servicio) {
         this.servicio = servicio;
+    }
+
+    @GetMapping("/plantilla")
+    public ResponseEntity<byte[]> plantilla(@RequestParam(defaultValue = "1001") String formato) throws java.io.IOException {
+        byte[] contenido = servicio.generarPlantilla(formato);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=plantilla-" + formato + ".xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(contenido);
     }
 
     @PostMapping(value = "/{empresaId}/cargar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -59,11 +69,29 @@ public class MedioMagneticoController {
                 .body(xml);
     }
 
+    @PostMapping("/{medioMagneticoId}/presentar")
+    public ResponseEntity<MedioMagneticoDto> presentar(@PathVariable Long medioMagneticoId) {
+        return ResponseEntity.ok(servicio.marcarPresentado(medioMagneticoId));
+    }
+
+    @GetMapping("/{medioMagneticoId}/terceros")
+    public ResponseEntity<TercerosResumenDto> terceros(@PathVariable Long medioMagneticoId) {
+        return ResponseEntity.ok(servicio.resumenTerceros(medioMagneticoId));
+    }
+
+    @PostMapping("/{medioMagneticoId}/aplicar-dv")
+    public ResponseEntity<java.util.Map<String, Long>> aplicarDv(@PathVariable Long medioMagneticoId) {
+        long corregidos = servicio.aplicarCorreccionesDv(medioMagneticoId);
+        return ResponseEntity.ok(java.util.Map.of("corregidos", corregidos));
+    }
+
     @GetMapping("/{medioMagneticoId}/xml")
     public ResponseEntity<byte[]> descargarXml(@PathVariable Long medioMagneticoId) {
         String xml = servicio.generarXml(medioMagneticoId);
+        String formato = servicio.formatoDe(medioMagneticoId);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=medio-magnetico-1001.xml")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=medio-magnetico-" + formato + ".xml")
                 .contentType(MediaType.APPLICATION_XML)
                 .body(xml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }

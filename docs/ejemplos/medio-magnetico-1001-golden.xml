@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Golden XML formato 1001 (sin errores): válido contra medio-magnetico-1001.xsd.
+     DV presentados son correctos según algoritmo módulo 11 de la DIAN.
+     PerReinOtros = DV + NIT sin DV. -->
+<em:MedioMagnetico xmlns:em="urn:oecd:ties:ds:dian:magnetixdian" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" anioGrabeable="2025" formato="1001" version="10">
+    <em:Cuenta>
+        <em:TipoInformacion>Exogena</em:TipoInformacion>
+        <em:Periodo>
+            <em:Mes>12</em:Mes>
+            <em:Anio>2025</em:Anio>
+        </em:Periodo>
+        <em:RazonSocial>MAGNETIXDIAN SAS</em:RazonSocial>
+        <em:TipoDocumento>NIT</em:TipoDocumento>
+        <em:NumeroIdentificacion>900123456</em:NumeroIdentificacion>
+        <em:DigitoVerificacion>8</em:DigitoVerificacion>
+    </em:Cuenta>
+    <em:Informacion>
+        <em:PerReinOtros>1900123456</em:PerReinOtros>
+        <em:Concepto>2012</em:Concepto>
+        <em:ValorPago>3000000.00</em:ValorPago>
+        <em:RetencionRenta>300000.00</em:RetencionRenta>
+        <em:RetencionIVA>0.00</em:RetencionIVA>
+        <em:RetencionICA>0.00</em:RetencionICA>
+        <em:RetencionTimbre>0.00</em:RetencionTimbre>
+        <em:IVA>570000.00</em:IVA>
+        <em:MayorValorCost>3000000.00</em:MayorValorCost>
+        <em:NotaCredito>0.00</em:NotaCredito>
+    </em:Informacion>
+    <em:Informacion>
+        <em:PerReinOtros>5830111122</em:PerReinOtros>
+        <em:Concepto>2005</em:Concepto>
+        <em:ValorPago>12000000.00</em:ValorPago>
+        <em:RetencionRenta>1320000.00</em:RetencionRenta>
+        <em:RetencionIVA>0.00</em:RetencionIVA>
+        <em:RetencionICA>0.00</em:RetencionICA>
+        <em:RetencionTimbre>0.00</em:RetencionTimbre>
+        <em:IVA>0.00</em:IVA>
+        <em:MayorValorCost>12000000.00</em:MayorValorCost>
+        <em:NotaCredito>0.00</em:NotaCredito>
+    </em:Informacion>
+    <em:Informacion>
+        <em:PerReinOtros>0107568942</em:PerReinOtros>
+        <em:Concepto>2009</em:Concepto>
+        <em:ValorPago>5000000.00</em:ValorPago>
+        <em:RetencionRenta>0.00</em:RetencionRenta>
+        <em:RetencionIVA>0.00</em:RetencionIVA>
+        <em:RetencionICA>0.00</em:RetencionICA>
+        <em:RetencionTimbre>0.00</em:RetencionTimbre>
+        <em:IVA>0.00</em:IVA>
+        <em:MayorValorCost>5000000.00</em:MayorValorCost>
+        <em:NotaCredito>0.00</em:NotaCredito>
+    </em:Informacion>
+</em:MedioMagnetico>

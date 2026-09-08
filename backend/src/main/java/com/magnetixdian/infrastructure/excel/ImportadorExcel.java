@@ -56,6 +56,7 @@ public class ImportadorExcel {
     private static final int COL_VALOR_GASTO    = 11;
     private static final int COL_VALOR_COSTO    = 12;
     private static final int COL_VALOR_NC       = 13;
+    private static final int COL_MARCA_EJEMPLO  = 14;
 
     public List<OperacionDatos> importar(MultipartFile archivo) throws IOException {
         try (Workbook workbook = WorkbookFactory.create(archivo.getInputStream())) {
@@ -112,6 +113,9 @@ public class ImportadorExcel {
     }
 
     private OperacionDatos mapearFila(Row row, int linea) {
+        if (esFilaEjemplo(row)) {
+            return null;
+        }
         String tipo = celdaTexto(row, COL_TIPO);
         String documento = celdaTexto(row, COL_DOCUMENTO);
         if ((tipo == null || tipo.isBlank()) && (documento == null || documento.isBlank())) {
@@ -134,6 +138,16 @@ public class ImportadorExcel {
                 numero(row, COL_VALOR_COSTO),
                 numero(row, COL_VALOR_NC),
                 false);
+    }
+
+    /**
+     * Detects the template's decorative example rows (plantilla descargable),
+     * marked with the literal "EJEMPLO" in the marker column (O), and ignores
+     * them so they never become real operations.
+     */
+    private boolean esFilaEjemplo(Row row) {
+        String marca = celdaTexto(row, COL_MARCA_EJEMPLO);
+        return marca != null && "EJEMPLO".equalsIgnoreCase(marca.trim());
     }
 
     private boolean esFilaVacia(Row row) {

@@ -107,3 +107,56 @@ export type MedioMagnetico = {
   createdAt: string
   updatedAt: string
 }
+
+export type EmpresaAdmin = {
+  id: number
+  nit: string
+  razonSocial: string
+  regimen: string
+  tipoDocumento: string
+  granContribuyente: boolean
+  direccion: string | null
+  ciudad: string | null
+  departamento: string | null
+  codigoDane: string | null
+  email: string | null
+  createdAt: string
+}
+
+export type UsuarioAdmin = {
+  id: number
+  username: string
+  email: string
+  nombre: string
+  enabled: boolean
+  roles: string[]
+  empresaId: number | null
+}
+
+export type CalendarioAdmin = {
+  id: number
+  anioGravable: number
+  anioPresentacion: number
+  tipoReporte: string
+  rangoNitIni: string | null
+  rangoNitFin: string | null
+  fechaLimite: string
+}
+
+export type SugerenciaDv = {
+  operacionId: number
+  linea: number
+  tipoDocumento: string
+  numero: string
+  dvActual: number | null
+  dvEsperado: number
+  concepto: string
+  valorPago: number
+}
+
+export type TercerosResumen = {
+  totalRegistros: number
+  tercerosUnicos: number
+  nitsConDvIncorrecto: number
+  sugerenciasDv: SugerenciaDv[]
+}

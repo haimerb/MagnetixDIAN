@@ -5,8 +5,9 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
- * Catálogo de conceptos del formato 1001 (pagos/abonos en cuenta y
- * retenciones) para la vigencia Resolución 000227/2025.
+ * Catálogo de conceptos de los formatos de información exógena soportados.
+ * Formato 1001: pagos/abonos en cuenta y retenciones.
+ * Formato 1002: créditos, descuentos, devoluciones y notas de ajuste.
  *
  * <p>Lista representativa — el catálogo completo se puede versionar por año
  * gravable en BD. Incluye los conceptos de uso común en la práctica.</p>
@@ -33,7 +34,32 @@ public class CatalogoConceptos {
             Map.entry("2091", "Pagos o abonos por servicios técnicos")
     );
 
+    private static final Map<String, String> CONCEPTOS_1002 = Map.ofEntries(
+            Map.entry("7001", "Devoluciones en ventas"),
+            Map.entry("7002", "Descuentos otorgados"),
+            Map.entry("7003", "Rebajas hechas"),
+            Map.entry("7004", "Notas crédito por ajustes de servicios"),
+            Map.entry("7005", "Devoluciones de compras"),
+            Map.entry("7006", "Descuentos recibidos"),
+            Map.entry("7007", "Notas débito de compensación"),
+            Map.entry("7008", "Ajustes por diferencias de cambio")
+    );
+
     public Map<String, String> conceptosFormato1001() {
+        return CONCEPTOS_1001;
+    }
+
+    public Map<String, String> conceptosFormato1002() {
+        return CONCEPTOS_1002;
+    }
+
+    /**
+     * Retorna el catálogo de conceptos vigente para el formato dado.
+     */
+    public Map<String, String> conceptosParaFormato(String formato) {
+        if ("1002".equalsIgnoreCase(formato)) {
+            return CONCEPTOS_1002;
+        }
         return CONCEPTOS_1001;
     }
 }

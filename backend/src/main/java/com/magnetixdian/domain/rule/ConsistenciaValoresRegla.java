@@ -38,7 +38,8 @@ public class ConsistenciaValoresRegla implements ReglaValidacion {
         validarNoSupera(resultados, "retencionIca", op.retencionIca(), op.valorPago(), op.linea());
         validarNoSupera(resultados, "retencionTimbre", op.retencionTimbre(), op.valorPago(), op.linea());
 
-        var totalRetenciones = op.retencionRenta()
+        var totalRetenciones = java.math.BigDecimal.ZERO
+                .add(op.retencionRenta() == null ? java.math.BigDecimal.ZERO : op.retencionRenta())
                 .add(op.retencionIva() == null ? java.math.BigDecimal.ZERO : op.retencionIva())
                 .add(op.retencionIca() == null ? java.math.BigDecimal.ZERO : op.retencionIca())
                 .add(op.retencionTimbre() == null ? java.math.BigDecimal.ZERO : op.retencionTimbre());

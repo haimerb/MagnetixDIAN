@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Golden XML formato 1002 (créditos, descuentos, devoluciones y notas de ajuste).
+     Válido contra medio-magnetico-1002.xsd. DV correctos según módulo 11.
+     PerReinOtros = DV + NIT sin DV. -->
+<em:MedioMagnetico xmlns:em="urn:oecd:ties:ds:dian:magnetixdian" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" anioGrabeable="2025" formato="1002" version="10">
+    <em:Cuenta>
+        <em:TipoInformacion>Exogena</em:TipoInformacion>
+        <em:Periodo>
+            <em:Mes>12</em:Mes>
+            <em:Anio>2025</em:Anio>
+        </em:Periodo>
+        <em:RazonSocial>MAGNETIXDIAN SAS</em:RazonSocial>
+        <em:TipoDocumento>NIT</em:TipoDocumento>
+        <em:NumeroIdentificacion>900123456</em:NumeroIdentificacion>
+        <em:DigitoVerificacion>8</em:DigitoVerificacion>
+    </em:Cuenta>
+    <em:InformacionCredito>
+        <em:PerReinOtros>1900123456</em:PerReinOtros>
+        <em:Concepto>7001</em:Concepto>
+        <em:ValorMovimiento>2500000.00</em:ValorMovimiento>
+        <em:ValorNotaCredito>2500000.00</em:ValorNotaCredito>
+    </em:InformacionCredito>
+    <em:InformacionCredito>
+        <em:PerReinOtros>5830111122</em:PerReinOtros>
+        <em:Concepto>7002</em:Concepto>
+        <em:ValorMovimiento>800000.00</em:ValorMovimiento>
+        <em:RetencionRenta>80000.00</em:RetencionRenta>
+    </em:InformacionCredito>
+</em:MedioMagnetico>

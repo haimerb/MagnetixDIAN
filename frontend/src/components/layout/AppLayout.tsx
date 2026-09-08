@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { to: '/validacion', label: 'Validación' },
   { to: '/reporte', label: 'Reportes' },
   { to: '/guia', label: 'Guía MUISCA' },
+  { to: '/admin', label: 'Administración', admin: true as const },
 ]
 
 export default function AppLayout() {
@@ -37,19 +38,21 @@ export default function AppLayout() {
             MagnetixDIAN
           </Typography>
           <Box component="nav" aria-label="Navegación principal" sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
-            {NAV_ITEMS.map((item) => (
-              <Button
-                key={item.to}
-                color="inherit"
-                onClick={() => navigate(item.to)}
-                sx={{
-                  opacity: location.pathname === item.to ? 1 : 0.75,
-                  textDecoration: location.pathname === item.to ? 'underline' : 'none',
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
+            {NAV_ITEMS
+              .filter(item => !item.admin || sesion?.roles?.includes('ROLE_ADMIN'))
+              .map((item) => (
+                <Button
+                  key={item.to}
+                  color="inherit"
+                  onClick={() => navigate(item.to)}
+                  sx={{
+                    opacity: location.pathname === item.to ? 1 : 0.75,
+                    textDecoration: location.pathname === item.to ? 'underline' : 'none',
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
           </Box>
           <Typography variant="body2" color="inherit" sx={{ display: { xs: 'none', sm: 'block' } }}>
             {sesion?.username}

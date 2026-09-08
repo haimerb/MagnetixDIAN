@@ -76,6 +76,10 @@ public class EmpresaJpa {
         return nit;
     }
 
+    public void setNit(String nit) {
+        this.nit = nit;
+    }
+
     public String getRazonSocial() {
         return razonSocial;
     }
@@ -138,6 +142,14 @@ public class EmpresaJpa {
 
     public void setRegimen(String regimen) {
         this.regimen = regimen;
+    }
+
+    public void setTipoDocumento(String tipoDocumento) {
+        this.tipoDocumento = tipoDocumento;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
     }
 
     public void setRazonSocial(String razonSocial) {

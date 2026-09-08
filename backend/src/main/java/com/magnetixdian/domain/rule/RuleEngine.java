@@ -26,7 +26,7 @@ public class RuleEngine {
 
     public RuleEngine(Collection<ReglaValidacion> reglas) {
         this.reglas = reglas.stream()
-                .collect(Collectors.toMap(ReglaValidacion::codigo, Function.identity()));
+                .collect(Collectors.toMap(ReglaValidacion::codigo, Function.identity(), (a, b) -> b));
     }
 
     public List<ReglaValidacion> reglasActivas() {

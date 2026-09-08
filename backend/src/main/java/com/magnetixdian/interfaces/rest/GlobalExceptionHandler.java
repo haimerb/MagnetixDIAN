@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -37,6 +38,11 @@ public class GlobalExceptionHandler {
                 .findFirst()
                 .orElse("Validación fallida.");
         return respuesta(HttpStatus.BAD_REQUEST, mensaje);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Map<String, Object>> noAutenticado(AuthenticationException ex) {
+        return respuesta(HttpStatus.UNAUTHORIZED, "Credenciales inválidas o usuario inactivo.");
     }
 
     @ExceptionHandler(Exception.class)

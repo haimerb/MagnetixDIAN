@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
@@ -44,10 +45,15 @@ public class UsuarioJpa {
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<RoleJpa> roles = new HashSet<>();
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "empresa_id")
+    private EmpresaJpa empresa;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
-    protected UsuarioJpa() {
+    public UsuarioJpa() {
+        this.createdAt = OffsetDateTime.now();
     }
 
     public Long getId() {
@@ -80,6 +86,14 @@ public class UsuarioJpa {
 
     public Set<RoleJpa> getRoles() {
         return roles;
+    }
+
+    public EmpresaJpa getEmpresa() {
+        return empresa;
+    }
+
+    public void setEmpresa(EmpresaJpa empresa) {
+        this.empresa = empresa;
     }
 
     public void setUsername(String username) {

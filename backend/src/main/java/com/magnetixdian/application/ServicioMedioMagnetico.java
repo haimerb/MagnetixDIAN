@@ -3,8 +3,13 @@ package com.magnetixdian.application;
 import com.magnetixdian.domain.model.OperacionDatos;
 import com.magnetixdian.domain.model.ResultadoRegla;
 import com.magnetixdian.domain.model.Severidad;
+import com.magnetixdian.domain.rule.NitDigitoVerificacionRegla;
 import com.magnetixdian.infrastructure.excel.ImportadorExcel;
+import com.magnetixdian.infrastructure.excel.PlantillaExcelGenerator;
 import com.magnetixdian.infrastructure.xml.GeneradorXml1001;
+import com.magnetixdian.infrastructure.xml.GeneradorXml1002;
+import com.magnetixdian.interfaces.dto.SugerenciaDvDto;
+import com.magnetixdian.interfaces.dto.TercerosResumenDto;
 import com.magnetixdian.infrastructure.persistence.DetalleErrorJpa;
 import com.magnetixdian.infrastructure.persistence.DetalleErrorRepository;
 import com.magnetixdian.infrastructure.persistence.EmpresaRepository;
@@ -35,8 +40,10 @@ public class ServicioMedioMagnetico {
     private final ValidacionRepository validacionRepo;
     private final DetalleErrorRepository detalleRepo;
     private final ImportadorExcel importadorExcel;
+    private final PlantillaExcelGenerator plantillaExcel;
     private final ServicioValidacion servicioValidacion;
-    private final GeneradorXml1001 generadorXml;
+    private final GeneradorXml1001 generadorXml1001;
+    private final GeneradorXml1002 generadorXml1002;
 
     public ServicioMedioMagnetico(MedioMagneticoRepository medioRepo,
                                   OperacionRepository operacionRepo,
@@ -44,16 +51,27 @@ public class ServicioMedioMagnetico {
                                   ValidacionRepository validacionRepo,
                                   DetalleErrorRepository detalleRepo,
                                   ImportadorExcel importadorExcel,
+                                  PlantillaExcelGenerator plantillaExcel,
                                   ServicioValidacion servicioValidacion,
-                                  GeneradorXml1001 generadorXml) {
+                                  GeneradorXml1001 generadorXml1001,
+                                  GeneradorXml1002 generadorXml1002) {
         this.medioRepo = medioRepo;
         this.operacionRepo = operacionRepo;
         this.empresaRepo = empresaRepo;
         this.validacionRepo = validacionRepo;
         this.detalleRepo = detalleRepo;
         this.importadorExcel = importadorExcel;
+        this.plantillaExcel = plantillaExcel;
         this.servicioValidacion = servicioValidacion;
-        this.generadorXml = generadorXml;
+        this.generadorXml1001 = generadorXml1001;
+        this.generadorXml1002 = generadorXml1002;
+    }
+
+    /**
+     * Genera la plantilla Excel descargable del formato indicado.
+     */
+    public byte[] generarPlantilla(String formato) throws IOException {
+        return plantillaExcel.generar(formato);
     }
 
     /**
@@ -113,7 +131,7 @@ public class ServicioMedioMagnetico {
 
         for (OperacionJpa op : operaciones) {
             OperacionDatos datos = toDatos(op);
-            List<ResultadoRegla> resultados = servicioValidacion.validar(datos, anioGravable, null);
+            List<ResultadoRegla> resultados = servicioValidacion.validar(datos, anioGravable, null, medio.getFormato());
             for (ResultadoRegla r : resultados) {
                 if (r.valida() || r.severidad() == null) {
                     continue;
@@ -208,11 +226,98 @@ public class ServicioMedioMagnetico {
             throw new IllegalStateException("Debe validar el medio magnético antes de generar el XML.");
         }
         List<OperacionJpa> operaciones = operacionRepo.findByMedioMagneticoId(medioMagneticoId);
-        String xml = generadorXml.generar(medio, operaciones);
+        String xml = "1002".equalsIgnoreCase(medio.getFormato())
+                ? generadorXml1002.generar(medio, operaciones)
+                : generadorXml1001.generar(medio, operaciones);
         medio.setEstado("XML_GENERADO");
         medio.touch();
         medioRepo.save(medio);
         return xml;
+    }
+
+    /**
+     * Marca el medio magnético como presentado ante la DIAN.
+     * Solo se permite partiendo de un estado ya validado.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public com.magnetixdian.interfaces.dto.MedioMagneticoDto marcarPresentado(Long medioMagneticoId) {
+        MedioMagneticoJpa medio = medioRepo.findById(medioMagneticoId)
+                .orElseThrow(() -> new IllegalArgumentException("Medio magnético no encontrado: " + medioMagneticoId));
+        String estado = medio.getEstado();
+        if ("BORRADOR".equals(estado) || "CARGADO".equals(estado)) {
+            throw new IllegalStateException("Debe validar el medio magnético antes de marcarlo como presentado.");
+        }
+        medio.setEstado("PRESENTADO");
+        medio.touch();
+        return toDto(medioRepo.save(medio));
+    }
+
+    /**
+     * Formato del medio magnético (para nombres de descarga).
+     */
+    public String formatoDe(Long medioMagneticoId) {
+        return medioRepo.findById(medioMagneticoId)
+                .map(MedioMagneticoJpa::getFormato)
+                .orElse("1001");
+    }
+
+    // ------------------------------------------------------------------
+    // Terceros y normalización de DV (catálogo NIT)
+    // ------------------------------------------------------------------
+
+    /**
+     * Resume los terceros reportados en el medio: total de registros, terceros
+     * únicos y cantidad de NIT con dígito de verificación inconsistente.
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public TercerosResumenDto resumenTerceros(Long medioMagneticoId) {
+        List<OperacionJpa> operaciones = operacionRepo.findByMedioMagneticoId(medioMagneticoId);
+        long tercerosUnicos = operaciones.stream()
+                .map(op -> op.getTipoDocumento() + "|" + op.getNumeroIdentificacion())
+                .distinct()
+                .count();
+        List<SugerenciaDvDto> sugerencias = operaciones.stream()
+                .map(this::sugerenciaDv)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        return new TercerosResumenDto(
+                operaciones.size(),
+                tercerosUnicos,
+                sugerencias.size(),
+                sugerencias);
+    }
+
+    /**
+     * Aplica las correcciones de DV sugeridas y devuelve cuántos registros
+     * fueron corregidos.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public int aplicarCorreccionesDv(Long medioMagneticoId) {
+        List<OperacionJpa> operaciones = operacionRepo.findByMedioMagneticoId(medioMagneticoId);
+        int corregidos = 0;
+        for (OperacionJpa op : operaciones) {
+            SugerenciaDvDto sugerencia = sugerenciaDv(op);
+            if (sugerencia != null) {
+                op.setDv(sugerencia.dvEsperado());
+                operacionRepo.save(op);
+                corregidos++;
+            }
+        }
+        return corregidos;
+    }
+
+    private SugerenciaDvDto sugerenciaDv(OperacionJpa op) {
+        if (!"NIT".equalsIgnoreCase(op.getTipoDocumento())
+                && !"NITCE".equalsIgnoreCase(op.getTipoDocumento())) {
+            return null;
+        }
+        String numero = op.getNumeroIdentificacion();
+        Integer dvEsperado = NitDigitoVerificacionRegla.calcularDv(numero == null ? "" : numero.replaceAll("[^0-9]", ""));
+        if (dvEsperado == null || Integer.valueOf(dvEsperado).equals(op.getDv())) {
+            return null;
+        }
+        return new SugerenciaDvDto(op.getId(), op.getLinea(), op.getTipoDocumento(),
+                numero, op.getDv(), dvEsperado, op.getConcepto(), op.getValorPago());
     }
 
     public record CargaResultado(Long medioMagneticoId, int registrosCargados) {

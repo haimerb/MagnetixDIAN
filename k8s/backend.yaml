@@ -26,11 +26,15 @@ spec:
             - name: NOTIFICATIONS_ENABLED
               value: "false"
           readinessProbe:
-            tcpSocket: { port: http }
+            httpGet:
+              path: /actuator/health
+              port: http
             initialDelaySeconds: 25
             periodSeconds: 10
           livenessProbe:
-            tcpSocket: { port: http }
+            httpGet:
+              path: /actuator/health
+              port: http
             initialDelaySeconds: 40
             periodSeconds: 20
           volumeMounts:

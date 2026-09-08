@@ -29,17 +29,27 @@ public class ServicioValidacion {
     }
 
     /**
+     * Valida una operación contra la vigencia del año gravable dado
+     * usando el catálogo de conceptos del formato 1001.
+     */
+    public List<ResultadoRegla> validar(OperacionDatos operacion, Integer anioGravable, BigDecimal cuantiaMenor) {
+        return validar(operacion, anioGravable, cuantiaMenor, "1001");
+    }
+
+    /**
      * Valida una operación contra la vigencia del año gravable dado.
      *
      * @param operacion registro a validar
      * @param anioGravable año gravable (determina UVT y catálogo)
      * @param cuantiaMenor monto de cuantía menor (null → usa 3 UVT)
+     * @param formato formato del medio (define el catálogo de conceptos)
      * @return resultados de todas las reglas aplicadas
      */
-    public List<ResultadoRegla> validar(OperacionDatos operacion, Integer anioGravable, BigDecimal cuantiaMenor) {
+    public List<ResultadoRegla> validar(OperacionDatos operacion, Integer anioGravable,
+                                        BigDecimal cuantiaMenor, String formato) {
         BigDecimal uvt = uvtManager.uvtParaAnio(anioGravable);
         ContextoValidacion contexto = new ContextoValidacion(
-                operacion, uvt, catalogo.conceptosFormato1001(), cuantiaMenor);
+                operacion, uvt, catalogo.conceptosParaFormato(formato), cuantiaMenor);
         return ruleEngine.validar(contexto);
     }
 

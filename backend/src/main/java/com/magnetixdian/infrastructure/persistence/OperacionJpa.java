@@ -103,6 +103,10 @@ public class OperacionJpa {
         return dv;
     }
 
+    public void setDv(Integer dv) {
+        this.dv = dv;
+    }
+
     public String getConcepto() {
         return concepto;
     }
@@ -158,17 +162,21 @@ public class OperacionJpa {
         this.numeroIdentificacion = datos.numeroIdentificacion();
         this.dv = datos.dv();
         this.concepto = datos.concepto();
-        this.valorPago = datos.valorPago();
-        this.retencionRenta = datos.retencionRenta();
-        this.retencionIva = datos.retencionIva();
-        this.retencionIca = datos.retencionIca();
-        this.retencionTimbre = datos.retencionTimbre();
-        this.ivaPagado = datos.ivaPagado();
-        this.ivaDescontable = datos.ivaDescontable();
-        this.valorGasto = datos.valorGasto();
-        this.valorCosto = datos.valorCosto();
-        this.valorNc = datos.valorNc();
+        this.valorPago = oCero(datos.valorPago());
+        this.retencionRenta = oCero(datos.retencionRenta());
+        this.retencionIva = oCero(datos.retencionIva());
+        this.retencionIca = oCero(datos.retencionIca());
+        this.retencionTimbre = oCero(datos.retencionTimbre());
+        this.ivaPagado = oCero(datos.ivaPagado());
+        this.ivaDescontable = oCero(datos.ivaDescontable());
+        this.valorGasto = oCero(datos.valorGasto());
+        this.valorCosto = oCero(datos.valorCosto());
+        this.valorNc = oCero(datos.valorNc());
         this.cuantiaMenor = datos.cuantiaMenor();
         this.createdAt = OffsetDateTime.now();
+    }
+
+    private static BigDecimal oCero(BigDecimal valor) {
+        return valor != null ? valor : BigDecimal.ZERO;
     }
 }
