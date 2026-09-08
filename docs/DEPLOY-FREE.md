@@ -60,19 +60,37 @@ Necesitas subir el repo a GitHub primero (Render no acepta repos locales).
 
 ---
 
-## 3. Frontend — Cloudflare Pages (10 min)
+## 3. Frontend — Cloudflare Workers con git + build (recomendado)
 
-1. Cuenta en <https://dash.cloudflare.com> (sin tarjeta).
-2. **Workers & Pages → Create → Pages → Connect to Git** → elige el repo.
-3. Configuración del proyecto:
-   - **Framework preset**: `Vite`
-   - **Root directory**: `frontend`
-   - **Build command**: `npm run build`
-   - **Build output directory**: `dist`
-   - **Environment variables** (Production):
-     - `VITE_API_BASE_URL` → `https://magnetixdian-backend.onrender.com` (URL del servicio Render)
-4. **Save and Deploy**. El build corre en los cloud servers de Cloudflare (sin tocar tu PC).
-5. Resultado: `https://<tu-proyecto>.pages.dev` — es la URL que va en `CORS_ORIGINS`.
+Usa el flujo de Cloudflare **Workers → Connect to Git** (compila con `wrangler`).
+El repo incluye:
+
+- `wrangler.toml` — sirve `frontend/dist` como MPA/SPA (`not_found_handling = single-page-application`),
+  con variable `BACKEND_ORIGIN` apuntando al backend de Render.
+- `worker.js` — reenvía `/api/*` al backend de Render. **Así no se necesita CORS ni `VITE_API_BASE_URL`**:
+  el navegador habla solo con el dominio del worker y este proxya.
+
+Configuración en Cloudflare:
+
+| Campo | Valor |
+|---|---|
+| Repositorio | `haimerb/MagnetixDIAN` |
+| **Build command** | `npm --prefix frontend run build && npx -y wrangler deploy` |
+| Variable `VITE_API_BASE_URL` | **dejar de usar / eliminar** (el proxy cubre `/api`) |
+
+Si tu proyecto final es `magnetixdian`, la URL será `https://magnetixdian.<cuenta>.workers.dev`.
+
+### Alternativa: Cloudflare Pages (flujo clásico)
+Workers & Pages → **Pages → Create → Connect to Git**:
+
+| Campo | Valor |
+|---|---|
+| Framework preset | `Vite` |
+| Root directory | `frontend` |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Env `VITE_API_BASE_URL` | `https://magnetixdian-backend.onrender.com` |
+| (`CORS_ORIGINS` en Render) | `https://magnetixdian.pages.dev` |
 
 ---
 

@@ -1,0 +1,11 @@
+name = "magnetixdian"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Sirve el build de producción del frontend (React SPA).
+# not_found_handling: cualquier ruta cliente (ej. /validacion) devuelve index.html.
+assets = { directory = "frontend/dist", binding = "ASSETS", not_found_handling = "single-page-application" }
+
+[vars]
+# El worker reenvía /api/* a este backend (Render). Ajustar si cambia el servicio.
+BACKEND_ORIGIN = "https://magnetixdian-backend.onrender.com"
