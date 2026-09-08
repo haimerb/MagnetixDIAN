@@ -70,13 +70,15 @@ El repo incluye:
 - `worker.js` — reenvía `/api/*` al backend de Render. **Así no se necesita CORS ni `VITE_API_BASE_URL`**:
   el navegador habla solo con el dominio del worker y este proxya.
 
-Configuración en Cloudflare:
+Configuración en Cloudflare (flujo Workers → Connect to Git):
 
 | Campo | Valor |
 |---|---|
 | Repositorio | `haimerb/MagnetixDIAN` |
-| **Build command** | `npm --prefix frontend run build && npx -y wrangler deploy` |
-| Variable `VITE_API_BASE_URL` | **dejar de usar / eliminar** (el proxy cubre `/api`) |
+| Deploy command | **dejar el default** `npx wrangler deploy` |
+
+**No hace falta tocar el build command**: el `[build]` de `wrangler.toml` compila Vite
+(`npm ci && npm run build` en `frontend/`) automáticamente antes de desplegar.
 
 Si tu proyecto final es `magnetixdian`, la URL será `https://magnetixdian.<cuenta>.workers.dev`.
 

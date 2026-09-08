@@ -6,6 +6,12 @@ compatibility_date = "2026-01-01"
 # not_found_handling: cualquier ruta cliente (ej. /validacion) devuelve index.html.
 assets = { directory = "frontend/dist", binding = "ASSETS", not_found_handling = "single-page-application" }
 
+# Se ejecuta automáticamente antes de `npx wrangler deploy` (comando por defecto de Cloudflare).
+# Compila Vite → frontend/dist; sin esto Cloudflare no puede subir los assets.
+[build]
+command = "npm ci && npm run build"
+cwd = "frontend"
+
 [vars]
 # El worker reenvía /api/* a este backend (Render). Ajustar si cambia el servicio.
 BACKEND_ORIGIN = "https://magnetixdian-backend.onrender.com"
