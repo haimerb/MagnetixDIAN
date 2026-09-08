@@ -16,7 +16,7 @@ services:
     autoDeploy: true
     envVars:
       - key: DB_URL
-        value: jdbc:postgresql://db.<TU-REF>.supabase.co:5432/postgres?sslmode=require
+        value: jdbc:postgresql://db.bzkiibkvvmkghgeohugq.supabase.co:5432/postgres?sslmode=require
       - key: DB_USER
         value: postgres
       - key: DB_PASSWORD
