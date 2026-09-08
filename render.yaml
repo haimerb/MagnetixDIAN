@@ -1,0 +1,31 @@
+# Blueprint de deploy en Render (free tier) — SOLO backend.
+# Deploy alternativo e independiente del actual (docker-compose/GoDaddy):
+#   frontend  → Cloudflare Pages (https://magnetixdian.pages.dev)
+#   backend   → Render (este blueprint)                                        
+#   base datos→ Supabase PostgreSQL
+# Uso: en Render, New → Blueprint → sube este repo (o pega este archivo).
+# Reemplaza DB_URL, CORS_ORIGINS y genera los secretos en el dashboard de Render.
+
+services:
+  - type: web
+    name: magnetixdian-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile.render
+    healthCheckPath: /actuator/health
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: DB_URL
+        value: jdbc:postgresql://db.<TU-REF>.supabase.co:5432/postgres?sslmode=require
+      - key: DB_USER
+        value: postgres
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://magnetixdian.pages.dev
+      - key: UPLOAD_DIR
+        value: /tmp/uploads
+      - key: NOTIFICATIONS_ENABLED
+        value: "false"

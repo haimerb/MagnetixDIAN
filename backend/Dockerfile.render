@@ -1,0 +1,19 @@
+# Backend MagnetixDIAN — Dockerfile para Render FREE (512 MB RAM)
+# Variante del Dockerfile principal ajustada al free tier:
+#   - Build de Maven con memoria limitada para no morir en builds de 512 MB.
+#   - JVM de runtime limitada a 256 MB heap.
+# Usar únicamente para el deploy en Render (render.yaml en la raíz del repo).
+
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+ENV MAVEN_OPTS="-Xmx512m -Dfile.encoding=UTF-8"
+COPY pom.xml .
+RUN mvn dependency:go-offline -B || true
+COPY src ./src
+RUN mvn package -DskipTests -B
+
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-Xmx256m", "-jar", "app.jar"]

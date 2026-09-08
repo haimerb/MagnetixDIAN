@@ -3,8 +3,10 @@ import axios from 'axios'
 const TOKEN_KEY = 'magnetixdian_token'
 const REFRESH_KEY = 'magnetixdian_refresh'
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, '') ?? ''
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${API_BASE}/api`,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -25,7 +27,7 @@ api.interceptors.response.use(
       const refresh = localStorage.getItem(REFRESH_KEY)
       if (refresh) {
         try {
-          const { data } = await axios.post('/api/auth/refresh', { refreshToken: refresh })
+          const { data } = await axios.post(`${API_BASE}/api/auth/refresh`, { refreshToken: refresh })
           localStorage.setItem(TOKEN_KEY, data.accessToken)
           localStorage.setItem(REFRESH_KEY, data.refreshToken)
           return api(original)

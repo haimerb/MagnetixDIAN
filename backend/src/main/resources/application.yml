@@ -51,6 +51,8 @@ magnetixdian:
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   upload:
     dir: ${UPLOAD_DIR:./uploads}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:4173}
   notifications:
     enabled: ${NOTIFICATIONS_ENABLED:false}
     days-before-deadline: [15, 7, 1]
