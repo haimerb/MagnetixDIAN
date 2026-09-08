@@ -11,6 +11,7 @@ services:
     name: magnetixdian-backend
     runtime: docker
     dockerfilePath: backend/Dockerfile.render
+    dockerContext: backend
     healthCheckPath: /actuator/health
     plan: free
     autoDeploy: true
