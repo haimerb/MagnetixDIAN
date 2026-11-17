@@ -173,3 +173,140 @@ export type TercerosResumen = {
   nitsConDvIncorrecto: number
   sugerenciasDv: SugerenciaDv[]
 }
+
+export type LineaFacturaRequest = {
+  codigoProducto: string | null
+  descripcion: string
+  cantidad: number
+  unidadMedida: string | null
+  valorUnitario: number
+  descuento: number
+  ivaPct: number
+  incPct: number
+  codigoUnspsc: string | null
+}
+
+export type AdquirenteRequest = {
+  tipoDocumento: string
+  numeroDocumento: string
+  digitoVerificacion: number | null
+  nombre: string
+  email: string | null
+  direccion: string | null
+  municipio: string | null
+  regimen: string | null
+  responsabilidadFiscal: string | null
+}
+
+export type FacturaRequest = {
+  tipoDocumento: string
+  adquirente: AdquirenteRequest
+  lineas: LineaFacturaRequest[]
+  observaciones: string | null
+  formaPago: string | null
+  medioPago: string | null
+  tipoOperacion: string | null
+  fechaVencimiento: string | null
+  cufeReferencia: string | null
+  numeroReferencia: string | null
+}
+
+export type FacturaResumen = {
+  id: number
+  tipoDocumento: string
+  numeroCompleto: string
+  cufe: string | null
+  estado: string
+  fechaEmision: string
+  adquirenteNombre: string
+  adquirenteNumDoc: string
+  total: number
+  totalPagar: number
+  createdAt: string
+}
+
+export type FacturaDetalle = {
+  id: number
+  tipoDocumento: string
+  prefijo: string | null
+  numero: number
+  numeroCompleto: string
+  cufe: string | null
+  cude: string | null
+  ambiente: number
+  estado: string
+  fechaEmision: string
+  horaEmision: string
+  fechaVencimiento: string | null
+  moneda: string
+  formaPago: string
+  medioPago: string
+  adquirente: AdquirenteRequest
+  lineas: LineaFacturaRequest[]
+  subtotal: number
+  totalImpuestos: number
+  totalRetenciones: number
+  total: number
+  totalPagar: number
+  observaciones: string | null
+  qrUrl: string | null
+  respuestaDian: string | null
+  fechaValidacion: string | null
+  createdAt: string
+}
+
+export type ErrorValidacion = {
+  codigo: string
+  severidad: 'ERROR' | 'ADVERTENCIA' | 'INFO' | null
+  mensaje: string | null
+  linea: number | null
+  campo: string | null
+  valorEsperado: string | null
+  valorEncontrado: string | null
+}
+
+export type ResultadoEmision = {
+  exitoso: boolean
+  id: number | null
+  numeroCompleto: string | null
+  cufe: string | null
+  estado: string
+  qrUrl: string | null
+  mensaje: string | null
+  errores: ErrorValidacion[]
+}
+
+export type ConfigFe = {
+  ambiente: number
+  softwareId: string | null
+  softwarePin: string | null
+  softwareSecurityCode: string | null
+  testSetId: string | null
+  resolucionNumero: string | null
+  resolucionFecha: string | null
+  prefijo: string | null
+  rangoDesde: number | null
+  rangoHasta: number | null
+  rangoVigenciaDesde: string | null
+  rangoVigenciaHasta: string | null
+  canal: string
+  pacProveedor: string | null
+  pacBaseUrl: string | null
+  pacApiKey: string | null
+  certificadoNombre: string | null
+  certificadoPassword: string | null
+  certificadoPath: string | null
+  responsabilidadFiscal: string
+  codigoMunicipio: string | null
+  activo: boolean
+  tieneCertificado: boolean
+  tienePacKey: boolean
+}
+
+export type CatalogoDian = {
+  id: number
+  tipo: string
+  codigo: string
+  descripcion: string
+  activo: boolean
+}

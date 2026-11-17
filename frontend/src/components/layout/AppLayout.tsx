@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/carga', label: 'Carga de datos' },
   { to: '/validacion', label: 'Validación' },
   { to: '/reporte', label: 'Reportes' },
+  { to: '/facturacion', label: 'Facturación' },
   { to: '/guia', label: 'Guía MUISCA' },
   { to: '/admin', label: 'Administración', admin: true as const },
 ]

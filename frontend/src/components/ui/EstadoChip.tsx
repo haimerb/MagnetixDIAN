@@ -7,6 +7,9 @@ const ESTADOS: Record<string, { color: 'default' | 'primary' | 'success' | 'warn
   VALIDADO_CON_ERRORES: { color: 'warning', label: 'Con errores' },
   XML_GENERADO: { color: 'primary', label: 'XML generado' },
   PRESENTADO: { color: 'success', label: 'Presentado' },
+  ACEPTADO: { color: 'success', label: 'Aceptado' },
+  RECHAZADO: { color: 'error', label: 'Rechazado' },
+  PENDIENTE: { color: 'warning', label: 'Pendiente' },
 }
 
 export default function EstadoChip({ estado }: { estado: string }) {

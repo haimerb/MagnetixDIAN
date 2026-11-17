@@ -9,6 +9,9 @@ import ValidacionPage from './pages/ValidacionPage'
 import ReportePage from './pages/ReportePage'
 import GuiaMuiscaPage from './pages/GuiaMuiscaPage'
 import AdminPage from './pages/AdminPage'
+import FacturacionPage from './pages/FacturacionPage'
+import FacturaDetallePage from './pages/FacturaDetallePage'
+import ConfigFePage from './pages/ConfigFePage'
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -35,6 +38,9 @@ export default function App() {
             <Route path="validacion/:medioId?" element={<ValidacionPage />} />
             <Route path="reporte/:medioId?" element={<ReportePage />} />
             <Route path="guia" element={<GuiaMuiscaPage />} />
+            <Route path="facturacion" element={<FacturacionPage />} />
+            <Route path="facturacion/config" element={<ConfigFePage />} />
+            <Route path="facturacion/:id" element={<FacturaDetallePage />} />
             <Route path="admin" element={<AdminPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

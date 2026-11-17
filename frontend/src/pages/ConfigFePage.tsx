@@ -1,0 +1,212 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
+import Grid from '@mui/material/Grid2'
+import MenuItem from '@mui/material/MenuItem'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import SaveIcon from '@mui/icons-material/Save'
+import { api, type ConfigFe } from '../api/client'
+import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+
+const VACIO: ConfigFe = {
+  ambiente: 2,
+  softwareId: '',
+  softwarePin: '',
+  softwareSecurityCode: null,
+  testSetId: '',
+  resolucionNumero: '',
+  resolucionFecha: null,
+  prefijo: '',
+  rangoDesde: null,
+  rangoHasta: null,
+  rangoVigenciaDesde: null,
+  rangoVigenciaHasta: null,
+  canal: 'SIMULADO',
+  pacProveedor: '',
+  pacBaseUrl: '',
+  pacApiKey: '',
+  certificadoNombre: '',
+  certificadoPassword: '',
+  certificadoPath: '',
+  responsabilidadFiscal: 'R-99-PN',
+  codigoMunicipio: '',
+  activo: true,
+  tieneCertificado: false,
+  tienePacKey: false,
+}
+
+export default function ConfigFePage() {
+  const navigate = useNavigate()
+  const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
+  const [config, setConfig] = useState<ConfigFe>(VACIO)
+  const [mensaje, setMensaje] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [guardando, setGuardando] = useState(false)
+
+  useEffect(() => {
+    if (empresaId == null) return
+    api
+      .get<ConfigFe>(`/facturacion/config/${empresaId}`)
+      .then((res) => setConfig({ ...VACIO, ...res.data, softwarePin: '', pacApiKey: '', certificadoPassword: '' }))
+      .catch(() => setError('No se pudo cargar la configuración.'))
+  }, [empresaId])
+
+  const set = <K extends keyof ConfigFe>(clave: K, valor: ConfigFe[K]) =>
+    setConfig((c) => ({ ...c, [clave]: valor }))
+
+  const onGuardar = async () => {
+    if (empresaId == null) return
+    setGuardando(true)
+    setError(null)
+    setMensaje(null)
+    try {
+      const { data } = await api.put<ConfigFe>(`/facturacion/config/${empresaId}`, config)
+      setConfig({ ...VACIO, ...data, softwarePin: '', pacApiKey: '', certificadoPassword: '' })
+      setMensaje('Configuración guardada.')
+    } catch {
+      setError('No se pudo guardar la configuración.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  if (cargandoEmpresa) return <Typography>Cargando…</Typography>
+  if (empresaId == null) return <Alert severity="info">No hay una empresa asociada.</Alert>
+
+  return (
+    <Box component="section" sx={{ display: 'grid', gap: 3 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/facturacion')}>Volver</Button>
+          <Typography variant="h4" component="h1">Configuración DIAN</Typography>
+        </Stack>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          {config.tieneCertificado && <Chip color="success" label="Certificado cargado" />}
+          {config.tienePacKey && <Chip color="success" label="API key PAC" />}
+          <Button variant="contained" startIcon={<SaveIcon />} onClick={onGuardar} disabled={guardando}>
+            {guardando ? 'Guardando…' : 'Guardar'}
+          </Button>
+        </Stack>
+      </Stack>
+
+      {mensaje && <Alert severity="success">{mensaje}</Alert>}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="subtitle1" sx={{ mb: 2 }}>General</Typography>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              select
+              fullWidth
+              label="Ambiente"
+              value={config.ambiente}
+              onChange={(e) => set('ambiente', Number(e.target.value))}
+            >
+              <MenuItem value={2}>Habilitación (2)</MenuItem>
+              <MenuItem value={1}>Producción (1)</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              select
+              fullWidth
+              label="Canal de transmisión"
+              value={config.canal}
+              onChange={(e) => set('canal', e.target.value)}
+            >
+              <MenuItem value="SIMULADO">Simulado</MenuItem>
+              <MenuItem value="PAC">PAC</MenuItem>
+              <MenuItem value="DIAN">DIAN directo</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="Prefijo" value={config.prefijo ?? ''} onChange={(e) => set('prefijo', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              fullWidth
+              label="Responsabilidad fiscal"
+              value={config.responsabilidadFiscal}
+              onChange={(e) => set('responsabilidadFiscal', e.target.value)}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="Software ID" value={config.softwareId ?? ''} onChange={(e) => set('softwareId', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField
+              fullWidth
+              type="password"
+              label="Software PIN"
+              placeholder={config.softwarePin ? '' : '••••••'}
+              value={config.softwarePin ?? ''}
+              onChange={(e) => set('softwarePin', e.target.value)}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="Test Set ID" value={config.testSetId ?? ''} onChange={(e) => set('testSetId', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="Código municipio (DANE)" value={config.codigoMunicipio ?? ''} onChange={(e) => set('codigoMunicipio', e.target.value)} />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="subtitle1" sx={{ mb: 2 }}>Resolución de facturación</Typography>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField fullWidth label="Número de resolución" value={config.resolucionNumero ?? ''} onChange={(e) => set('resolucionNumero', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 2 }}>
+            <TextField fullWidth type="date" InputLabelProps={{ shrink: true }} label="Fecha" value={config.resolucionFecha ?? ''} onChange={(e) => set('resolucionFecha', e.target.value || null)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth type="number" label="Rango desde" value={config.rangoDesde ?? ''} onChange={(e) => set('rangoDesde', e.target.value === '' ? null : Number(e.target.value))} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth type="number" label="Rango hasta" value={config.rangoHasta ?? ''} onChange={(e) => set('rangoHasta', e.target.value === '' ? null : Number(e.target.value))} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth type="date" InputLabelProps={{ shrink: true }} label="Vigencia desde" value={config.rangoVigenciaDesde ?? ''} onChange={(e) => set('rangoVigenciaDesde', e.target.value || null)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth type="date" InputLabelProps={{ shrink: true }} label="Vigencia hasta" value={config.rangoVigenciaHasta ?? ''} onChange={(e) => set('rangoVigenciaHasta', e.target.value || null)} />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+        <Typography variant="subtitle1" sx={{ mb: 2 }}>PAC / Certificado</Typography>
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <TextField fullWidth label="Proveedor PAC" value={config.pacProveedor ?? ''} onChange={(e) => set('pacProveedor', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 5 }}>
+            <TextField fullWidth label="URL base PAC" value={config.pacBaseUrl ?? ''} onChange={(e) => set('pacBaseUrl', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField fullWidth type="password" label="API key PAC" placeholder={config.pacApiKey ? '' : '••••••'} value={config.pacApiKey ?? ''} onChange={(e) => set('pacApiKey', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField fullWidth label="Nombre del certificado" value={config.certificadoNombre ?? ''} onChange={(e) => set('certificadoNombre', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField fullWidth label="Ruta del certificado (.p12)" value={config.certificadoPath ?? ''} onChange={(e) => set('certificadoPath', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <TextField fullWidth type="password" label="Contraseña del certificado" placeholder={config.certificadoPassword ? '' : '••••••'} value={config.certificadoPassword ?? ''} onChange={(e) => set('certificadoPassword', e.target.value)} />
+          </Grid>
+        </Grid>
+      </Paper>
+    </Box>
+  )
+}
