@@ -20,8 +20,7 @@ Carga un Excel con las operaciones del período, valida contra las reglas DIAN (
 backend/    API REST + reglas de negocio + generación XML
 frontend/   SPA React (Vite) con proxy /api → :8080
 docker/     docker-compose (db, backend, frontend)
-k8s/        Manifiestos Kubernetes (namespace factelect)
-docs/       Manual técnico, manual de usuario y ejemplos
+docs/       Manual técnico, manual de usuario, ejemplos y diagrama de arquitectura
 ```
 
 ## Inicio rápido (Docker Compose)
@@ -49,22 +48,24 @@ export PATH="$JAVA_HOME/bin:$PATH"
 cd backend && MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn spring-boot:run
 
 # Frontend (→ :5173, proxy /api → :8080)
-cd frontend && npm install && npm run dev
+cd frontend && pnpm install && pnpm run dev
 ```
 
-Checks previos a commit: backend `mvn clean package`; frontend `npm run lint` (0 errores) y `npm run build`.
+Checks previos a commit: backend `mvn clean package`; frontend `pnpm run lint` (0 errores) y `pnpm run build`.
 
 ## Documentación
 
 - [`docs/MANUAL-TECNICO.md`](docs/MANUAL-TECNICO.md) — arquitectura, modelo de datos, reglas, API, despliegue.
 - [`docs/MANUAL-USUARIO.md`](docs/MANUAL-USUARIO.md) — uso de la aplicación paso a paso.
 - [`docs/ejemplos/`](docs/ejemplos/) — XML de salida y respuestas JSON de la API.
+- [`docs/arquitectura.png`](docs/arquitectura.png) — diagrama de arquitectura.
 
 ## Roadmap
 
-- [ ] Suite de pruebas (JUnit) para el motor de reglas.
+- [x] Suite de pruebas (JUnit) para el motor de reglas.
 - [ ] Soporte multiformato (1002, 2276…) y marco normativo por año.
-- [ ] Panel de administración (empresas, usuarios, calendario).
-- [ ] CI/CD en GitHub Actions (build + lint + tests) y despliegue K8s.
+- [x] Panel de administración (empresas, usuarios, calendario).
+- [x] CI en GitHub Actions (build + lint + tests).
+- [ ] Publicación automática (deploy) tras merge a `main`.
 
 Ver issues del repo para el backlog detallado.

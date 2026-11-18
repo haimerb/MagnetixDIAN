@@ -34,7 +34,7 @@ export default function AppLayout() {
           <Typography
             variant="h6"
             component={Box}
-            sx={{ flexGrow: 1, fontFamily: '"Fraunces", serif', fontWeight: 600 }}
+            sx={{ flexGrow: 1, fontFamily: '"Space Grotesk", "Inter", sans-serif', fontWeight: 700 }}
           >
             MagnetixDIAN
           </Typography>
