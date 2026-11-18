@@ -14,6 +14,7 @@ import com.magnetixdian.domain.rule.NitDigitoVerificacionRegla;
 import com.magnetixdian.domain.rule.factura.ContextoFactura;
 import com.magnetixdian.domain.rule.factura.ValidadorFactura;
 import com.magnetixdian.domain.transmision.ResultadoTransmision;
+import com.magnetixdian.infrastructure.notification.NotificadorEmail;
 import com.magnetixdian.infrastructure.pdf.GeneradorPdfFactura;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigJpa;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigRepository;
@@ -35,6 +36,8 @@ import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.LineaFacturaRequest;
 import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -59,6 +63,8 @@ import java.util.Map;
 @Service
 public class ServicioFacturacion {
 
+    private static final Logger log = LoggerFactory.getLogger(ServicioFacturacion.class);
+
     private static final String COD_IVA = CufeCalculator.IVA;
     private static final String COD_INC = CufeCalculator.INC;
 
@@ -73,6 +79,7 @@ public class ServicioFacturacion {
     private final GeneradorPdfFactura generadorPdf;
     private final ServicioFirma firma;
     private final ServicioTransmision transmision;
+    private final NotificadorEmail notificador;
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -84,7 +91,8 @@ public class ServicioFacturacion {
                                GeneradorAttachedDocument generadorAttached,
                                GeneradorPdfFactura generadorPdf,
                                ServicioFirma firma,
-                               ServicioTransmision transmision) {
+                               ServicioTransmision transmision,
+                               NotificadorEmail notificador) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -96,6 +104,7 @@ public class ServicioFacturacion {
         this.generadorPdf = generadorPdf;
         this.firma = firma;
         this.transmision = transmision;
+        this.notificador = notificador;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -144,8 +153,37 @@ public class ServicioFacturacion {
         evento.setRespuesta(transmisionResultado.respuestaCruda());
         eventoRepository.save(evento);
 
+        notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
+
         return new ResultadoEmisionDto(true, factura.getId(), numeroCompleto, cufe, factura.getEstado(),
                 qrUrl, transmisionResultado.mensaje(), List.of());
+    }
+
+    private void notificarAdquirente(EmpresaJpa empresa, EmpresaFeConfigJpa config, FacturaJpa factura,
+                                     FacturaDatos datos, String xmlFirmado, String numeroCompleto) {
+        if (!config.isNotificarAdquirente()) {
+            return;
+        }
+        String destino = datos.adquirente().email();
+        if (destino == null || destino.isBlank()) {
+            log.warn("La empresa {} notifica al adquirente pero la factura {} no tiene correo del adquirente",
+                    empresa.getId(), numeroCompleto);
+            return;
+        }
+        try {
+            byte[] pdf = pdf(empresa.getId(), factura.getId());
+            String cufe = factura.getCufe() != null ? factura.getCufe() : factura.getCude();
+            String asunto = "Factura electrónica " + numeroCompleto + " - " + empresa.getRazonSocial();
+            String cuerpo = "Estimado(a) " + datos.adquirente().nombre() + ",\n\n"
+                    + "Adjuntamos la factura electrónica " + numeroCompleto + " emitida por "
+                    + empresa.getRazonSocial() + ".\n\nCUFE: " + cufe
+                    + "\n\nEste mensaje fue generado automáticamente.";
+            notificador.enviarFactura(destino, asunto, cuerpo,
+                    "factura-" + numeroCompleto + ".xml", xmlFirmado.getBytes(StandardCharsets.UTF_8),
+                    "factura-" + numeroCompleto + ".pdf", pdf);
+        } catch (Exception ex) {
+            log.warn("No se pudo enviar por correo la factura {}: {}", numeroCompleto, ex.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)

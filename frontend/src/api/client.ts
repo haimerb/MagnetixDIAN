@@ -329,6 +329,7 @@ export type ConfigFe = {
   activo: boolean
   tieneCertificado: boolean
   tienePacKey: boolean
+  notificarAdquirente: boolean
 }
 
 export type CatalogoDian = {

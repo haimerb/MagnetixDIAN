@@ -65,6 +65,9 @@ public class ServicioConfigFe {
         if (dto.activo() != null) {
             c.setActivo(dto.activo());
         }
+        if (dto.notificarAdquirente() != null) {
+            c.setNotificarAdquirente(dto.notificarAdquirente());
+        }
         c.setUpdatedAt(java.time.OffsetDateTime.now());
         return aDto(configRepository.save(c));
     }
@@ -88,6 +91,7 @@ public class ServicioConfigFe {
                 c.getPacProveedor(), c.getPacBaseUrl(), null, c.getCertificadoNombre(), null,
                 c.getCertificadoPath(), c.getResponsabilidadFiscal(), c.getCodigoMunicipio(), c.isActivo(),
                 c.getCertificadoPath() != null && !c.getCertificadoPath().isBlank(),
-                c.getPacApiKey() != null && !c.getPacApiKey().isBlank());
+                c.getPacApiKey() != null && !c.getPacApiKey().isBlank(),
+                c.isNotificarAdquirente());
     }
 }

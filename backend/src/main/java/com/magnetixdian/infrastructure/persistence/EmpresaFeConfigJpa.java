@@ -87,6 +87,9 @@ public class EmpresaFeConfigJpa {
     @Column(name = "codigo_municipio", length = 10)
     private String codigoMunicipio;
 
+    @Column(name = "notificar_adquirente", nullable = false)
+    private boolean notificarAdquirente = false;
+
     @Column(nullable = false)
     private boolean activo = true;
 
@@ -274,6 +277,14 @@ public class EmpresaFeConfigJpa {
 
     public void setCodigoMunicipio(String codigoMunicipio) {
         this.codigoMunicipio = codigoMunicipio;
+    }
+
+    public boolean isNotificarAdquirente() {
+        return notificarAdquirente;
+    }
+
+    public void setNotificarAdquirente(boolean notificarAdquirente) {
+        this.notificarAdquirente = notificarAdquirente;
     }
 
     public boolean isActivo() {
