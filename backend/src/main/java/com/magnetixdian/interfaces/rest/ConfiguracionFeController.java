@@ -2,7 +2,9 @@ package com.magnetixdian.interfaces.rest;
 
 import com.magnetixdian.application.ServicioConfigFe;
 import com.magnetixdian.interfaces.dto.ConfigFeDto;
+import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,18 +20,23 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfiguracionFeController {
 
     private final ServicioConfigFe servicio;
+    private final AutorizacionEmpresa autorizacion;
 
-    public ConfiguracionFeController(ServicioConfigFe servicio) {
+    public ConfiguracionFeController(ServicioConfigFe servicio, AutorizacionEmpresa autorizacion) {
         this.servicio = servicio;
+        this.autorizacion = autorizacion;
     }
 
     @GetMapping("/{empresaId}")
-    public ResponseEntity<ConfigFeDto> obtener(@PathVariable Long empresaId) {
+    public ResponseEntity<ConfigFeDto> obtener(@PathVariable Long empresaId, Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.obtener(empresaId));
     }
 
     @PutMapping("/{empresaId}")
-    public ResponseEntity<ConfigFeDto> guardar(@PathVariable Long empresaId, @RequestBody ConfigFeDto dto) {
+    public ResponseEntity<ConfigFeDto> guardar(@PathVariable Long empresaId, @RequestBody ConfigFeDto dto,
+                                               Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.guardar(empresaId, dto));
     }
 }
