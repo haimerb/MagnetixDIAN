@@ -13,8 +13,13 @@ import com.magnetixdian.interfaces.dto.CalendarioDianDto;
 import com.magnetixdian.interfaces.dto.CalendarioDianRequest;
 import com.magnetixdian.interfaces.dto.EmpresaDto;
 import com.magnetixdian.interfaces.dto.EmpresaRequest;
+import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.UsuarioDto;
 import com.magnetixdian.interfaces.dto.UsuarioRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +59,13 @@ public class ServicioAdmin {
     @Transactional(readOnly = true)
     public List<EmpresaDto> listarEmpresas() {
         return empresaRepo.findAll().stream().map(this::toDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaDto<EmpresaDto> listarEmpresasPaginado(int pagina, int tamano) {
+        Pageable pageable = paginacion(pagina, tamano, "id");
+        Page<EmpresaDto> page = empresaRepo.findAll(pageable).map(this::toDto);
+        return PaginaDto.desde(page);
     }
 
     @Transactional
@@ -109,6 +121,18 @@ public class ServicioAdmin {
     @Transactional(readOnly = true)
     public List<UsuarioDto> listarUsuarios() {
         return usuarioRepo.findAll().stream().map(this::toDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaDto<UsuarioDto> listarUsuariosPaginado(int pagina, int tamano) {
+        Pageable pageable = paginacion(pagina, tamano, "id");
+        Page<UsuarioDto> page = usuarioRepo.findAll(pageable).map(this::toDto);
+        return PaginaDto.desde(page);
+    }
+
+    private static Pageable paginacion(int pagina, int tamano, String orden) {
+        return PageRequest.of(Math.max(pagina, 0), Math.min(Math.max(tamano, 1), 100),
+                Sort.by(Sort.Direction.ASC, orden));
     }
 
     @Transactional

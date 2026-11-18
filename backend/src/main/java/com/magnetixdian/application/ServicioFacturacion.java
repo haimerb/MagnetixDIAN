@@ -33,7 +33,12 @@ import com.magnetixdian.interfaces.dto.FacturaDetalleDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.LineaFacturaRequest;
+import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -146,11 +151,28 @@ public class ServicioFacturacion {
     @Transactional(readOnly = true)
     public List<FacturaResumenDto> listar(Long empresaId) {
         return facturaRepository.findByEmpresaIdOrderByCreatedAtDesc(empresaId).stream()
-                .map(f -> new FacturaResumenDto(f.getId(), f.getTipoDocumento(), f.getNumeroCompleto(),
-                        f.getCufe() != null ? f.getCufe() : f.getCude(), f.getEstado(), f.getFechaEmision(),
-                        f.getAdquirenteNombre(), f.getAdquirenteNumDoc(), f.getTotal(), f.getTotalPagar(),
-                        f.getCreatedAt()))
+                .map(this::aResumen)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaDto<FacturaResumenDto> listarPaginado(Long empresaId, int pagina, int tamano) {
+        Pageable pageable = PageRequest.of(Math.max(pagina, 0), acotarTamano(tamano),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<FacturaResumenDto> page = facturaRepository.findByEmpresaId(empresaId, pageable)
+                .map(this::aResumen);
+        return PaginaDto.desde(page);
+    }
+
+    private FacturaResumenDto aResumen(FacturaJpa f) {
+        return new FacturaResumenDto(f.getId(), f.getTipoDocumento(), f.getNumeroCompleto(),
+                f.getCufe() != null ? f.getCufe() : f.getCude(), f.getEstado(), f.getFechaEmision(),
+                f.getAdquirenteNombre(), f.getAdquirenteNumDoc(), f.getTotal(), f.getTotalPagar(),
+                f.getCreatedAt());
+    }
+
+    private static int acotarTamano(int tamano) {
+        return Math.min(Math.max(tamano, 1), 100);
     }
 
     @Transactional(readOnly = true)

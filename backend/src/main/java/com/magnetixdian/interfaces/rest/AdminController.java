@@ -5,6 +5,7 @@ import com.magnetixdian.interfaces.dto.CalendarioDianDto;
 import com.magnetixdian.interfaces.dto.CalendarioDianRequest;
 import com.magnetixdian.interfaces.dto.EmpresaDto;
 import com.magnetixdian.interfaces.dto.EmpresaRequest;
+import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.UsuarioDto;
 import com.magnetixdian.interfaces.dto.UsuarioRequest;
 import jakarta.validation.Valid;
@@ -43,6 +44,13 @@ public class AdminController {
         return ResponseEntity.ok(servicio.listarEmpresas());
     }
 
+    @GetMapping("/empresas/paginado")
+    public ResponseEntity<PaginaDto<EmpresaDto>> listarEmpresasPaginado(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(servicio.listarEmpresasPaginado(page, size));
+    }
+
     @PostMapping("/empresas")
     public ResponseEntity<EmpresaDto> crearEmpresa(@Valid @RequestBody EmpresaRequest request) {
         return ResponseEntity.ok(servicio.crearEmpresa(request));
@@ -65,6 +73,13 @@ public class AdminController {
     @GetMapping("/usuarios")
     public ResponseEntity<List<UsuarioDto>> listarUsuarios() {
         return ResponseEntity.ok(servicio.listarUsuarios());
+    }
+
+    @GetMapping("/usuarios/paginado")
+    public ResponseEntity<PaginaDto<UsuarioDto>> listarUsuariosPaginado(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(servicio.listarUsuariosPaginado(page, size));
     }
 
     @PostMapping("/usuarios")

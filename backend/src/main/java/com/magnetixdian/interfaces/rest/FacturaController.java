@@ -8,6 +8,7 @@ import com.magnetixdian.interfaces.dto.ErrorValidacionDto;
 import com.magnetixdian.interfaces.dto.FacturaDetalleDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
+import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
@@ -68,6 +70,16 @@ public class FacturaController {
                                                           Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.listar(empresaId));
+    }
+
+    @GetMapping("/{empresaId}/paginado")
+    public ResponseEntity<PaginaDto<FacturaResumenDto>> listarPaginado(
+            @PathVariable Long empresaId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicio.listarPaginado(empresaId, page, size));
     }
 
     @GetMapping("/{empresaId}/{id}")

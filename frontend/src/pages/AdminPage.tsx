@@ -16,6 +16,7 @@ import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
+import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
 import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
@@ -23,13 +24,14 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
-import { api, type EmpresaAdmin, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
+import { api, type EmpresaAdmin, type Pagina, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
 import EmptyState from '../components/ui/EmptyState'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 
 const ROLES = ['ROLE_ADMIN', 'ROLE_CONTADOR', 'ROLE_CLIENTE']
 const TIPOS_REPORTE = ['GRAN_CONTRIBUYENTE', 'PERSONA_JURIDICA', 'PERSONA_NATURAL']
+const FILAS_POR_PAGINA = [10, 25, 50]
 
 type TabIdx = 'empresas' | 'usuarios' | 'calendario'
 
@@ -41,21 +43,34 @@ export default function AdminPage() {
   const [anioCalendario, setAnioCalendario] = useState(2025)
   const [error, setError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'empresa' | 'usuario' | 'calendario' | null>(null)
+  const [paginaEmpresas, setPaginaEmpresas] = useState(0)
+  const [tamanoEmpresas, setTamanoEmpresas] = useState(FILAS_POR_PAGINA[0])
+  const [totalEmpresas, setTotalEmpresas] = useState(0)
+  const [paginaUsuarios, setPaginaUsuarios] = useState(0)
+  const [tamanoUsuarios, setTamanoUsuarios] = useState(FILAS_POR_PAGINA[0])
+  const [totalUsuarios, setTotalUsuarios] = useState(0)
 
   const [formEmpresa, setFormEmpresa] = useState({ nit: '', razonSocial: '', email: '', ciudad: '', regimen: 'ORDINARIO', tipoDocumento: 'NIT' })
   const [formUsuario, setFormUsuario] = useState({ username: '', password: '', email: '', nombre: '', empresaId: '', roles: 'ROLE_CONTADOR' })
   const [formCalendario, setFormCalendario] = useState({ anioPresentacion: 2026, tipoReporte: 'PERSONA_JURIDICA', rangoNitIni: '', rangoNitFin: '', fechaLimite: '' })
 
-  const cargarEmpresas = () => api.get<EmpresaAdmin[]>('/admin/empresas').then(r => setEmpresas(r.data)).catch(() => undefined)
-  const cargarUsuarios = () => api.get<UsuarioAdmin[]>('/admin/usuarios').then(r => setUsuarios(r.data)).catch(() => undefined)
+  const cargarEmpresas = () => api
+    .get<Pagina<EmpresaAdmin>>('/admin/empresas/paginado', { params: { page: paginaEmpresas, size: tamanoEmpresas } })
+    .then(r => { setEmpresas(r.data.contenido); setTotalEmpresas(r.data.total) })
+    .catch(() => undefined)
+  const cargarUsuarios = () => api
+    .get<Pagina<UsuarioAdmin>>('/admin/usuarios/paginado', { params: { page: paginaUsuarios, size: tamanoUsuarios } })
+    .then(r => { setUsuarios(r.data.contenido); setTotalUsuarios(r.data.total) })
+    .catch(() => undefined)
   const cargarCalendario = () => api.get<CalendarioAdmin[]>(`/admin/calendario?anioGravable=${anioCalendario}`).then(r => setCalendario(r.data)).catch(() => undefined)
 
-  useEffect(() => { cargarEmpresas(); cargarUsuarios(); cargarCalendario() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargarEmpresas() }, [paginaEmpresas, tamanoEmpresas]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargarUsuarios() }, [paginaUsuarios, tamanoUsuarios]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === 'calendario') cargarCalendario() }, [tab, anioCalendario]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const crearEmpresa = async () => {
     try {
-      await api.post('/admin/empresas', formEmpresa)
+      await api.post('/admin/empresas', formEmpresa, { skipGlobalError: true })
       setDialog(null)
       cargarEmpresas()
     } catch (e: unknown) {
@@ -66,7 +81,7 @@ export default function AdminPage() {
   const eliminarEmpresa = async (id: number) => {
     if (!window.confirm('¿Eliminar esta empresa?')) return
     try {
-      await api.delete(`/admin/empresas/${id}`)
+      await api.delete(`/admin/empresas/${id}`, { skipGlobalError: true })
       cargarEmpresas()
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'No se pudo eliminar la empresa')
@@ -80,7 +95,7 @@ export default function AdminPage() {
         roles: [formUsuario.roles],
         empresaId: formUsuario.empresaId ? Number(formUsuario.empresaId) : null,
         enabled: true
-      })
+      }, { skipGlobalError: true })
       setDialog(null)
       cargarUsuarios()
     } catch (e: unknown) {
@@ -102,7 +117,7 @@ export default function AdminPage() {
         rangoNitIni: formCalendario.rangoNitIni || null,
         rangoNitFin: formCalendario.rangoNitFin || null,
         fechaLimite: formCalendario.fechaLimite
-      })
+      }, { skipGlobalError: true })
       setDialog(null)
       cargarCalendario()
     } catch (e: unknown) {
@@ -170,6 +185,19 @@ export default function AdminPage() {
               </Table>
             </TableContainer>
           )}
+          {totalEmpresas > 0 && (
+            <TablePagination
+              component="div"
+              count={totalEmpresas}
+              page={paginaEmpresas}
+              onPageChange={(_, nueva) => setPaginaEmpresas(nueva)}
+              rowsPerPage={tamanoEmpresas}
+              onRowsPerPageChange={e => { setTamanoEmpresas(parseInt(e.target.value, 10)); setPaginaEmpresas(0) }}
+              rowsPerPageOptions={FILAS_POR_PAGINA}
+              labelRowsPerPage="Filas por página"
+              labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+            />
+          )}
         </SectionCard>
       )}
 
@@ -211,6 +239,19 @@ export default function AdminPage() {
                 </TableBody>
               </Table>
             </TableContainer>
+          )}
+          {totalUsuarios > 0 && (
+            <TablePagination
+              component="div"
+              count={totalUsuarios}
+              page={paginaUsuarios}
+              onPageChange={(_, nueva) => setPaginaUsuarios(nueva)}
+              rowsPerPage={tamanoUsuarios}
+              onRowsPerPageChange={e => { setTamanoUsuarios(parseInt(e.target.value, 10)); setPaginaUsuarios(0) }}
+              rowsPerPageOptions={FILAS_POR_PAGINA}
+              labelRowsPerPage="Filas por página"
+              labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+            />
           )}
         </SectionCard>
       )}
