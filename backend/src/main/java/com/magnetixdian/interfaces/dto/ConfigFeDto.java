@@ -31,5 +31,6 @@ public record ConfigFeDto(
         String codigoMunicipio,
         Boolean activo,
         Boolean tieneCertificado,
-        Boolean tienePacKey) {
+        Boolean tienePacKey,
+        Boolean notificarAdquirente) {
 }

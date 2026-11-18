@@ -4,9 +4,11 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import Grid from '@mui/material/Grid2'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
+import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -40,6 +42,7 @@ const VACIO: ConfigFe = {
   activo: true,
   tieneCertificado: false,
   tienePacKey: false,
+  notificarAdquirente: false,
 }
 
 export default function ConfigFePage() {
@@ -139,6 +142,17 @@ export default function ConfigFePage() {
           </Grid>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField fullWidth label="Código municipio (DANE)" value={config.codigoMunicipio ?? ''} onChange={(e) => set('codigoMunicipio', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={config.notificarAdquirente}
+                  onChange={(e) => set('notificarAdquirente', e.target.checked)}
+                />
+              }
+              label="Enviar factura al adquirente por correo"
+            />
           </Grid>
         </Grid>
       </SectionCard>

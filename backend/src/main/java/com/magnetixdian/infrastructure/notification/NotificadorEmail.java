@@ -1,12 +1,18 @@
 package com.magnetixdian.infrastructure.notification;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+
 /**
- * Envío de notificaciones por email a clientes (recordatorios de vencimiento).
+ * Envío de notificaciones por email a clientes (recordatorios de vencimiento y
+ * facturas electrónicas al adquirente).
  * Se desactiva con la propiedad magnetixdian.notifications.enabled=false.
  */
 @Service
@@ -21,6 +27,10 @@ public class NotificadorEmail {
         this.enabled = enabled;
     }
 
+    public boolean habilitado() {
+        return enabled;
+    }
+
     /**
      * Envía un recordatorio de vencimiento al destinatario indicado.
      */
@@ -32,6 +42,29 @@ public class NotificadorEmail {
         message.setTo(destinatario);
         message.setSubject(asunto);
         message.setText(cuerpo);
+        mailSender.send(message);
+    }
+
+    /**
+     * Envía la factura electrónica (XML firmado + PDF) al adquirente como adjuntos.
+     */
+    public void enviarFactura(String destinatario, String asunto, String cuerpo,
+                              String nombreXml, byte[] xml,
+                              String nombrePdf, byte[] pdf) throws MessagingException {
+        if (!enabled) {
+            return;
+        }
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setTo(destinatario);
+        helper.setSubject(asunto);
+        helper.setText(cuerpo, false);
+        if (xml != null && xml.length > 0) {
+            helper.addAttachment(nombreXml, new ByteArrayResource(xml), "application/xml");
+        }
+        if (pdf != null && pdf.length > 0) {
+            helper.addAttachment(nombrePdf, new ByteArrayResource(pdf), "application/pdf");
+        }
         mailSender.send(message);
     }
 }
