@@ -130,3 +130,24 @@ cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos c
   (frontend) — solo los usan Render y Cloudflare.
 
 Nada del flujo actual (docker-compose, ZIP a GoDaddy, CI) se ve afectado.
+
+---
+
+## 7. Deploy automático tras merge a `main`
+
+El workflow `.github/workflows/deploy.yml` publica automáticamente al hacer push/merge a `main`
+(también se puede lanzar a mano con *Run workflow*):
+
+- **Frontend:** compila Vite y ejecuta `wrangler deploy` (Cloudflare Worker).
+- **Backend:** dispara el *Deploy Hook* de Render.
+
+Configurar estos **secrets** en GitHub (Settings → Secrets and variables → Actions):
+
+| Secret | Descripción |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Token con permiso *Edit Cloudflare Workers* |
+| `CLOUDFLARE_ACCOUNT_ID` | ID de la cuenta de Cloudflare |
+| `RENDER_DEPLOY_HOOK` | URL del Deploy Hook del servicio en Render (Settings → Deploy Hook) |
+
+Si un secret no está definido, el job correspondiente se omite con un aviso (no falla). El backend
+también puede desplegarse solo con `autoDeploy: true` de `render.yaml`.
