@@ -25,7 +25,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGINS
-        value: https://magnetixdian.pages.dev
+        value: https://magnetixdian.pages.dev,https://magnetixdian.hbarbetti-ing.workers.dev
       - key: UPLOAD_DIR
         value: /tmp/uploads
       - key: NOTIFICATIONS_ENABLED
