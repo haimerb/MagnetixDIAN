@@ -1,6 +1,9 @@
 # MagnetixDIAN — Manual Técnico
 
-Sistema de generación de **medios magnéticos (información exógena)** de la DIAN, formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Flujo: carga de Excel → validación → reporte → XML → marcar presentado + normalización de terceros.
+Sistema con **dos módulos**:
+
+1. **Medios magnéticos (información exógena DIAN)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Flujo: carga de Excel → validación → reporte → XML → marcar presentado + normalización de terceros.
+2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con CUFE/CUDE (SHA-384), UBL 2.1, firma XAdES-EPES, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
 
 ## 1. Stack
 
@@ -9,15 +12,20 @@ Sistema de generación de **medios magnéticos (información exógena)** de la D
 | Lenguaje backend | Java (Temurin) | 17 |
 | Framework backend | Spring Boot | 3.3.5 |
 | ORM / migraciones | Spring Data JPA / Flyway | 10.20.1 |
-| Base de datos | PostgreSQL (Docker) | 16 |
+| Base de datos | PostgreSQL (Docker / Supabase) | 16 |
 | Autenticación | JWT (jjwt) | 0.12.6 |
 | Excel | Apache POI | 5.3.0 |
 | XML | DOM (JDK) + XSD propio (1001 y 1002) | — |
+| Firma XAdES | XML Digital Signature (JDK) + BouncyCastle (bcpkix) | — |
+| PDF factura | OpenPDF | — |
+| QR | ZXing (core + javase) | — |
+| Correo | Spring Boot Mail (SMTP) | 3.3.5 |
 | Health | Spring Boot Actuator | 3.3.5 |
 | Swagger | springdoc-openapi | 2.6.0 |
-| Frontend | React / Vite / MUI | 18 / 5 / 6.5 |
+| Frontend | React / Vite / MUI / React Router | 18 / 5 / 6.5 / 6 |
+| Tests frontend | Vitest + Testing Library | 2.1.9 |
 
-**Requerimiento de JDK 17:** el Maven global del sistema usa JDK 8. Todos los builds exigenn la variable de entorno:
+**Requerimiento de JDK 17:** el Maven global del sistema usa JDK 8. Todos los builds exigen la variable de entorno:
 
 ```bash
 export JAVA_HOME="C:/Users/hbarb/AppData/Local/jdk17"
@@ -28,40 +36,75 @@ export PATH="$JAVA_HOME/bin:$PATH"
 
 ```
 backend/src/main/java/com/magnetixdian/
-  interfaces/rest/     Controllers REST (MedioMagneticoController, AuthController)
-  interfaces/dto/      Records de respuesta (NUNCA entidades JPA — open-in-view=false)
-  application/         Servicios de caso de uso (AuthService, JwtService, ServicioMedioMagnetico, ServicioValidacion)
-  domain/              ReglaValidacion (nterfaz), RuleEngine, reglas, CatalogoConceptos, UvtManager
-  infrastructure/      ImportadorExcel (POI), GeneradorXml1001 (DOM), persistencia JPA, notificación
-  security/            JwtAuthFilter, CustomUserDetailsService, JwtService
-  config/              SecurityConfig, WebConfig
+  interfaces/rest/      Controllers REST (AuthController, MedioMagneticoController,
+                        FacturaController, ConfiguracionFeController, AdminController,
+                        GlobalExceptionHandler)
+  interfaces/dto/       Records de respuesta (NUNCA entidades JPA — open-in-view=false)
+                        incluido PaginaDto<T> para listados paginados
+  application/          Servicios de caso de uso (AuthService, JwtService, ServicioAdmin,
+                        ServicioMedioMagnetico, ServicioValidacion, ServicioFacturacion,
+                        ServicioNumeracion, ServicioFirma, ServicioTransmision,
+                        ServicioConfigFe, ServicioGeneracionAutomatica)
+  domain/
+    rule/               ReglaValidacion (interfaz), RuleEngine, reglas 1001/1002, CatalogoConceptos
+    rule/factura/       Reglas de facturación (ValidadorFactura + ReglaFactura)
+    cufe/               CufeCalculator (SHA-384), QrUrlGenerator
+    factura/            Modelo de dominio (FacturaDatos, TipoDocumento, LineaFactura, ...)
+    firma/              FirmadorXml (interfaz), FirmadorNoOp, FirmadorXades
+    transmision/        CanalTransmision (interfaz), ResultadoTransmision
+    uvt/                UvtManager
+    model/              OperacionDatos, ResultadoRegla, Severidad
+  infrastructure/
+    excel/              ImportadorExcel (POI), PlantillaExcelGenerator
+    xml/                GeneradorXml1001/1002, GeneradorUblFactura, GeneradorAttachedDocument,
+                        GeneradorApplicationResponse
+    pdf/                GeneradorPdfFactura (OpenPDF)
+    transmision/        CanalSimulado, pac/ClientePac, dian/ClienteDianSoap
+    notification/       NotificadorEmail, ServicioNotificaciones, SchedulerJobs
+    persistence/        Repositorios y entidades JPA
+  security/             JwtAuthFilter, CustomUserDetailsService, AutorizacionEmpresa
+  config/               SecurityConfig, JwtProperties
 ```
 
 **Principios:**
 
-- **Reglas extensibles:** toda regla de negocio es un bean `@Component` que implementa `ReglaValidacion`. `RuleEngine` las detecta automáticamente por Spring y las ejecuta en orden. Nueva regla = nueva clase, **nunca** tocar el engine.
+- **Reglas extensibles:** toda regla de negocio es un bean `@Component` que implementa `ReglaValidacion` (o `ReglaFactura`). `RuleEngine` / `ValidadorFactura` las detectan automáticamente por Spring y las ejecutan en orden. Nueva regla = nueva clase, **nunca** tocar el engine.
+- **Reglas format-aware:** `ReglaValidacion.aplicaA(formato)` permite activar/desactivar reglas por formato (1001/1002). `ContextoValidacion` transporta el `formato`.
 - **DTOs en el contrato API:** las respuestas serializan records, no entidades (evita proxys LAZY con `open-in-view: false`).
 - **Java 17 estricto:** no usar features de Java 21 (ej. pattern matching en `switch`).
-- **Filas de detalle:** `ValidacionJpa` tiene `@OneToMany(cascade = CascadeType.ALL)` para persistir `DetalleErrorJpa`.
+- **Autorización por empresa:** `AutorizacionEmpresa` verifica que el usuario autenticado (no-ADMIN) solo acceda a los recursos de su empresa; `ROLE_ADMIN` accede a todo. Se aplica en los controllers de facturación, medios y configuración.
+- **Sin `WebConfig`:** CORS y seguridad se centralizan en `SecurityConfig`.
 
 ## 3. Modelo de datos
 
 Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 
+| Migración | Contenido |
+|---|---|
+| `V1__esquema_inicial.sql` | Esquema base |
+| `V2__seed.sql` | UVT, catálogo de reglas, calendario DIAN |
+| `V3__seed_usuario.sql` | Usuario admin + empresa demo |
+| `V4__facturacion_electronica.sql` | Tablas de facturación electrónica |
+| `V5__catalogos_facturacion.sql` | Catálogos DIAN de facturación |
+| `V6__resolucion_demo.sql` | Resolución/prefijo demo por empresa |
+
+**Tablas de medios magnéticos:** `empresa`, `tercero`, `medio_magnetico`, `operacion`, `uvt_vigencia`, `regla`, `validacion` / `detalle_error`, `calendario_dian`, `notificacion`, `role` / `usuario` / `usuario_role`.
+
+**Tablas de facturación electrónica:**
+
 | Tabla | Propósito |
 |---|---|
-| `role` / `usuario` / `usuario_role` | Seguridad y roles (ADMIN, OPERADOR) |
-| `empresa` | Cliente/dedarante (NIT, régimen, gran contribuyente) |
-| `tercero` | Beneficiarios de pagos (normalizados por NIT) |
-| `medio_magnetico` | Encabezado de reporte (formato, año gravable, estado) |
-| `operacion` | Detalle formato 1001 (pagos/abonos, retenciones, IVA) |
-| `uvt_vigencia` | Valor UVT por año (2024: 47.065; 2025: 49.799; 2026: 52.374) |
-| `regla` | Catálogo de reglas (código, severidad, mensaje) |
-| `validacion` / `detalle_error` | Corridas de validación y errores detectados |
-| `calendario_dian` | Fechas límite por rol NIT para avisos |
-| `notificacion` | Jobs de recordatorio de vencimiento |
+| `empresa_fe_config` | Configuración DIAN por empresa (ambiente, software, resolución, rango, canal, PAC, certificado, responsabilidad fiscal) |
+| `consecutivo` | Consecutivos de numeración por empresa/prefijo/tipo |
+| `factura` | Encabezado (tipos 01/91/92/05, CUFE/CUDE, totales, adquirente, `cufe_referencia`, `numero_referencia`, estado) |
+| `factura_linea` | Líneas (producto, cantidad, valor, impuestos) |
+| `factura_impuesto` | Impuestos desagregados por línea |
+| `factura_evento` | Eventos/transmisión (EMISION y eventos DIAN 030-034) |
+| `catalogo_dian` | Catálogos DIAN (tipo documento, responsabilidad, tributo, evento, ...) |
 
 **Estados de `medio_magnetico`:** `BORRADOR` → `CARGADO` → `VALIDADO` | `VALIDADO_CON_ERRORES` → `XML_GENERADO` → `PRESENTADO`. Solo se permite `PRESENTADO` desde `VALIDADO`/`VALIDADO_CON_ERRORES`/`XML_GENERADO`.
+
+**Estados de `factura`:** `BORRADOR` | `GENERADO` | `FIRMADO` | `ENVIADO` | `ACEPTADO` | `RECHAZADO` | `ANULADA`.
 
 Constraint SQL importante: `validacion` no permite operaciones duplicadas por línea (`UNIQUE (medio_magnetico_id, linea)`); la recarga de Excel limpia antes (`@Modifying(flushAutomatically = true, clearAutomatically = true)`).
 
@@ -93,7 +136,7 @@ Archivos de prueba regenerables desde `backend/tools/`:
 - `GenXlsxLimpio.java` → `target/ejemplo-1001-limpio.xlsx` (5 registros **sin errores** → genera XML válido).
 - `GenXlsx1002.java` → `target/ejemplo-1002.xlsx` (3 registros 1002 **sin errores**).
 
-Ver §7 para el procedimiento de compilación de los generadores.
+Ver §8 para el procedimiento de compilación de los generadores.
 
 ## 5. Catálogo de conceptos
 
@@ -104,21 +147,38 @@ Ver §7 para el procedimiento de compilación de los generadores.
 | **1001** | 2004 servicios, 2005 honorarios, 2007 comisiones, 2008 arrendamiento, 2009 intereses, 2012 compras, 2018 salarios, 2025 dividendos, 2036 exterior, 2050 salud, 2071 regalías, 2073 construcción, 2080 prestaciones, 2086 servicios públicos, 2090 vigilancia, 2091 técnicos |
 | **1002** | 7001 devoluciones ventas, 7002 descuentos otorgados, 7003 rebajas, 7004 notas crédito, 7005 devoluciones compras, 7006 descuentos recibidos, 7007 notas débito, 7008 diferencias de cambio |
 
-Implementadas en `domain/rule/` y catalogadas en BD (V2 seed):
+Reglas implementadas en `domain/rule/` (catalogadas en BD, V2 seed):
 
-| Código | Regla | Severidad |
-|---|---|---|
-| `DV_NIT` | Dígito de verificación del NIT (módulo 11, algoritmo DIAN) | ERROR |
-| `OBLIGATORIEDAD` | Campos obligatorios (tipo doc, número doc, concepto, valor pago) | ERROR |
-| `CONCEPTO_VALIDO` | Concepto existe en el catálogo del formato | ERROR |
-| `CONSISTENCIA_VALORES` | Valores numéricos no negativos y retenciones ≤ pago | ERROR |
-| `TOPE_3_UVT` | Pagos menores a 3 UVT del año (aviso) | ADVERTENCIA |
+| Código | Regla | Formato | Severidad |
+|---|---|---|---|
+| `DV_NIT` | Dígito de verificación del NIT (módulo 11, algoritmo DIAN) | 1001/1002 | ERROR |
+| `OBLIGATORIEDAD` | Campos obligatorios (tipo doc, número doc, concepto, valor pago) | 1001 | ERROR |
+| `OBLIGATORIEDAD_CAMPO_1002` | Campos obligatorios del formato 1002 | 1002 | ERROR |
+| `CONCEPTO_VALIDO` | Concepto existe en el catálogo del formato | 1001/1002 | ERROR |
+| `CONSISTENCIA_VALORES` | Valores numéricos no negativos y retenciones ≤ pago | 1001 | ERROR |
+| `TOPE_3_UVT` | Pagos menores a 3 UVT del año (aviso) | 1001 | ADVERTENCIA |
 
 Límite de reporte: 3 UVT × 49.799 (2025) = **149.397 COP**.
 
-## 6. API REST
+### Reglas de facturación (`domain/rule/factura/`)
+
+`ValidadorFactura` ejecuta las reglas `ReglaFactura`: `NitFacturaRegla`, `ObligatoriedadFacturaRegla`, `LineasFacturaRegla`, `TotalesFacturaRegla`, `RangoNumeracionFacturaRegla`.
+
+## 6. Facturación electrónica
+
+- **CUFE/CUDE:** `CufeCalculator` (SHA-384) sobre la cadena DIAN; `QrUrlGenerator` arma la URL del QR.
+- **UBL 2.1:** `GeneradorUblFactura` + `GeneradorAttachedDocument` + `GeneradorApplicationResponse`.
+- **Firma:** `ServicioFirma` elige `FirmadorXades` si la empresa tiene certificado, o `FirmadorNoOp` en caso contrario. XAdES-EPES enveloped con PKCS#12 (SHA-256, política de firma DIAN v2).
+- **Transmisión:** `ServicioTransmision` usa el canal configurado (`domain/transmision/CanalTransmision`): `CanalSimulado` (default), PAC REST (`ClientePac`) o DIAN SOAP (`SendBillSync`, `ClienteDianSoap`).
+- **PDF:** `GeneradorPdfFactura` (OpenPDF), descargable con el XML.
+- **Notas crédito/débito:** los tipos 91/92 referencian el documento original mediante `cufe_referencia` / `numero_referencia`, reflejados en el UBL.
+- **Eventos DIAN:** los eventos 030-034 (acuse, recibo, reclamo, aceptación) se registran sobre la factura y se persisten en `factura_evento`.
+
+## 7. API REST
 
 Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
+
+### Autenticación y medios magnéticos
 
 | Método | Ruta | Descripción |
 |---|---|---|
@@ -134,16 +194,38 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | GET | `/api/mediomagnetico/{id}/terceros` | Resumen de terceros + sugerencias de DV |
 | POST | `/api/mediomagnetico/{id}/aplicar-dv` | Aplica los DV correctos a los NIT |
 | GET | `/api/mediomagnetico/empresa/{empresaId}` | Lista medios magnéticos de la empresa |
-| GET | `/api/admin/empresas` · POST · PUT · DELETE | CRUD de empresas (rol ADMIN) |
-| GET | `/api/admin/usuarios` · POST · PUT estado | CRUD de usuarios (rol ADMIN) |
-| GET | `/api/admin/calendario` · POST · DELETE | Calendario DIAN (rol ADMIN) |
+| GET | `/api/mediomagnetico/empresa/{empresaId}/paginado` | Listado paginado (`page`, `size`) |
+
+### Facturación electrónica
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/facturacion/{empresaId}/validar` | Valida una factura/nota sin emitir |
+| POST | `/api/facturacion/{empresaId}/emitir` | Emite (valida, CUFE, UBL, firma, transmite, persiste) |
+| GET | `/api/facturacion/{empresaId}` | Lista documentos de la empresa |
+| GET | `/api/facturacion/{empresaId}/paginado` | Listado paginado (`page`, `size`) |
+| GET | `/api/facturacion/{empresaId}/{id}` | Detalle del documento |
+| GET | `/api/facturacion/{empresaId}/{id}/pdf` | Descarga el PDF |
+| GET | `/api/facturacion/{empresaId}/{id}/xml` | Descarga el XML firmado |
+| GET | `/api/facturacion/catalogo/{tipo}` | Catálogo DIAN (`TIPO_DOCUMENTO`, `TRIBUTO`, ...) |
+| GET/PUT | `/api/facturacion/config/{empresaId}` | Obtiene/guarda la configuración DIAN de la empresa |
+
+### Administración (rol ADMIN)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET/POST/PUT/DELETE | `/api/admin/empresas` | CRUD de empresas |
+| GET | `/api/admin/empresas/paginado` | Listado paginado (`page`, `size`) |
+| GET/POST/PUT | `/api/admin/usuarios` | CRUD de usuarios |
+| GET | `/api/admin/usuarios/paginado` | Listado paginado (`page`, `size`) |
+| GET/POST/DELETE | `/api/admin/calendario` | Calendario DIAN |
 | GET | `/actuator/health` · `/actuator/health/liveness` · `/actuator/health/readiness` | Health checks (sin auth) |
 
-**Seguridad:** salvo `/api/auth/**`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>`. `/api/admin/**` exige además `ROLE_ADMIN`. CORS habilitado para `localhost:5173/4173`.
+**Seguridad:** salvo `/api/auth/**`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>`. `/api/admin/**` exige además `ROLE_ADMIN`. Los recursos por empresa se filtran con `AutorizacionEmpresa` (403 si no corresponde). CORS configurable con `CORS_ORIGINS` (default `localhost:5173`, `localhost:4173`).
 
-**Respuestas de error** (`GlobalExceptionHandler`): `400` argumentos inválidos, `409` estado inconsistente (ej. generar XML sin validar/corrección), `404` no encontrado, JSON limpio.
+**Respuestas de error** (`GlobalExceptionHandler`): `400` argumentos inválidos, `403` acceso denegado, `409` estado inconsistente, `404` no encontrado, JSON limpio.
 
-## 7. Tareas de desarrollo
+## 8. Tareas de desarrollo
 
 ```bash
 # Levantar BD (contenedor magnetixdian-db)
@@ -158,25 +240,28 @@ MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn spring-boot:run
 # Backend: build con tests
 MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn clean package
 
-# Regenerar los Excel de prueba (requiere dependencias de compilación, se ejecuta desde backend/)
-mvn -q compile dependency:copy-dependencies -DincludeScope=runtime
-"$JAVA_HOME/bin/javac" -encoding UTF-8 -cp "target/dependency/*" -d "target/generated" \
-  tools/GenXlsx.java tools/GenXlsxLimpio.java tools/GenXlsx1002.java
-"$JAVA_HOME/bin/java" -cp "target/classes;target/dependency/*;target/generated" GenXlsx
-"$JAVA_HOME/bin/java" -cp "target/classes;target/dependency/*;target/generated" GenXlsxLimpio
-"$JAVA_HOME/bin/java" -cp "target/classes;target/dependency/*;target/generated" GenXlsx1002
+# Frontend (pnpm — NO usar npm)
+cd frontend
+pnpm run lint    # ESLint (0 warnings)
+pnpm run test    # Vitest
+pnpm run build   # tsc -b + vite build
+
+# Regenerar los Excel de prueba (desde backend/)
+mvn -q dependency:copy-dependencies -DincludeScope=runtime
+"C:/Users/hbarb/AppData/Local/jdk17/bin/javac" -encoding UTF-8 -cp "target/dependency/*" -d target tools/GenXlsx.java
+"C:/Users/hbarb/AppData/Local/jdk17/bin/java" -cp "target;target/dependency/*" GenXlsx
 
 # Matar el backend si quedó corriendo
 netstat -ano | grep :8080 && taskkill //PID <pid> //F
 ```
 
-**Cambios a migraciones:** si se modifican `V1`/`V2`/`V3`, recrear el volumen:
+**Cambios a migraciones:** si se modifican migraciones ya aplicadas, recrear el volumen:
 
 ```bash
 docker compose down -v && docker compose up -d db
 ```
 
-## 8. Despliegue
+## 9. Despliegue
 
 ### Docker Compose (desarrollo/preproducción)
 
@@ -188,7 +273,17 @@ cd docker && docker compose up -d --build
 - `backend` → `localhost:8080` (env vars via compose; volumen `uploads`)
 - `frontend` (Nginx) → `localhost:5173`, proxya `/api` a `backend:8080`
 
-## 9. Variables de entorno
+### Despliegue gratuito (Cloudflare Workers + Render + Supabase)
+
+Guía completa en `docs/DEPLOY-FREE.md`:
+
+- **Frontend:** Cloudflare Worker (`worker.js` + `wrangler.toml`) que sirve el bundle Vite y proxya `/api` al backend.
+- **Backend:** Render free (`render.yaml` + `backend/Dockerfile.render`, JVM `-Xmx256m`).
+- **BD:** Supabase free vía **Session pooler (IPv4)**; Flyway con `baseline-on-migrate`.
+
+El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merge a `main` (ver §11).
+
+## 10. Variables de entorno
 
 | Variable | Default | Uso |
 |---|---|---|
@@ -197,33 +292,44 @@ cd docker && docker compose up -d --build
 | `JWT_SECRET` | valor base64 interno | firma JWT (cambiar en producción) |
 | `JWT_EXPIRATION_MS` | `86400000` | vigencia access token |
 | `JWT_REFRESH_EXPIRATION_MS` | `604800000` | vigencia refresh token |
-| `UPLOAD_DIR` | `./uploads` | archivos subidos |
+| `UPLOAD_DIR` | `./uploads` | archivos subidos (Excel, certificados) |
+| `CORS_ORIGINS` | `http://localhost:5173,http://localhost:4173` | orígenes permitidos |
 | `NOTIFICATIONS_ENABLED` | `false` | envío de recordatorios |
-| `MAIL_HOST` / `MAIL_USERNAME` / `MAIL_PASSWORD` | Gmail | SMTP |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | Gmail / 587 / — | SMTP |
 | `REMINDER_CRON` | `0 0 9 * * *` | cron recordatorios |
-| `GENERATOR_CRON` | `0 0 2 1 1 *` | cron generador programado |
+| `GENERATOR_CRON` | `0 0 2 1 1 *` | cron generador automático de XML |
+| `SERVER_PORT` | `8080` | puerto HTTP |
 
-## 10. Notificaciones y jobs
+## 11. Notificaciones, jobs y CI/CD
 
-- `SchedulerJobs` consulta el calendario DIAN y, a 15/7/1 días del vencimiento, crea `notificacion` y envía correo si `NOTIFICATIONS_ENABLED=true`.
-- `ServicioNotificaciones` + `NotificadorEmail` (SMTP) separan la lógica del transporte.
+- **Recordatorios:** `SchedulerJobs` consulta el calendario DIAN y, a 15/7/1 días del vencimiento (`magnetixdian.notifications.days-before-deadline`), crea `notificacion` y envía correo si `NOTIFICATIONS_ENABLED=true` (cron `REMINDER_CRON`).
+- **Generación automática:** `ServicioGeneracionAutomatica` genera el XML de los medios en estado `VALIDADO` (idempotente, un fallo no detiene el lote); programado por `SchedulerJobs` con cron `GENERATOR_CRON`.
+- **Transporte:** `ServicioNotificaciones` + `NotificadorEmail` (SMTP) separan la lógica del transporte.
+- **Tareas programadas** habilitadas con `@EnableScheduling`.
 
-## 11. Pruebas y smoke test
+### CI (GitHub Actions)
 
-Suite JUnit en `backend/src/test/java/` (rule engine + importador Excel). `mvn package` los ejecuta (BUILD SUCCESS requiere 0 fallos).
+`.github/workflows/ci.yml` ejecuta en cada push/PR a `main`/`develop`:
+- **backend:** `mvn clean package` (JDK 17, cache Maven).
+- **frontend:** `pnpm install --frozen-lockfile && pnpm run lint && pnpm run test && pnpm run build`.
+
+### CD (GitHub Actions)
+
+`.github/workflows/deploy.yml` despliega tras un push a `main`: publica el frontend en Cloudflare Workers y dispara el deploy de Render (secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `RENDER_DEPLOY_HOOK`).
+
+## 12. Pruebas y smoke test
+
+Suite JUnit en `backend/src/test/java/` (rule engine, reglas de facturación, CUFE/QR, importador Excel, seguridad, generador automático). Suite Vitest en `frontend/src/**/*.test.tsx` (átomos, ErrorBoundary, notificaciones).
 
 ```bash
 # Backend con tests
 export JAVA_HOME="C:/Users/hbarb/AppData/Local/jdk17"
 export PATH="$JAVA_HOME/bin:$PATH"
 cd backend && MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn clean package
+
+# Frontend con tests
+cd frontend && pnpm run lint && pnpm run test && pnpm run build
 ```
-
-### CI (GitHub Actions)
-
-`.github/workflows/ci.yml` ejecuta en cada push/PR a `main`/`develop`:
-- **backend:** `mvn clean package` (JDK 17, cache Maven).
-- **frontend:** `pnpm install --frozen-lockfile && pnpm run lint && pnpm run build`.
 
 ### Smoke test manual
 
@@ -255,11 +361,15 @@ curl -s -X POST http://localhost:8080/api/mediomagnetico/2/cargar \
   -F "formato=1002" -F "anioGravable=2025" -F "archivo=@target/ejemplo-1002.xlsx" \
   -H "Authorization: Bearer $TOKEN"
 
-# 5) Administración (rol ADMIN)
+# 5) Facturación electrónica (empresa demo id=1)
+curl -s -X POST http://localhost:8080/api/facturacion/1/validar \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d @factura.json
+
+# 6) Administración (rol ADMIN)
 curl -s http://localhost:8080/api/admin/empresas -H "Authorization: Bearer $TOKEN"
 curl -s http://localhost:8080/api/admin/calendario?anioGravable=2025 -H "Authorization: Bearer $TOKEN"
 
-# 6) Health (sin auth)
+# 7) Health (sin auth)
 curl -s http://localhost:8080/actuator/health
 ```
 
