@@ -103,6 +103,7 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `DB_URL` | Render (env) | `jdbc:postgresql://aws-0-<REGION>.pooler.supabase.com:5432/postgres?sslmode=require` |
 | `DB_USER` / `DB_PASSWORD` | Render (env) | `postgres.<ref>` / password de Supabase |
 | `JWT_SECRET` | Render (env) | base64 de 64 bytes (`openssl rand -base64 64`) |
+| `CRYPTO_KEY` | Render (env) | secreto para cifrar credenciales DIAN en BD (`openssl rand -base64 32`) |
 
 Seguridad: PostgreSQL de Supabase **no se expone** (solo via pooler con SSL); Render es el único
 cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos con HTTPS gratis.
@@ -130,3 +131,24 @@ cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos c
   (frontend) — solo los usan Render y Cloudflare.
 
 Nada del flujo actual (docker-compose, ZIP a GoDaddy, CI) se ve afectado.
+
+---
+
+## 7. Deploy automático tras merge a `main`
+
+El workflow `.github/workflows/deploy.yml` publica automáticamente al hacer push/merge a `main`
+(también se puede lanzar a mano con *Run workflow*):
+
+- **Frontend:** compila Vite y ejecuta `wrangler deploy` (Cloudflare Worker).
+- **Backend:** dispara el *Deploy Hook* de Render.
+
+Configurar estos **secrets** en GitHub (Settings → Secrets and variables → Actions):
+
+| Secret | Descripción |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Token con permiso *Edit Cloudflare Workers* |
+| `CLOUDFLARE_ACCOUNT_ID` | ID de la cuenta de Cloudflare |
+| `RENDER_DEPLOY_HOOK` | URL del Deploy Hook del servicio en Render (Settings → Deploy Hook) |
+
+Si un secret no está definido, el job correspondiente se omite con un aviso (no falla). El backend
+también puede desplegarse solo con `autoDeploy: true` de `render.yaml`.

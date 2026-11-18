@@ -36,11 +36,14 @@ public class RuleEngine {
     }
 
     /**
-     * Ejecuta todas las reglas sobre un contexto de validación.
+     * Ejecuta todas las reglas que apliquen al formato del contexto.
      */
     public List<ResultadoRegla> validar(ContextoValidacion contexto) {
         List<ResultadoRegla> resultados = new ArrayList<>();
         for (ReglaValidacion regla : reglas.values()) {
+            if (!regla.aplicaA(contexto.formato())) {
+                continue;
+            }
             resultados.addAll(regla.evaluar(contexto));
         }
         return resultados;

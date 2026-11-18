@@ -25,6 +25,11 @@ public class ObligatoriedadCampoRegla implements ReglaValidacion {
     }
 
     @Override
+    public boolean aplicaA(String formato) {
+        return "1001".equals(formato);
+    }
+
+    @Override
     public List<ResultadoRegla> evaluar(ContextoValidacion contexto) {
         var op = contexto.operacion();
         List<ResultadoRegla> resultados = new ArrayList<>();

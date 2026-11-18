@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -20,7 +20,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import { api, type ErrorValidacion, type FacturaRequest, type LineaFacturaRequest, type ResultadoEmision } from '../../api/client'
+import { api, type ErrorValidacion, type FacturaRequest, type FacturaResumen, type LineaFacturaRequest, type ResultadoEmision } from '../../api/client'
 
 const TIPOS = [
   { codigo: '01', label: 'Factura de venta' },
@@ -89,6 +89,34 @@ export default function FacturaEditor({
   const [errores, setErrores] = useState<ErrorValidacion[]>([])
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [facturas, setFacturas] = useState<FacturaResumen[]>([])
+  const [referenciaId, setReferenciaId] = useState<number | ''>('')
+  const [cufeReferencia, setCufeReferencia] = useState<string | null>(null)
+  const [numeroReferencia, setNumeroReferencia] = useState<string | null>(null)
+
+  const esNota = tipoDocumento === '91' || tipoDocumento === '92'
+
+  useEffect(() => {
+    if (!abierto) return
+    api
+      .get<FacturaResumen[]>(`/facturacion/${empresaId}`)
+      .then((res) => setFacturas(res.data.filter((f) => f.tipoDocumento === '01')))
+      .catch(() => setFacturas([]))
+  }, [abierto, empresaId])
+
+  const seleccionarReferencia = (id: number | '') => {
+    setReferenciaId(id)
+    const ref = facturas.find((f) => f.id === id)
+    setNumeroReferencia(ref?.numeroCompleto ?? null)
+    setCufeReferencia(ref?.cufe ?? null)
+    if (ref) {
+      setAdquirente((a) => ({
+        ...a,
+        numeroDocumento: a.numeroDocumento || ref.adquirenteNumDoc,
+        nombre: a.nombre || ref.adquirenteNombre,
+      }))
+    }
+  }
 
   const totales = useMemo(() => {
     let subtotal = 0
@@ -120,8 +148,8 @@ export default function FacturaEditor({
     medioPago: '10',
     tipoOperacion: '10',
     fechaVencimiento: null,
-    cufeReferencia: null,
-    numeroReferencia: null,
+    cufeReferencia,
+    numeroReferencia,
   })
 
   const onValidar = async () => {
@@ -165,13 +193,36 @@ export default function FacturaEditor({
               fullWidth
               label="Tipo de documento"
               value={tipoDocumento}
-              onChange={(e) => setTipoDocumento(e.target.value)}
+              onChange={(e) => {
+                const nuevo = e.target.value
+                setTipoDocumento(nuevo)
+                if (nuevo !== '91' && nuevo !== '92') seleccionarReferencia('')
+              }}
             >
               {TIPOS.map((t) => (
                 <MenuItem key={t.codigo} value={t.codigo}>{t.label}</MenuItem>
               ))}
             </TextField>
           </Grid>
+          {esNota && (
+            <Grid size={{ xs: 12, md: 8 }}>
+              <TextField
+                select
+                fullWidth
+                label="Documento referenciado (factura original)"
+                value={referenciaId}
+                onChange={(e) => seleccionarReferencia(e.target.value === '' ? '' : Number(e.target.value))}
+                helperText="La nota crédito/débito debe referenciar la factura que modifica"
+              >
+                {facturas.length === 0 && <MenuItem value="" disabled>No hay facturas emitidas</MenuItem>}
+                {facturas.map((f) => (
+                  <MenuItem key={f.id} value={f.id}>
+                    {f.numeroCompleto} · {f.adquirenteNombre}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+          )}
           <Grid size={{ xs: 12 }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Adquirente</Typography>
             <Grid container spacing={2}>

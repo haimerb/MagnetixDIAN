@@ -4,6 +4,7 @@ import com.magnetixdian.domain.cufe.CufeCalculator;
 import com.magnetixdian.domain.cufe.QrUrlGenerator;
 import com.magnetixdian.domain.factura.DatosAdquirente;
 import com.magnetixdian.domain.factura.DatosEmisor;
+import com.magnetixdian.domain.factura.EventoDian;
 import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.domain.factura.ImpuestoFactura;
 import com.magnetixdian.domain.factura.LineaFactura;
@@ -14,6 +15,7 @@ import com.magnetixdian.domain.rule.NitDigitoVerificacionRegla;
 import com.magnetixdian.domain.rule.factura.ContextoFactura;
 import com.magnetixdian.domain.rule.factura.ValidadorFactura;
 import com.magnetixdian.domain.transmision.ResultadoTransmision;
+import com.magnetixdian.infrastructure.notification.NotificadorEmail;
 import com.magnetixdian.infrastructure.pdf.GeneradorPdfFactura;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigJpa;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigRepository;
@@ -25,20 +27,30 @@ import com.magnetixdian.infrastructure.persistence.FacturaImpuestoJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaLineaJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaRepository;
+import com.magnetixdian.infrastructure.xml.GeneradorApplicationResponse;
 import com.magnetixdian.infrastructure.xml.GeneradorAttachedDocument;
 import com.magnetixdian.infrastructure.xml.GeneradorUblFactura;
 import com.magnetixdian.interfaces.dto.AdquirenteRequest;
 import com.magnetixdian.interfaces.dto.ErrorValidacionDto;
 import com.magnetixdian.interfaces.dto.FacturaDetalleDto;
+import com.magnetixdian.interfaces.dto.FacturaEventoDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.LineaFacturaRequest;
+import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -54,6 +66,8 @@ import java.util.Map;
 @Service
 public class ServicioFacturacion {
 
+    private static final Logger log = LoggerFactory.getLogger(ServicioFacturacion.class);
+
     private static final String COD_IVA = CufeCalculator.IVA;
     private static final String COD_INC = CufeCalculator.INC;
 
@@ -68,6 +82,8 @@ public class ServicioFacturacion {
     private final GeneradorPdfFactura generadorPdf;
     private final ServicioFirma firma;
     private final ServicioTransmision transmision;
+    private final NotificadorEmail notificador;
+    private final GeneradorApplicationResponse generadorEvento;
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -79,7 +95,9 @@ public class ServicioFacturacion {
                                GeneradorAttachedDocument generadorAttached,
                                GeneradorPdfFactura generadorPdf,
                                ServicioFirma firma,
-                               ServicioTransmision transmision) {
+                               ServicioTransmision transmision,
+                               NotificadorEmail notificador,
+                               GeneradorApplicationResponse generadorEvento) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -91,6 +109,8 @@ public class ServicioFacturacion {
         this.generadorPdf = generadorPdf;
         this.firma = firma;
         this.transmision = transmision;
+        this.notificador = notificador;
+        this.generadorEvento = generadorEvento;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -139,18 +159,64 @@ public class ServicioFacturacion {
         evento.setRespuesta(transmisionResultado.respuestaCruda());
         eventoRepository.save(evento);
 
+        notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
+
         return new ResultadoEmisionDto(true, factura.getId(), numeroCompleto, cufe, factura.getEstado(),
                 qrUrl, transmisionResultado.mensaje(), List.of());
+    }
+
+    private void notificarAdquirente(EmpresaJpa empresa, EmpresaFeConfigJpa config, FacturaJpa factura,
+                                     FacturaDatos datos, String xmlFirmado, String numeroCompleto) {
+        if (!config.isNotificarAdquirente()) {
+            return;
+        }
+        String destino = datos.adquirente().email();
+        if (destino == null || destino.isBlank()) {
+            log.warn("La empresa {} notifica al adquirente pero la factura {} no tiene correo del adquirente",
+                    empresa.getId(), numeroCompleto);
+            return;
+        }
+        try {
+            byte[] pdf = pdf(empresa.getId(), factura.getId());
+            String cufe = factura.getCufe() != null ? factura.getCufe() : factura.getCude();
+            String asunto = "Factura electrónica " + numeroCompleto + " - " + empresa.getRazonSocial();
+            String cuerpo = "Estimado(a) " + datos.adquirente().nombre() + ",\n\n"
+                    + "Adjuntamos la factura electrónica " + numeroCompleto + " emitida por "
+                    + empresa.getRazonSocial() + ".\n\nCUFE: " + cufe
+                    + "\n\nEste mensaje fue generado automáticamente.";
+            notificador.enviarFactura(destino, asunto, cuerpo,
+                    "factura-" + numeroCompleto + ".xml", xmlFirmado.getBytes(StandardCharsets.UTF_8),
+                    "factura-" + numeroCompleto + ".pdf", pdf);
+        } catch (Exception ex) {
+            log.warn("No se pudo enviar por correo la factura {}: {}", numeroCompleto, ex.getMessage());
+        }
     }
 
     @Transactional(readOnly = true)
     public List<FacturaResumenDto> listar(Long empresaId) {
         return facturaRepository.findByEmpresaIdOrderByCreatedAtDesc(empresaId).stream()
-                .map(f -> new FacturaResumenDto(f.getId(), f.getTipoDocumento(), f.getNumeroCompleto(),
-                        f.getCufe() != null ? f.getCufe() : f.getCude(), f.getEstado(), f.getFechaEmision(),
-                        f.getAdquirenteNombre(), f.getAdquirenteNumDoc(), f.getTotal(), f.getTotalPagar(),
-                        f.getCreatedAt()))
+                .map(this::aResumen)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public PaginaDto<FacturaResumenDto> listarPaginado(Long empresaId, int pagina, int tamano) {
+        Pageable pageable = PageRequest.of(Math.max(pagina, 0), acotarTamano(tamano),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<FacturaResumenDto> page = facturaRepository.findByEmpresaId(empresaId, pageable)
+                .map(this::aResumen);
+        return PaginaDto.desde(page);
+    }
+
+    private FacturaResumenDto aResumen(FacturaJpa f) {
+        return new FacturaResumenDto(f.getId(), f.getTipoDocumento(), f.getNumeroCompleto(),
+                f.getCufe() != null ? f.getCufe() : f.getCude(), f.getEstado(), f.getFechaEmision(),
+                f.getAdquirenteNombre(), f.getAdquirenteNumDoc(), f.getTotal(), f.getTotalPagar(),
+                f.getCreatedAt());
+    }
+
+    private static int acotarTamano(int tamano) {
+        return Math.min(Math.max(tamano, 1), 100);
     }
 
     @Transactional(readOnly = true)
@@ -166,12 +232,46 @@ public class ServicioFacturacion {
         AdquirenteRequest adq = new AdquirenteRequest(f.getAdquirenteTipoDoc(), f.getAdquirenteNumDoc(),
                 f.getAdquirenteDv(), f.getAdquirenteNombre(), f.getAdquirenteEmail(), f.getAdquirenteDireccion(),
                 f.getAdquirenteMunicipio(), f.getAdquirenteRegimen(), f.getAdquirenteResponsabilidad());
+        List<FacturaEventoDto> eventos = eventoRepository.findByFacturaIdOrderByFechaDesc(f.getId()).stream()
+                .map(this::aEvento)
+                .toList();
         return new FacturaDetalleDto(f.getId(), f.getTipoDocumento(), f.getPrefijo(), f.getNumero(),
                 f.getNumeroCompleto(), f.getCufe(), f.getCude(), f.getAmbiente(), f.getEstado(),
                 f.getFechaEmision(), f.getHoraEmision(), f.getFechaVencimiento(), f.getMoneda(),
                 f.getFormaPago(), f.getMedioPago(), adq, lineas, f.getSubtotal(), f.getTotalImpuestos(),
                 f.getTotalRetenciones(), f.getTotal(), f.getTotalPagar(), f.getObservaciones(), f.getQrUrl(),
-                f.getRespuestaDian(), f.getFechaValidacion(), f.getCreatedAt());
+                f.getRespuestaDian(), f.getFechaValidacion(), f.getCreatedAt(), eventos);
+    }
+
+    @Transactional
+    public FacturaEventoDto registrarEvento(Long empresaId, Long facturaId, String tipoEvento) {
+        FacturaJpa f = facturaRepository.findById(facturaId)
+                .filter(x -> x.getEmpresa().getId().equals(empresaId))
+                .orElseThrow(() -> new IllegalArgumentException("Documento no encontrado"));
+        EventoDian evento = EventoDian.porCodigo(tipoEvento)
+                .orElseThrow(() -> new IllegalArgumentException("Evento DIAN no soportado: " + tipoEvento));
+        EmpresaFeConfigJpa config = config(empresaId);
+        String cufe = f.getCufe() != null ? f.getCufe() : f.getCude();
+        String idEvento = f.getNumeroCompleto() + "-" + evento.getCodigo();
+        String xml = generadorEvento.generar(f, evento, cufe, idEvento,
+                config.getSoftwareId(), config.getSoftwareSecurityCode(), null);
+        String xmlFirmado = firma.firmar(xml, config);
+
+        FacturaEventoJpa ev = new FacturaEventoJpa();
+        ev.setFactura(f);
+        ev.setTipoEvento(evento.getCodigo());
+        ev.setEstado("REGISTRADO");
+        ev.setCude(cufe);
+        ev.setXml(xmlFirmado);
+        ev.setRespuesta(evento.getDescripcion());
+        return aEvento(eventoRepository.save(ev));
+    }
+
+    private FacturaEventoDto aEvento(FacturaEventoJpa e) {
+        String descripcion = EventoDian.porCodigo(e.getTipoEvento())
+                .map(EventoDian::getDescripcion)
+                .orElse(e.getTipoEvento());
+        return new FacturaEventoDto(e.getId(), e.getTipoEvento(), descripcion, e.getEstado(), e.getFecha());
     }
 
     @Transactional(readOnly = true)

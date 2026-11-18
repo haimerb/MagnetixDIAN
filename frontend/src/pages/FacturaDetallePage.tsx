@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Grid from '@mui/material/Grid2'
+import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -19,6 +21,14 @@ import { api, type FacturaDetalle } from '../api/client'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import EstadoChip from '../components/ui/EstadoChip'
 import SectionCard from '../components/ui/SectionCard'
+
+const EVENTOS = [
+  { codigo: '030', label: 'Acuse de recibo' },
+  { codigo: '031', label: 'Reclamo' },
+  { codigo: '032', label: 'Recibo del bien/servicio' },
+  { codigo: '033', label: 'Aceptación expresa' },
+  { codigo: '034', label: 'Aceptación tácita' },
+]
 
 async function descargar(url: string, nombre: string) {
   const token = localStorage.getItem('magnetixdian_token')
@@ -39,8 +49,10 @@ export default function FacturaDetallePage() {
   const { empresaId } = useEmpresaActiva()
   const [factura, setFactura] = useState<FacturaDetalle | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [tipoEvento, setTipoEvento] = useState('030')
+  const [registrando, setRegistrando] = useState(false)
 
-  useEffect(() => {
+  const cargar = useCallback(() => {
     if (id && empresaId != null) {
       api
         .get<FacturaDetalle>(`/facturacion/${empresaId}/${id}`)
@@ -48,6 +60,22 @@ export default function FacturaDetallePage() {
         .catch(() => setError('No se pudo cargar el documento.'))
     }
   }, [id, empresaId])
+
+  useEffect(cargar, [cargar])
+
+  const registrarEvento = async () => {
+    if (id == null || empresaId == null) return
+    setRegistrando(true)
+    setError(null)
+    try {
+      await api.post(`/facturacion/${empresaId}/${id}/eventos`, { tipoEvento })
+      cargar()
+    } catch {
+      setError('No se pudo registrar el evento.')
+    } finally {
+      setRegistrando(false)
+    }
+  }
 
   const money = (v: number) =>
     v?.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
@@ -165,6 +193,60 @@ export default function FacturaDetallePage() {
             ))}
           </TableBody>
         </Table>
+      </SectionCard>
+
+      <SectionCard title="Eventos DIAN" padded={false}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Código</TableCell>
+              <TableCell>Evento</TableCell>
+              <TableCell>Estado</TableCell>
+              <TableCell>Fecha</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {factura.eventos.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4}>
+                  <Typography variant="body2" color="text.secondary">
+                    Sin eventos registrados.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              factura.eventos.map((ev) => (
+                <TableRow key={ev.id}>
+                  <TableCell>{ev.tipoEvento}</TableCell>
+                  <TableCell>{ev.descripcion}</TableCell>
+                  <TableCell>
+                    <Chip size="small" label={ev.estado} />
+                  </TableCell>
+                  <TableCell>{new Date(ev.fecha).toLocaleString('es-CO')}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+        <Stack direction="row" spacing={2} sx={{ p: 2, alignItems: 'center' }}>
+          <TextField
+            select
+            size="small"
+            label="Registrar evento"
+            value={tipoEvento}
+            onChange={(e) => setTipoEvento(e.target.value)}
+            sx={{ minWidth: 240 }}
+          >
+            {EVENTOS.map((ev) => (
+              <MenuItem key={ev.codigo} value={ev.codigo}>
+                {ev.codigo} · {ev.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button variant="outlined" onClick={registrarEvento} disabled={registrando}>
+            {registrando ? 'Registrando…' : 'Registrar'}
+          </Button>
+        </Stack>
       </SectionCard>
 
       <SectionCard>

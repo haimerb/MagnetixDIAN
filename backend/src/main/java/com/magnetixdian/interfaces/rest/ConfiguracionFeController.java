@@ -2,13 +2,21 @@ package com.magnetixdian.interfaces.rest;
 
 import com.magnetixdian.application.ServicioConfigFe;
 import com.magnetixdian.interfaces.dto.ConfigFeDto;
+import com.magnetixdian.security.AutorizacionEmpresa;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 /**
  * API REST de configuración DIAN por empresa.
@@ -18,18 +26,36 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConfiguracionFeController {
 
     private final ServicioConfigFe servicio;
+    private final AutorizacionEmpresa autorizacion;
 
-    public ConfiguracionFeController(ServicioConfigFe servicio) {
+    public ConfiguracionFeController(ServicioConfigFe servicio, AutorizacionEmpresa autorizacion) {
         this.servicio = servicio;
+        this.autorizacion = autorizacion;
     }
 
     @GetMapping("/{empresaId}")
-    public ResponseEntity<ConfigFeDto> obtener(@PathVariable Long empresaId) {
+    public ResponseEntity<ConfigFeDto> obtener(@PathVariable Long empresaId, Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.obtener(empresaId));
     }
 
     @PutMapping("/{empresaId}")
-    public ResponseEntity<ConfigFeDto> guardar(@PathVariable Long empresaId, @RequestBody ConfigFeDto dto) {
+    public ResponseEntity<ConfigFeDto> guardar(@PathVariable Long empresaId, @RequestBody ConfigFeDto dto,
+                                               Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.guardar(empresaId, dto));
+    }
+
+    @PostMapping(value = "/{empresaId}/certificado", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ConfigFeDto> subirCertificado(@PathVariable Long empresaId,
+                                                        @RequestParam("archivo") MultipartFile archivo,
+                                                        @RequestParam(value = "password", required = false) String password,
+                                                        Authentication authentication) throws IOException {
+        autorizacion.verificar(empresaId, authentication);
+        String nombre = archivo.getOriginalFilename();
+        if (nombre == null || !(nombre.toLowerCase().endsWith(".p12") || nombre.toLowerCase().endsWith(".pfx"))) {
+            throw new IllegalArgumentException("El certificado debe ser un archivo .p12 o .pfx");
+        }
+        return ResponseEntity.ok(servicio.guardarCertificado(empresaId, nombre, archivo.getBytes(), password));
     }
 }

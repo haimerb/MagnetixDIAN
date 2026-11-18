@@ -3,12 +3,36 @@ import axios from 'axios'
 const TOKEN_KEY = 'magnetixdian_token'
 const REFRESH_KEY = 'magnetixdian_refresh'
 
+export const EVENTO_ERROR_API = 'magnetixdian:error'
+
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipGlobalError?: boolean
+  }
+}
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, '') ?? ''
 
 export const api = axios.create({
   baseURL: `${API_BASE}/api`,
   headers: { 'Content-Type': 'application/json' },
 })
+
+function mensajeDeError(error: unknown): string {
+  const e = error as {
+    response?: { data?: unknown }
+    message?: string
+  }
+  const data = e?.response?.data
+  if (typeof data === 'string' && data.trim()) return data
+  if (data && typeof data === 'object') {
+    const d = data as Record<string, unknown>
+    const m = d.message ?? d.error ?? d.mensaje
+    if (typeof m === 'string' && m.trim()) return m
+  }
+  if (typeof e?.message === 'string' && e.message.trim()) return e.message
+  return 'Ocurrió un error inesperado.'
+}
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_KEY)
@@ -35,8 +59,12 @@ api.interceptors.response.use(
           localStorage.removeItem(TOKEN_KEY)
           localStorage.removeItem(REFRESH_KEY)
           window.location.assign('/login')
+          return Promise.reject(error)
         }
       }
+    }
+    if (error.response?.status !== 401 && !original?.skipGlobalError) {
+      window.dispatchEvent(new CustomEvent(EVENTO_ERROR_API, { detail: mensajeDeError(error) }))
     }
     return Promise.reject(error)
   },
@@ -253,6 +281,15 @@ export type FacturaDetalle = {
   respuestaDian: string | null
   fechaValidacion: string | null
   createdAt: string
+  eventos: FacturaEvento[]
+}
+
+export type FacturaEvento = {
+  id: number
+  tipoEvento: string
+  descripcion: string
+  estado: string
+  fecha: string
 }
 
 export type ErrorValidacion = {
@@ -301,6 +338,7 @@ export type ConfigFe = {
   activo: boolean
   tieneCertificado: boolean
   tienePacKey: boolean
+  notificarAdquirente: boolean
 }
 
 export type CatalogoDian = {
@@ -309,4 +347,14 @@ export type CatalogoDian = {
   codigo: string
   descripcion: string
   activo: boolean
+}
+
+export type Pagina<T> = {
+  contenido: T[]
+  pagina: number
+  tamano: number
+  total: number
+  totalPaginas: number
+  primera: boolean
+  ultima: boolean
 }
