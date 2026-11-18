@@ -281,6 +281,15 @@ export type FacturaDetalle = {
   respuestaDian: string | null
   fechaValidacion: string | null
   createdAt: string
+  eventos: FacturaEvento[]
+}
+
+export type FacturaEvento = {
+  id: number
+  tipoEvento: string
+  descripcion: string
+  estado: string
+  fecha: string
 }
 
 export type ErrorValidacion = {

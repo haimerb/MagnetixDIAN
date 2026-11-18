@@ -4,6 +4,7 @@ import com.magnetixdian.domain.cufe.CufeCalculator;
 import com.magnetixdian.domain.cufe.QrUrlGenerator;
 import com.magnetixdian.domain.factura.DatosAdquirente;
 import com.magnetixdian.domain.factura.DatosEmisor;
+import com.magnetixdian.domain.factura.EventoDian;
 import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.domain.factura.ImpuestoFactura;
 import com.magnetixdian.domain.factura.LineaFactura;
@@ -26,11 +27,13 @@ import com.magnetixdian.infrastructure.persistence.FacturaImpuestoJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaLineaJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaRepository;
+import com.magnetixdian.infrastructure.xml.GeneradorApplicationResponse;
 import com.magnetixdian.infrastructure.xml.GeneradorAttachedDocument;
 import com.magnetixdian.infrastructure.xml.GeneradorUblFactura;
 import com.magnetixdian.interfaces.dto.AdquirenteRequest;
 import com.magnetixdian.interfaces.dto.ErrorValidacionDto;
 import com.magnetixdian.interfaces.dto.FacturaDetalleDto;
+import com.magnetixdian.interfaces.dto.FacturaEventoDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.LineaFacturaRequest;
@@ -80,6 +83,7 @@ public class ServicioFacturacion {
     private final ServicioFirma firma;
     private final ServicioTransmision transmision;
     private final NotificadorEmail notificador;
+    private final GeneradorApplicationResponse generadorEvento;
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -92,7 +96,8 @@ public class ServicioFacturacion {
                                GeneradorPdfFactura generadorPdf,
                                ServicioFirma firma,
                                ServicioTransmision transmision,
-                               NotificadorEmail notificador) {
+                               NotificadorEmail notificador,
+                               GeneradorApplicationResponse generadorEvento) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -105,6 +110,7 @@ public class ServicioFacturacion {
         this.firma = firma;
         this.transmision = transmision;
         this.notificador = notificador;
+        this.generadorEvento = generadorEvento;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -226,12 +232,46 @@ public class ServicioFacturacion {
         AdquirenteRequest adq = new AdquirenteRequest(f.getAdquirenteTipoDoc(), f.getAdquirenteNumDoc(),
                 f.getAdquirenteDv(), f.getAdquirenteNombre(), f.getAdquirenteEmail(), f.getAdquirenteDireccion(),
                 f.getAdquirenteMunicipio(), f.getAdquirenteRegimen(), f.getAdquirenteResponsabilidad());
+        List<FacturaEventoDto> eventos = eventoRepository.findByFacturaIdOrderByFechaDesc(f.getId()).stream()
+                .map(this::aEvento)
+                .toList();
         return new FacturaDetalleDto(f.getId(), f.getTipoDocumento(), f.getPrefijo(), f.getNumero(),
                 f.getNumeroCompleto(), f.getCufe(), f.getCude(), f.getAmbiente(), f.getEstado(),
                 f.getFechaEmision(), f.getHoraEmision(), f.getFechaVencimiento(), f.getMoneda(),
                 f.getFormaPago(), f.getMedioPago(), adq, lineas, f.getSubtotal(), f.getTotalImpuestos(),
                 f.getTotalRetenciones(), f.getTotal(), f.getTotalPagar(), f.getObservaciones(), f.getQrUrl(),
-                f.getRespuestaDian(), f.getFechaValidacion(), f.getCreatedAt());
+                f.getRespuestaDian(), f.getFechaValidacion(), f.getCreatedAt(), eventos);
+    }
+
+    @Transactional
+    public FacturaEventoDto registrarEvento(Long empresaId, Long facturaId, String tipoEvento) {
+        FacturaJpa f = facturaRepository.findById(facturaId)
+                .filter(x -> x.getEmpresa().getId().equals(empresaId))
+                .orElseThrow(() -> new IllegalArgumentException("Documento no encontrado"));
+        EventoDian evento = EventoDian.porCodigo(tipoEvento)
+                .orElseThrow(() -> new IllegalArgumentException("Evento DIAN no soportado: " + tipoEvento));
+        EmpresaFeConfigJpa config = config(empresaId);
+        String cufe = f.getCufe() != null ? f.getCufe() : f.getCude();
+        String idEvento = f.getNumeroCompleto() + "-" + evento.getCodigo();
+        String xml = generadorEvento.generar(f, evento, cufe, idEvento,
+                config.getSoftwareId(), config.getSoftwareSecurityCode(), null);
+        String xmlFirmado = firma.firmar(xml, config);
+
+        FacturaEventoJpa ev = new FacturaEventoJpa();
+        ev.setFactura(f);
+        ev.setTipoEvento(evento.getCodigo());
+        ev.setEstado("REGISTRADO");
+        ev.setCude(cufe);
+        ev.setXml(xmlFirmado);
+        ev.setRespuesta(evento.getDescripcion());
+        return aEvento(eventoRepository.save(ev));
+    }
+
+    private FacturaEventoDto aEvento(FacturaEventoJpa e) {
+        String descripcion = EventoDian.porCodigo(e.getTipoEvento())
+                .map(EventoDian::getDescripcion)
+                .orElse(e.getTipoEvento());
+        return new FacturaEventoDto(e.getId(), e.getTipoEvento(), descripcion, e.getEstado(), e.getFecha());
     }
 
     @Transactional(readOnly = true)

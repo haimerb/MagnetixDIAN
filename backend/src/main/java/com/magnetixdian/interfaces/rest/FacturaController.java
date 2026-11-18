@@ -6,9 +6,11 @@ import com.magnetixdian.infrastructure.persistence.CatalogoDianJpa;
 import com.magnetixdian.infrastructure.persistence.CatalogoDianRepository;
 import com.magnetixdian.interfaces.dto.ErrorValidacionDto;
 import com.magnetixdian.interfaces.dto.FacturaDetalleDto;
+import com.magnetixdian.interfaces.dto.FacturaEventoDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.PaginaDto;
+import com.magnetixdian.interfaces.dto.RegistrarEventoRequest;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.http.HttpHeaders;
@@ -87,6 +89,14 @@ public class FacturaController {
                                                      Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.detalle(empresaId, id));
+    }
+
+    @PostMapping("/{empresaId}/{id}/eventos")
+    public ResponseEntity<FacturaEventoDto> registrarEvento(@PathVariable Long empresaId, @PathVariable Long id,
+                                                            @RequestBody RegistrarEventoRequest request,
+                                                            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicio.registrarEvento(empresaId, id, request.tipoEvento()));
     }
 
     @GetMapping("/{empresaId}/{id}/pdf")
