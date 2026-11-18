@@ -36,5 +36,6 @@ public record FacturaDetalleDto(
         String qrUrl,
         String respuestaDian,
         OffsetDateTime fechaValidacion,
-        OffsetDateTime createdAt) {
+        OffsetDateTime createdAt,
+        List<FacturaEventoDto> eventos) {
 }
