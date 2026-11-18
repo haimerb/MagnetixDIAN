@@ -324,7 +324,9 @@ public class ServicioFacturacion {
                 BigDecimal ivaVal = base.multiply(ivaPct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
                 BigDecimal incVal = base.multiply(incPct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
                 BigDecimal total = base.add(ivaVal).add(incVal).setScale(2, RoundingMode.HALF_UP);
-                lineas.add(new LineaFactura(i++, lr.codigoProducto(), lr.descripcion(), cant,
+                String codProducto = (lr.codigoProducto() == null || lr.codigoProducto().isBlank())
+                        ? lr.codigoUnspsc() : lr.codigoProducto();
+                lineas.add(new LineaFactura(i++, codProducto, lr.descripcion(), cant,
                         lr.unidadMedida() == null ? "94" : lr.unidadMedida(), vu, desc, ivaPct, ivaVal, incPct,
                         incVal, total, lr.codigoUnspsc()));
                 subtotal = subtotal.add(base);

@@ -44,8 +44,8 @@ public class LineasFacturaRegla implements ReglaFactura {
             if (l.valorUnitario() == null || l.valorUnitario().compareTo(BigDecimal.ZERO) < 0) {
                 r.add(err(i, "valorUnitario", "El valor unitario no puede ser negativo", l.valorUnitario()));
             }
-            if (l.codigoProducto() == null || l.codigoProducto().isBlank()) {
-                r.add(err(i, "codigoProducto", "El código de producto (UNSPSC) es obligatorio", null));
+            if (l.codigoUnspsc() == null || l.codigoUnspsc().isBlank()) {
+                r.add(err(i, "codigoUnspsc", "El código de producto (UNSPSC) es obligatorio", null));
             }
             i++;
         }

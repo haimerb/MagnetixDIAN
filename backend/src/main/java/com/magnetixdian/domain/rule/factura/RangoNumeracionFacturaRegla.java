@@ -30,11 +30,11 @@ public class RangoNumeracionFacturaRegla implements ReglaFactura {
         var f = ctx.factura();
         List<ResultadoRegla> r = new ArrayList<>();
 
-        if (f.rangoDesde() > 0 && f.numero() < f.rangoDesde()) {
+        if (f.numero() > 0 && f.rangoDesde() > 0 && f.numero() < f.rangoDesde()) {
             r.add(err("numero", String.valueOf(f.rangoDesde()), String.valueOf(f.numero()),
                     "El número está por debajo del rango autorizado"));
         }
-        if (f.rangoHasta() > 0 && f.numero() > f.rangoHasta()) {
+        if (f.numero() > 0 && f.rangoHasta() > 0 && f.numero() > f.rangoHasta()) {
             r.add(err("numero", "<= " + f.rangoHasta(), String.valueOf(f.numero()),
                     "El número supera el rango autorizado"));
         }
