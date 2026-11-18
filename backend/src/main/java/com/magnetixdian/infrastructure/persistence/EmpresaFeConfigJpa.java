@@ -1,6 +1,7 @@
 package com.magnetixdian.infrastructure.persistence;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -8,6 +9,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+
+import com.magnetixdian.infrastructure.crypto.CifradoAtributoConverter;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -30,7 +33,8 @@ public class EmpresaFeConfigJpa {
     @Column(name = "software_id", length = 100)
     private String softwareId;
 
-    @Column(name = "software_pin", length = 100)
+    @Column(name = "software_pin", length = 300)
+    @Convert(converter = CifradoAtributoConverter.class)
     private String softwarePin;
 
     @Column(name = "software_security_code", length = 200)
@@ -69,13 +73,15 @@ public class EmpresaFeConfigJpa {
     @Column(name = "pac_base_url", length = 300)
     private String pacBaseUrl;
 
-    @Column(name = "pac_api_key", length = 300)
+    @Column(name = "pac_api_key", length = 600)
+    @Convert(converter = CifradoAtributoConverter.class)
     private String pacApiKey;
 
     @Column(name = "certificado_nombre", length = 200)
     private String certificadoNombre;
 
-    @Column(name = "certificado_password", length = 200)
+    @Column(name = "certificado_password", length = 600)
+    @Convert(converter = CifradoAtributoConverter.class)
     private String certificadoPassword;
 
     @Column(name = "certificado_path", length = 300)
