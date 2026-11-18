@@ -35,7 +35,7 @@ public class ConceptoValidoRegla implements ReglaValidacion {
         }
         return List.of(ResultadoRegla.error(
                 codigo(), Severidad.ERROR,
-                "Concepto " + concepto + " no existe en el catálogo del formato 1001.",
+                "Concepto " + concepto + " no existe en el catálogo del formato " + contexto.formato() + ".",
                 op.linea(), "concepto", "Concepto del catálogo vigente", concepto));
     }
 }
