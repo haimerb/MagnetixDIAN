@@ -136,13 +136,13 @@ Nada del flujo actual (docker-compose, ZIP a GoDaddy, CI) se ve afectado.
 
 ## 7. Deploy automático tras merge a `main`
 
-El workflow `.github/workflows/deploy.yml` publica automáticamente al hacer push/merge a `main`
-(también se puede lanzar a mano con *Run workflow*):
+El workflow `.github/workflows/deploy.yml` es el **único disparador** del deploy: al hacer push/merge
+a `main` (o a mano con *Run workflow*) publica frontend y backend.
 
 - **Frontend:** compila Vite y ejecuta `wrangler deploy` (Cloudflare Worker).
-- **Backend:** dispara el *Deploy Hook* de Render.
+- **Backend:** dispara el *Deploy Hook* de Render y espera a que `/actuator/health` responda `200`.
 
-Configurar estos **secrets** en GitHub (Settings → Secrets and variables → Actions):
+### Secrets de GitHub (Settings → Secrets and variables → Actions)
 
 | Secret | Descripción |
 |---|---|
@@ -150,5 +150,20 @@ Configurar estos **secrets** en GitHub (Settings → Secrets and variables → A
 | `CLOUDFLARE_ACCOUNT_ID` | ID de la cuenta de Cloudflare |
 | `RENDER_DEPLOY_HOOK` | URL del Deploy Hook del servicio en Render (Settings → Deploy Hook) |
 
-Si un secret no está definido, el job correspondiente se omite con un aviso (no falla). El backend
-también puede desplegarse solo con `autoDeploy: true` de `render.yaml`.
+Si un secret no está definido, el job correspondiente se omite con un aviso (no falla).
+
+### Requisitos para que Actions sea la única vía
+
+Para evitar **doble deploy**, deben estar desactivados los disparadores nativos:
+
+- **Render:** `render.yaml` tiene `autoDeploy: false` → el backend solo se despliega por el *Deploy Hook*.
+- **Cloudflare:** en *Workers & Pages → `magnetixdian` → Settings → Build*, **desconectar "Connect to Git"**
+  (si queda conectado, Cloudflare también compila y despliega en cada push).
+
+### `CRYPTO_KEY` (cifrado de credenciales DIAN)
+
+`render.yaml` declara `CRYPTO_KEY` con `generateValue: true`: **Render genera la clave** y la guarda en su
+vault (nunca pasa por git). Verificar en *Environment* que quedó con valor; si quedó vacía, borrar la
+variable y re-sincronizar el blueprint.
+
+> La clave **no debe cambiar nunca**: si se regenera, todo lo cifrado con la anterior queda indescifrable.

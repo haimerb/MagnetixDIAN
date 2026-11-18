@@ -49,12 +49,30 @@ jobs:
   backend:
     name: Deploy backend (Render)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      BACKEND_URL: https://magnetixdian-backend.onrender.com
     steps:
       - name: Trigger Render deploy
         if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
         run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
+      - name: Esperar a que el backend esté saludable
+        if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
+        run: |
+          echo "Esperando a $BACKEND_URL/actuator/health ..."
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -m 30 "$BACKEND_URL/actuator/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "Backend saludable (intento $i):"
+              curl -s "$BACKEND_URL/actuator/health"
+              exit 0
+            fi
+            echo "Intento $i: HTTP $code; reintentando en 20s..."
+            sleep 20
+          done
+          echo "::error::El backend no respondió saludablemente a tiempo."
+          exit 1
       - name: Aviso (secrets no configurados)
         if: ${{ env.RENDER_DEPLOY_HOOK == '' }}
-        run: echo "::notice::RENDER_DEPLOY_HOOK no configurado; Render usa autoDeploy (render.yaml)."
+        run: echo "::notice::RENDER_DEPLOY_HOOK no configurado; el backend no se desplegará."
