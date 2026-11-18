@@ -1,16 +1,17 @@
 import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
 import Step from '@mui/material/Step'
 import StepContent from '@mui/material/StepContent'
 import StepLabel from '@mui/material/StepLabel'
 import Stepper from '@mui/material/Stepper'
 import Typography from '@mui/material/Typography'
+import PageHeader from '../components/ui/PageHeader'
+import SectionCard from '../components/ui/SectionCard'
 
 const PASOS = [
   {
     titulo: 'Valide sus datos en MagnetixDIAN',
     texto:
-      'Cargue el Excel, ejecute la validación y corriga todos los errores. Solo los registros sin errores entran al XML final.',
+      'Cargue el Excel, ejecute la validación y corrija todos los errores. Solo los registros sin errores entran al XML final.',
   },
   {
     titulo: 'Genere y descargue el XML',
@@ -41,20 +42,20 @@ const PASOS = [
 
 export default function GuiaMuiscaPage() {
   return (
-    <Box component="section" sx={{ maxWidth: 760, display: 'grid', gap: 3 }}>
-      <Typography variant="h4" component="h1">
-        Guía paso a paso — Presentación en MUISCA
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Cómo presentar su información exógena generada con MagnetixDIAN ante la DIAN. Los plazos dependen del
-        tipo de contribuyente y del último dígito del NIT según el calendario tributario vigente.
-      </Typography>
+    <Box component="section" sx={{ maxWidth: 780, display: 'grid', gap: 3 }}>
+      <PageHeader
+        overline="Ayuda"
+        title="Guía paso a paso — Presentación en MUISCA"
+        subtitle="Cómo presentar su información exógena generada con MagnetixDIAN ante la DIAN. Los plazos dependen del tipo de contribuyente y del último dígito del NIT según el calendario tributario vigente."
+      />
 
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+      <SectionCard>
         <Stepper orientation="vertical" activeStep={-1} nonLinear>
           {PASOS.map((paso) => (
-            <Step key={paso.titulo}>
-              <StepLabel>{paso.titulo}</StepLabel>
+            <Step key={paso.titulo} expanded>
+              <StepLabel>
+                <Typography variant="subtitle2">{paso.titulo}</Typography>
+              </StepLabel>
               <StepContent>
                 <Typography variant="body2" color="text.secondary">
                   {paso.texto}
@@ -63,18 +64,21 @@ export default function GuiaMuiscaPage() {
             </Step>
           ))}
         </Stepper>
-      </Paper>
+      </SectionCard>
 
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, bgcolor: 'background.default' }}>
-        <Typography variant="subtitle2" sx={{ mb: 1 }}>
-          Plazos orientativos — año gravable 2025 (presentación 2026)
-        </Typography>
-        <Typography variant="body2" color="text.secondary" component="div" sx={{ display: 'grid', gap: 1 }}>
-          <span>· Grandes contribuyentes: 28 de abril al 13 de mayo de 2026 (según último dígito NIT).</span>
-          <span>· Personas jurídicas y naturales: 14 de mayo al 12 de junio de 2026 (según dos últimos dígitos NIT).</span>
-          <span>· Consulte siempre la resolución anual vigente de la DIAN.</span>
-        </Typography>
-      </Paper>
+      <SectionCard title="Plazos orientativos — año gravable 2025 (presentación 2026)">
+        <Box component="ul" sx={{ m: 0, pl: 2.5, display: 'grid', gap: 1 }}>
+          <Typography component="li" variant="body2" color="text.secondary">
+            Grandes contribuyentes: 28 de abril al 13 de mayo de 2026 (según último dígito NIT).
+          </Typography>
+          <Typography component="li" variant="body2" color="text.secondary">
+            Personas jurídicas y naturales: 14 de mayo al 12 de junio de 2026 (según dos últimos dígitos NIT).
+          </Typography>
+          <Typography component="li" variant="body2" color="text.secondary">
+            Consulte siempre la resolución anual vigente de la DIAN.
+          </Typography>
+        </Box>
+      </SectionCard>
     </Box>
   )
 }

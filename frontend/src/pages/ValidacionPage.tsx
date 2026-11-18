@@ -4,7 +4,6 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
-import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -14,6 +13,8 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Typography from '@mui/material/Typography'
 import { api, type MedioMagnetico, type Validacion, type TercerosResumen } from '../api/client'
+import PageHeader from '../components/ui/PageHeader'
+import SectionCard from '../components/ui/SectionCard'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 
 export default function ValidacionPage() {
@@ -42,8 +43,9 @@ export default function ValidacionPage() {
 
   useEffect(() => {
     if (medioId) {
-      api.get<TercerosResumen>(`/mediomagnetico/${medioId}/terceros`)
-        .then(r => setTerceros(r.data))
+      api
+        .get<TercerosResumen>(`/mediomagnetico/${medioId}/terceros`)
+        .then((r) => setTerceros(r.data))
         .catch(() => undefined)
     }
   }, [medioId, validacion])
@@ -69,7 +71,7 @@ export default function ValidacionPage() {
     setError(null)
     try {
       const { data } = await api.post(`/mediomagnetico/${medioId}/presentar`)
-      setMedio((prev) => prev ? { ...prev, estado: data.estado } : prev)
+      setMedio((prev) => (prev ? { ...prev, estado: data.estado } : prev))
     } catch {
       setError('No se pudo marcar como presentado. Verifique que el medio esté validado.')
     } finally {
@@ -122,46 +124,49 @@ export default function ValidacionPage() {
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="h4" component="h1">
-          Validación{medio ? ` — ${medio.formato} (${medio.anioGravable})` : ''}
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button variant="contained" onClick={onValidar} disabled={!medioId || cargando}>
-            {cargando ? 'Validando…' : 'Ejecutar validación'}
-          </Button>
-          <Button variant="outlined" onClick={onXml} disabled={!medioId || cargando || !archivoXmlListo}>
-            Generar XML
-          </Button>
-          <Button variant="outlined" onClick={onDescargarXml} disabled={!medioId || cargando || !xml}>
-            Descargar XML
-          </Button>
-          <Button variant="outlined" color="success" onClick={onPresentar} disabled={!medioId || cargando || !archivoXmlListo}>
-            Marcar presentado
-          </Button>
-        </Stack>
-      </Box>
+      <PageHeader
+        overline="Paso 2 de 3"
+        title={medio ? `Validación — Formato ${medio.formato} (${medio.anioGravable})` : 'Validación'}
+        subtitle="Ejecute las reglas DIAN, corrija los hallazgos y genere el XML del formato."
+        actions={
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Button variant="contained" onClick={onValidar} disabled={!medioId || cargando}>
+              {cargando ? 'Validando…' : 'Ejecutar validación'}
+            </Button>
+            <Button variant="outlined" onClick={onXml} disabled={!medioId || cargando || !archivoXmlListo}>
+              Generar XML
+            </Button>
+            <Button variant="outlined" onClick={onDescargarXml} disabled={!medioId || cargando || !xml}>
+              Descargar XML
+            </Button>
+            <Button variant="outlined" color="success" onClick={onPresentar} disabled={!medioId || cargando || !archivoXmlListo}>
+              Marcar presentado
+            </Button>
+          </Stack>
+        }
+      />
 
       {!medioId && (
         <Alert severity="info">Seleccione un medio magnético desde el panel para validar sus datos.</Alert>
       )}
 
       {validacion && (
-        <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
-            <Chip color={validacion.erroresTotal > 0 ? 'error' : 'success'} label={`${validacion.erroresTotal} errores`} />
+        <SectionCard title="Resultado de la validación">
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+            <Chip
+              color={validacion.erroresTotal > 0 ? 'error' : 'success'}
+              label={`${validacion.erroresTotal} errores`}
+            />
             <Chip color="warning" label={`${validacion.advertenciasTotal} advertencias`} />
             <Chip color="info" label={`${validacion.registrosValidados} registros validados`} />
-            <Chip color="default" label={`Estado: ${medio?.estado ?? '—'}`} />
+            <Chip variant="outlined" label={`Estado: ${medio?.estado ?? '—'}`} />
           </Stack>
 
-          {validacion.errores.length === 0 && (
+          {validacion.errores.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               Sin errores de validación en la última corrida.
             </Typography>
-          )}
-
-          {validacion.errores.length > 0 && (
+          ) : (
             <TableContainer>
               <Table size="small" aria-label="Errores de validación">
                 <TableHead>
@@ -177,7 +182,11 @@ export default function ValidacionPage() {
                     <TableRow key={`${e.linea}-${e.campo}-${idx}`}>
                       <TableCell>{e.linea ?? '—'}</TableCell>
                       <TableCell>
-                        <Chip size="small" color={severidadColor(e.severidad) as 'error' | 'warning' | 'info'} label={e.severidad} />
+                        <Chip
+                          size="small"
+                          color={severidadColor(e.severidad) as 'error' | 'warning' | 'info'}
+                          label={e.severidad}
+                        />
                       </TableCell>
                       <TableCell>{e.campo ?? '—'}</TableCell>
                       <TableCell>{e.mensaje}</TableCell>
@@ -187,18 +196,22 @@ export default function ValidacionPage() {
               </Table>
             </TableContainer>
           )}
-        </Paper>
+        </SectionCard>
       )}
 
       {terceros && (
-        <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>Terceros y normalización de DV</Typography>
-          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+        <SectionCard title="Terceros y normalización de DV">
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ mb: 2, alignItems: 'center' }}>
             <Chip label={`${terceros.totalRegistros} registros`} />
             <Chip label={`${terceros.tercerosUnicos} terceros únicos`} />
-            <Chip color={terceros.nitsConDvIncorrecto > 0 ? 'warning' : 'success'} label={`${terceros.nitsConDvIncorrecto} NIT con DV incorrecto`} />
+            <Chip
+              color={terceros.nitsConDvIncorrecto > 0 ? 'warning' : 'success'}
+              label={`${terceros.nitsConDvIncorrecto} NIT con DV incorrecto`}
+            />
             {terceros.nitsConDvIncorrecto > 0 && (
-              <Button size="small" variant="outlined" color="warning" onClick={onAplicarDv}>Aplicar DV correctos</Button>
+              <Button size="small" variant="outlined" color="warning" onClick={onAplicarDv}>
+                Aplicar DV correctos
+              </Button>
             )}
           </Stack>
           {terceros.sugerenciasDv.length > 0 && (
@@ -231,20 +244,29 @@ export default function ValidacionPage() {
               </Table>
             </TableContainer>
           )}
-        </Paper>
+        </SectionCard>
       )}
 
       {error && <Alert severity="error">{error}</Alert>}
 
       {xml && (
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 1 }}>
-            XML generado
-          </Typography>
-          <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        <SectionCard title="XML generado" padded={false}>
+          <Box
+            component="pre"
+            sx={{
+              m: 0,
+              p: { xs: 2, md: 3 },
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.8125rem',
+              bgcolor: (t) => t.palette.action.hover,
+              borderRadius: '0 0 10px 10px',
+            }}
+          >
             {xml}
-          </Typography>
-        </Paper>
+          </Box>
+        </SectionCard>
       )}
     </Box>
   )

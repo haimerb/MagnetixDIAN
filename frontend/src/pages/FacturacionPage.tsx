@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Snackbar from '@mui/material/Snackbar'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -11,12 +10,15 @@ import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
-import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { api, type FacturaResumen, type ResultadoEmision } from '../api/client'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+import EmptyState from '../components/ui/EmptyState'
 import EstadoChip from '../components/ui/EstadoChip'
+import PageHeader from '../components/ui/PageHeader'
+import SectionCard from '../components/ui/SectionCard'
 import FacturaEditor from '../components/facturacion/FacturaEditor'
 
 export default function FacturacionPage() {
@@ -50,74 +52,79 @@ export default function FacturacionPage() {
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="h4" component="h1">Facturación electrónica</Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<SettingsIcon />}
-            onClick={() => navigate('/facturacion/config')}
-            disabled={cargandoEmpresa}
-          >
-            Configuración DIAN
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setEditorAbierto(true)}
-            disabled={empresaId == null}
-          >
-            Nueva factura
-          </Button>
-        </Box>
-      </Box>
+      <PageHeader
+        overline="Facturación electrónica"
+        title="Documentos electrónicos"
+        subtitle="Emita y consulte facturas, notas crédito y documentos soporte."
+        actions={
+          <>
+            <Button
+              variant="outlined"
+              startIcon={<SettingsIcon />}
+              onClick={() => navigate('/facturacion/config')}
+              disabled={cargandoEmpresa}
+            >
+              Configuración DIAN
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setEditorAbierto(true)}
+              disabled={empresaId == null}
+            >
+              Nueva factura
+            </Button>
+          </>
+        }
+      />
 
       {empresaId == null && !cargandoEmpresa && (
         <Alert severity="info">No hay una empresa asociada para emitir documentos.</Alert>
       )}
 
-      <Paper variant="outlined">
-        <TableContainer>
-          <Table size="small" aria-label="Documentos electrónicos">
-            <TableHead>
-              <TableRow>
-                <TableCell>Número</TableCell>
-                <TableCell>Tipo</TableCell>
-                <TableCell>Fecha</TableCell>
-                <TableCell>Adquirente</TableCell>
-                <TableCell align="right">Total</TableCell>
-                <TableCell>Estado</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {facturas.map((f) => (
-                <TableRow
-                  key={f.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => navigate(`/facturacion/${f.id}`)}
-                >
-                  <TableCell>{f.numeroCompleto}</TableCell>
-                  <TableCell>{f.tipoDocumento}</TableCell>
-                  <TableCell>{f.fechaEmision}</TableCell>
-                  <TableCell>{f.adquirenteNombre}</TableCell>
-                  <TableCell align="right">{money(f.totalPagar)}</TableCell>
-                  <TableCell><EstadoChip estado={f.estado} /></TableCell>
-                </TableRow>
-              ))}
-              {facturas.length === 0 && (
+      <SectionCard padded={false}>
+        {facturas.length === 0 ? (
+          <EmptyState
+            icon={<ReceiptLongOutlinedIcon />}
+            title="Sin documentos emitidos"
+            description="Aún no hay documentos electrónicos. Cree el primero con «Nueva factura»."
+          />
+        ) : (
+          <TableContainer>
+            <Table size="small" aria-label="Documentos electrónicos">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Aún no hay documentos electrónicos emitidos.
-                    </Typography>
-                  </TableCell>
+                  <TableCell>Número</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell>Adquirente</TableCell>
+                  <TableCell align="right">Total</TableCell>
+                  <TableCell>Estado</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {facturas.map((f) => (
+                  <TableRow
+                    key={f.id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/facturacion/${f.id}`)}
+                  >
+                    <TableCell sx={{ fontWeight: 600 }}>{f.numeroCompleto}</TableCell>
+                    <TableCell>{f.tipoDocumento}</TableCell>
+                    <TableCell>{f.fechaEmision}</TableCell>
+                    <TableCell>{f.adquirenteNombre}</TableCell>
+                    <TableCell align="right">{money(f.totalPagar)}</TableCell>
+                    <TableCell>
+                      <EstadoChip estado={f.estado} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </SectionCard>
 
       {error && <Alert severity="error">{error}</Alert>}
 
