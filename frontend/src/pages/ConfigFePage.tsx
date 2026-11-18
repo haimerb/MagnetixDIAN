@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -52,6 +52,8 @@ export default function ConfigFePage() {
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [subiendoCert, setSubiendoCert] = useState(false)
+  const archivoRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (empresaId == null) return
@@ -77,6 +79,25 @@ export default function ConfigFePage() {
       setError('No se pudo guardar la configuración.')
     } finally {
       setGuardando(false)
+    }
+  }
+
+  const subirCertificado = async (file: File) => {
+    if (empresaId == null) return
+    setSubiendoCert(true)
+    setError(null)
+    setMensaje(null)
+    try {
+      const fd = new FormData()
+      fd.append('archivo', file)
+      fd.append('password', config.certificadoPassword ?? '')
+      const { data } = await api.post<ConfigFe>(`/facturacion/config/${empresaId}/certificado`, fd)
+      setConfig({ ...VACIO, ...data, softwarePin: '', pacApiKey: '', certificadoPassword: '' })
+      setMensaje('Certificado cargado.')
+    } catch {
+      setError('No se pudo subir el certificado.')
+    } finally {
+      setSubiendoCert(false)
     }
   }
 
@@ -199,6 +220,29 @@ export default function ConfigFePage() {
           </Grid>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField fullWidth type="password" label="Contraseña del certificado" placeholder={config.certificadoPassword ? '' : '••••••'} value={config.certificadoPassword ?? ''} onChange={(e) => set('certificadoPassword', e.target.value)} />
+          </Grid>
+          <Grid size={{ xs: 12 }}>
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+              <Button variant="outlined" disabled={subiendoCert} onClick={() => archivoRef.current?.click()}>
+                {subiendoCert ? 'Subiendo…' : 'Subir certificado (.p12)'}
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                {config.tieneCertificado
+                  ? `Certificado cargado: ${config.certificadoNombre ?? 'sí'}`
+                  : 'Sin certificado cargado'}
+              </Typography>
+              <input
+                ref={archivoRef}
+                type="file"
+                accept=".p12,.pfx"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) subirCertificado(f)
+                  e.target.value = ''
+                }}
+              />
+            </Stack>
           </Grid>
         </Grid>
       </SectionCard>

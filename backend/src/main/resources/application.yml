@@ -53,6 +53,8 @@ magnetixdian:
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   upload:
     dir: ${UPLOAD_DIR:./uploads}
+  crypto:
+    key: ${CRYPTO_KEY:magnetixdian-dev-crypto-key-change-me}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:4173}
   notifications:

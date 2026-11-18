@@ -103,6 +103,7 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `DB_URL` | Render (env) | `jdbc:postgresql://aws-0-<REGION>.pooler.supabase.com:5432/postgres?sslmode=require` |
 | `DB_USER` / `DB_PASSWORD` | Render (env) | `postgres.<ref>` / password de Supabase |
 | `JWT_SECRET` | Render (env) | base64 de 64 bytes (`openssl rand -base64 64`) |
+| `CRYPTO_KEY` | Render (env) | secreto para cifrar credenciales DIAN en BD (`openssl rand -base64 32`) |
 
 Seguridad: PostgreSQL de Supabase **no se expone** (solo via pooler con SSL); Render es el único
 cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos con HTTPS gratis.

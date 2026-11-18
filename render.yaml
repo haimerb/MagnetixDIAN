@@ -24,6 +24,8 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: CRYPTO_KEY
+        sync: false
       - key: CORS_ORIGINS
         value: https://magnetixdian.pages.dev,https://magnetixdian.hbarbetti-ing.workers.dev
       - key: UPLOAD_DIR
