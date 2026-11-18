@@ -45,6 +45,11 @@ public class GlobalExceptionHandler {
         return respuesta(HttpStatus.UNAUTHORIZED, "Credenciales inválidas o usuario inactivo.");
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> accesoDenegado(org.springframework.security.access.AccessDeniedException ex) {
+        return respuesta(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> generico(Exception ex) {
         log.error("Error no manejado en la API", ex);

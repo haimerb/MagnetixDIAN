@@ -261,6 +261,15 @@ public class ServicioMedioMagnetico {
                 .orElse("1001");
     }
 
+    /**
+     * Identificador de la empresa dueña del medio magnético (para autorización).
+     */
+    public Long empresaDe(Long medioMagneticoId) {
+        return medioRepo.findById(medioMagneticoId)
+                .map(m -> m.getEmpresa().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Medio magnético no encontrado: " + medioMagneticoId));
+    }
+
     // ------------------------------------------------------------------
     // Terceros y normalización de DV (catálogo NIT)
     // ------------------------------------------------------------------

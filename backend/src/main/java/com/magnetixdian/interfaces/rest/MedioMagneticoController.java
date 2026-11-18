@@ -5,9 +5,11 @@ import com.magnetixdian.application.ServicioMedioMagnetico.CargaResultado;
 import com.magnetixdian.interfaces.dto.MedioMagneticoDto;
 import com.magnetixdian.interfaces.dto.TercerosResumenDto;
 import com.magnetixdian.interfaces.dto.ValidacionProcesoDto;
+import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,9 +29,15 @@ import java.util.List;
 public class MedioMagneticoController {
 
     private final ServicioMedioMagnetico servicio;
+    private final AutorizacionEmpresa autorizacion;
 
-    public MedioMagneticoController(ServicioMedioMagnetico servicio) {
+    public MedioMagneticoController(ServicioMedioMagnetico servicio, AutorizacionEmpresa autorizacion) {
         this.servicio = servicio;
+        this.autorizacion = autorizacion;
+    }
+
+    private void verificarPorMedio(Long medioMagneticoId, Authentication authentication) {
+        autorizacion.verificar(servicio.empresaDe(medioMagneticoId), authentication);
     }
 
     @GetMapping("/plantilla")
@@ -45,24 +53,31 @@ public class MedioMagneticoController {
     public ResponseEntity<CargaResultado> cargar(@PathVariable Long empresaId,
                                                  @RequestParam String formato,
                                                  @RequestParam Integer anioGravable,
-                                                 @RequestParam MultipartFile archivo) throws java.io.IOException {
+                                                 @RequestParam MultipartFile archivo,
+                                                 Authentication authentication) throws java.io.IOException {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.cargarDesdeExcel(empresaId, formato, anioGravable, archivo));
     }
 
     @PostMapping("/{medioMagneticoId}/validar")
     public ResponseEntity<ValidacionProcesoDto> validar(@PathVariable Long medioMagneticoId,
-                                                        @RequestParam Integer anioGravable) {
+                                                        @RequestParam Integer anioGravable,
+                                                        Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
         return ResponseEntity.ok(servicio.validarDto(medioMagneticoId, anioGravable));
     }
 
     @GetMapping("/{medioMagneticoId}/reporte")
-    public ResponseEntity<ValidacionProcesoDto> reporte(@PathVariable Long medioMagneticoId) {
+    public ResponseEntity<ValidacionProcesoDto> reporte(@PathVariable Long medioMagneticoId,
+                                                        Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
         ValidacionProcesoDto dto = servicio.reporteDto(medioMagneticoId);
         return dto != null ? ResponseEntity.ok(dto) : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/{medioMagneticoId}/generar-xml")
-    public ResponseEntity<String> generarXml(@PathVariable Long medioMagneticoId) {
+    public ResponseEntity<String> generarXml(@PathVariable Long medioMagneticoId, Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
         String xml = servicio.generarXml(medioMagneticoId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_XML)
@@ -70,23 +85,27 @@ public class MedioMagneticoController {
     }
 
     @PostMapping("/{medioMagneticoId}/presentar")
-    public ResponseEntity<MedioMagneticoDto> presentar(@PathVariable Long medioMagneticoId) {
+    public ResponseEntity<MedioMagneticoDto> presentar(@PathVariable Long medioMagneticoId, Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
         return ResponseEntity.ok(servicio.marcarPresentado(medioMagneticoId));
     }
 
     @GetMapping("/{medioMagneticoId}/terceros")
-    public ResponseEntity<TercerosResumenDto> terceros(@PathVariable Long medioMagneticoId) {
+    public ResponseEntity<TercerosResumenDto> terceros(@PathVariable Long medioMagneticoId, Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
         return ResponseEntity.ok(servicio.resumenTerceros(medioMagneticoId));
     }
 
     @PostMapping("/{medioMagneticoId}/aplicar-dv")
-    public ResponseEntity<java.util.Map<String, Long>> aplicarDv(@PathVariable Long medioMagneticoId) {
+    public ResponseEntity<java.util.Map<String, Long>> aplicarDv(@PathVariable Long medioMagneticoId, Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
         long corregidos = servicio.aplicarCorreccionesDv(medioMagneticoId);
         return ResponseEntity.ok(java.util.Map.of("corregidos", corregidos));
     }
 
     @GetMapping("/{medioMagneticoId}/xml")
-    public ResponseEntity<byte[]> descargarXml(@PathVariable Long medioMagneticoId) {
+    public ResponseEntity<byte[]> descargarXml(@PathVariable Long medioMagneticoId, Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
         String xml = servicio.generarXml(medioMagneticoId);
         String formato = servicio.formatoDe(medioMagneticoId);
         return ResponseEntity.ok()
@@ -97,7 +116,8 @@ public class MedioMagneticoController {
     }
 
     @GetMapping("/empresa/{empresaId}")
-    public ResponseEntity<List<MedioMagneticoDto>> listar(@PathVariable Long empresaId) {
+    public ResponseEntity<List<MedioMagneticoDto>> listar(@PathVariable Long empresaId, Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.listarPorEmpresaDto(empresaId));
     }
 }

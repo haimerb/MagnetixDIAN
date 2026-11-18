@@ -9,6 +9,7 @@ import com.magnetixdian.interfaces.dto.FacturaDetalleDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
+import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,17 +35,22 @@ public class FacturaController {
     private final ServicioFacturacion servicio;
     private final AuthService authService;
     private final CatalogoDianRepository catalogoRepository;
+    private final AutorizacionEmpresa autorizacion;
 
     public FacturaController(ServicioFacturacion servicio, AuthService authService,
-                             CatalogoDianRepository catalogoRepository) {
+                             CatalogoDianRepository catalogoRepository,
+                             AutorizacionEmpresa autorizacion) {
         this.servicio = servicio;
         this.authService = authService;
         this.catalogoRepository = catalogoRepository;
+        this.autorizacion = autorizacion;
     }
 
     @PostMapping("/{empresaId}/validar")
     public ResponseEntity<List<ErrorValidacionDto>> validar(@PathVariable Long empresaId,
-                                                            @RequestBody FacturaRequest request) {
+                                                            @RequestBody FacturaRequest request,
+                                                            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.validar(empresaId, request));
     }
 
@@ -52,22 +58,29 @@ public class FacturaController {
     public ResponseEntity<ResultadoEmisionDto> emitir(@PathVariable Long empresaId,
                                                       @RequestBody FacturaRequest request,
                                                       Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         Long usuarioId = authService.perfil(authentication.getName()).id();
         return ResponseEntity.ok(servicio.emitir(empresaId, usuarioId, request));
     }
 
     @GetMapping("/{empresaId}")
-    public ResponseEntity<List<FacturaResumenDto>> listar(@PathVariable Long empresaId) {
+    public ResponseEntity<List<FacturaResumenDto>> listar(@PathVariable Long empresaId,
+                                                          Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.listar(empresaId));
     }
 
     @GetMapping("/{empresaId}/{id}")
-    public ResponseEntity<FacturaDetalleDto> detalle(@PathVariable Long empresaId, @PathVariable Long id) {
+    public ResponseEntity<FacturaDetalleDto> detalle(@PathVariable Long empresaId, @PathVariable Long id,
+                                                     Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.detalle(empresaId, id));
     }
 
     @GetMapping("/{empresaId}/{id}/pdf")
-    public ResponseEntity<byte[]> pdf(@PathVariable Long empresaId, @PathVariable Long id) {
+    public ResponseEntity<byte[]> pdf(@PathVariable Long empresaId, @PathVariable Long id,
+                                      Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         byte[] contenido = servicio.pdf(empresaId, id);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=factura-" + id + ".pdf")
@@ -76,7 +89,9 @@ public class FacturaController {
     }
 
     @GetMapping("/{empresaId}/{id}/xml")
-    public ResponseEntity<byte[]> xml(@PathVariable Long empresaId, @PathVariable Long id) {
+    public ResponseEntity<byte[]> xml(@PathVariable Long empresaId, @PathVariable Long id,
+                                      Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
         String xml = servicio.xmlFirmado(empresaId, id);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=factura-" + id + ".xml")
