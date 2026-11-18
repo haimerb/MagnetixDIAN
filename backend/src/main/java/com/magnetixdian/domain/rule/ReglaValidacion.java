@@ -26,6 +26,15 @@ public interface ReglaValidacion {
     String nombre();
 
     /**
+     * Indica si la regla aplica al formato de medio dado (1001, 1002, ...).
+     * Por defecto aplica a todos los formatos; las reglas específicas de un
+     * formato deben sobrescribir este método.
+     */
+    default boolean aplicaA(String formato) {
+        return true;
+    }
+
+    /**
      * Evalúa la regla sobre un registro de operación.
      *
      * @param contexto contexto con datos del registro y parámetros por vigencia

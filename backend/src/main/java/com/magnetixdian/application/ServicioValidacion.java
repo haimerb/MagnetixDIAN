@@ -49,7 +49,7 @@ public class ServicioValidacion {
                                         BigDecimal cuantiaMenor, String formato) {
         BigDecimal uvt = uvtManager.uvtParaAnio(anioGravable);
         ContextoValidacion contexto = new ContextoValidacion(
-                operacion, uvt, catalogo.conceptosParaFormato(formato), cuantiaMenor);
+                operacion, uvt, catalogo.conceptosParaFormato(formato), cuantiaMenor, formato);
         return ruleEngine.validar(contexto);
     }
 

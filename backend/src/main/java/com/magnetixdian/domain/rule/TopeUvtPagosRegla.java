@@ -29,6 +29,11 @@ public class TopeUvtPagosRegla implements ReglaValidacion {
     }
 
     @Override
+    public boolean aplicaA(String formato) {
+        return "1001".equals(formato);
+    }
+
+    @Override
     public List<ResultadoRegla> evaluar(ContextoValidacion contexto) {
         var op = contexto.operacion();
         if (op.valorPago() == null || op.valorPago().signum() <= 0) {
