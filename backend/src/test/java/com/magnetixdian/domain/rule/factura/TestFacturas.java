@@ -58,13 +58,15 @@ final class TestFacturas {
         LocalDate rangoVigenciaHasta = LocalDate.of(2026, 12, 31);
         long rangoDesde = 1L;
         long rangoHasta = 10000L;
+        String cufeReferencia = null;
+        String numeroReferencia = null;
 
         FacturaDatos build() {
             return new FacturaDatos(
                     tipo, prefijo + "-" + numero, prefijo, numero, fechaEmision, LocalTime.NOON,
                     null, 2, "COP", "1", "10", null, emisor, adquirente, lineas,
                     List.<ImpuestoFactura>of(), subtotal, totalImpuestos, totalRetenciones, total,
-                    totalPagar, null, null, null, "sw-1", "12345", "abc123", null,
+                    totalPagar, null, cufeReferencia, numeroReferencia, "sw-1", "12345", "abc123", null,
                     resolucionNumero, LocalDate.of(2025, 1, 1), rangoVigenciaDesde,
                     rangoVigenciaHasta, rangoDesde, rangoHasta);
         }
