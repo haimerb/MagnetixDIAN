@@ -188,20 +188,6 @@ cd docker && docker compose up -d --build
 - `backend` → `localhost:8080` (env vars via compose; volumen `uploads`)
 - `frontend` (Nginx) → `localhost:5173`, proxya `/api` a `backend:8080`
 
-### Kubernetes
-
-Manifiestos en `k8s/` (namespace `magnetixdian`):
-
-```bash
-kubectl apply -f k8s/secret.yaml
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/db.yaml
-kubectl apply -f k8s/backend.yaml
-kubectl apply -f k8s/frontend.yaml
-```
-
-El `Deployment` de backend usa `spring.config` con las mismas variables env que Composer; el secreto `magnetixdian-jwt` provee `JWT_SECRET`.
-
 ## 9. Variables de entorno
 
 | Variable | Default | Uso |
@@ -237,7 +223,7 @@ cd backend && MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn clean package
 
 `.github/workflows/ci.yml` ejecuta en cada push/PR a `main`/`develop`:
 - **backend:** `mvn clean package` (JDK 17, cache Maven).
-- **frontend:** `npm ci && npm run lint && npm run build`.
+- **frontend:** `pnpm install --frozen-lockfile && pnpm run lint && pnpm run build`.
 
 ### Smoke test manual
 

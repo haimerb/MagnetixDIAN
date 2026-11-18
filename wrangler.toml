@@ -9,7 +9,7 @@ assets = { directory = "frontend/dist", binding = "ASSETS", not_found_handling =
 # Se ejecuta automáticamente antes de `npx wrangler deploy` (comando por defecto de Cloudflare).
 # Compila Vite → frontend/dist; sin esto Cloudflare no puede subir los assets.
 [build]
-command = "npm ci && npm run build"
+command = "pnpm install --frozen-lockfile && pnpm run build"
 cwd = "frontend"
 
 [vars]

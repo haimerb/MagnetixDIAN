@@ -78,7 +78,7 @@ Configuración en Cloudflare:
 | Deploy command | **dejar el default** `npx wrangler deploy` |
 
 **No hace falta tocar el build command**: el `[build]` de `wrangler.toml` corre
-`npm ci && npm run build` en `frontend/` antes de cada deploy.
+`pnpm install --frozen-lockfile && pnpm run build` en `frontend/` antes de cada deploy.
 
 > Si el proyecto se creó con una variable `VITE_API_BASE_URL` apuntando a Render, el navegador
 > llama a Render **directo (cross-origin)** y ahí sí aplica CORS → por eso `CORS_ORIGINS` incluye
@@ -89,7 +89,7 @@ URL final de la app: `https://magnetixdian.<cuenta>.workers.dev`
 ### Alternativa: Cloudflare Pages (flujo clásico)
 
 Workers & Pages → **Pages → Create → Connect to Git** → Root directory `frontend`,
-build `npm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y en Render
+build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y en Render
 `CORS_ORIGINS` incluir `https://<proyecto>.pages.dev`.
 
 ---

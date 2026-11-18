@@ -2,25 +2,25 @@ import '@mui/material/styles'
 
 declare module '@mui/material/styles' {
   interface Palette {
-    gold: Palette['primary']
-    terracotta: Palette['primary']
+    amber: Palette['primary']
+    clay: Palette['primary']
   }
   interface PaletteOptions {
-    gold?: PaletteOptions['primary']
-    terracotta?: PaletteOptions['primary']
+    amber?: PaletteOptions['primary']
+    clay?: PaletteOptions['primary']
   }
 }
 
 declare module '@mui/material/Chip' {
   interface ChipPropsColorOverrides {
-    gold: true
-    terracotta: true
+    amber: true
+    clay: true
   }
 }
 
 declare module '@mui/material/Button' {
   interface ButtonPropsColorOverrides {
-    gold: true
-    terracotta: true
+    amber: true
+    clay: true
   }
 }
