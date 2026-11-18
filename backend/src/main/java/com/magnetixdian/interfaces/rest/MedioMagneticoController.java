@@ -120,4 +120,14 @@ public class MedioMagneticoController {
         autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.listarPorEmpresaDto(empresaId));
     }
+
+    @GetMapping("/empresa/{empresaId}/paginado")
+    public ResponseEntity<com.magnetixdian.interfaces.dto.PaginaDto<MedioMagneticoDto>> listarPaginado(
+            @PathVariable Long empresaId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicio.listarPaginadoPorEmpresaDto(empresaId, page, size));
+    }
 }

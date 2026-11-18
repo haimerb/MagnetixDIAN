@@ -177,6 +177,16 @@ public class ServicioMedioMagnetico {
                 .toList();
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public com.magnetixdian.interfaces.dto.PaginaDto<com.magnetixdian.interfaces.dto.MedioMagneticoDto> listarPaginadoPorEmpresaDto(
+            Long empresaId, int pagina, int tamano) {
+        var pageable = org.springframework.data.domain.PageRequest.of(Math.max(pagina, 0),
+                Math.min(Math.max(tamano, 1), 100),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        var page = medioRepo.findByEmpresaId(empresaId, pageable).map(this::toDto);
+        return com.magnetixdian.interfaces.dto.PaginaDto.desde(page);
+    }
+
     public com.magnetixdian.interfaces.dto.ValidacionProcesoDto validarDto(Long medioMagneticoId, Integer anioGravable) {
         ValidacionJpa corrida = validar(medioMagneticoId, anioGravable);
         return toDto(corrida);
