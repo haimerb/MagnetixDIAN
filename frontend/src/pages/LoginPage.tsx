@@ -3,11 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
+import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import Logo from '../components/ui/Logo'
 import { useAuth } from '../features/auth/useAuth'
+
+const BENEFICIOS = [
+  'Validación con reglas DIAN: NIT, UVT y catálogo de conceptos.',
+  'Generación del XML formato 1001 listo para presentar.',
+  'Facturación electrónica multi-tenant integrada.',
+  'Guía paso a paso para la presentación en MUISCA.',
+]
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -36,22 +43,81 @@ export default function LoginPage() {
       component="main"
       sx={{
         minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        p: 2,
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: '1.05fr 1fr' },
         bgcolor: 'background.default',
       }}
     >
-      <Card sx={{ maxWidth: 420, width: '100%' }}>
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontSize: { xs: '1.5rem', md: '2rem' } }}>
-            MagnetixDIAN
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          p: 6,
+          color: '#fff',
+          background: (t) =>
+            `linear-gradient(150deg, ${t.palette.primary.dark}, ${t.palette.primary.main} 58%, ${t.palette.primary.light})`,
+        }}
+      >
+        <Logo size={40} variant="onDark" />
+        <Box sx={{ maxWidth: 460 }}>
+          <Typography variant="h3" sx={{ color: '#fff', mb: 2 }}>
+            Información exógena DIAN sin fricción
           </Typography>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            Información exógena DIAN — ingrese con sus credenciales
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.82)' }}>
+            Cargue, valide y presente sus medios magnéticos con confianza.
           </Typography>
-          <Box component="form" noValidate onSubmit={onSubmit} sx={{ mt: 3, display: 'grid', gap: 2 }}>
+          <Box component="ul" sx={{ mt: 4, display: 'grid', gap: 1.5, pl: 0, listStyle: 'none' }}>
+            {BENEFICIOS.map((b) => (
+              <Box
+                component="li"
+                key={b}
+                sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    mt: 0.75,
+                    borderRadius: '50%',
+                    bgcolor: 'secondary.main',
+                    flexShrink: 0,
+                  }}
+                />
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.92)' }}>
+                  {b}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+          Resolución Única 000227 de 2025
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, md: 6 } }}>
+        <Paper
+          elevation={0}
+          sx={{
+            maxWidth: 420,
+            width: '100%',
+            p: { xs: 3, md: 4 },
+            border: '1px solid',
+            borderColor: (t) => t.palette.divider,
+          }}
+        >
+          <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 3 }}>
+            <Logo size={34} />
+          </Box>
+          <Typography variant="h5" component="h1">
+            Ingresar
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Use sus credenciales habilitadas.
+          </Typography>
+
+          <Box component="form" noValidate onSubmit={onSubmit} sx={{ display: 'grid', gap: 2 }}>
             <TextField
               label="Usuario"
               autoComplete="username"
@@ -71,12 +137,13 @@ export default function LoginPage() {
             <Button type="submit" variant="contained" size="large" disabled={cargando}>
               {cargando ? 'Ingresando…' : 'Ingresar'}
             </Button>
-            <Typography variant="caption" color="text.disabled">
-              Usuario demo: admin / admin123
-            </Typography>
           </Box>
-        </CardContent>
-      </Card>
+
+          <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
+            Usuario demo: admin / admin123
+          </Typography>
+        </Paper>
+      </Box>
     </Box>
   )
 }

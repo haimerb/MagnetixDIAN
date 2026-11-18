@@ -338,11 +338,21 @@ export default function FacturaEditor({
           </Grid>
 
           <Grid size={{ xs: 12 }}>
-            <Divider sx={{ mb: 1 }} />
-            <Stack direction="row" spacing={3} sx={{ justifyContent: 'flex-end' }}>
-              <Typography variant="body2">Subtotal: {money(totales.subtotal)}</Typography>
-              <Typography variant="body2">Impuestos: {money(totales.impuestos)}</Typography>
-              <Typography variant="subtitle1">Total: {money(totales.total)}</Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Stack
+              direction="row"
+              spacing={3}
+              sx={{
+                justifyContent: 'flex-end',
+                alignItems: 'baseline',
+                p: 2,
+                borderRadius: 2,
+                bgcolor: 'action.hover',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">Subtotal: {money(totales.subtotal)}</Typography>
+              <Typography variant="body2" color="text.secondary">Impuestos: {money(totales.impuestos)}</Typography>
+              <Typography variant="h6">Total: {money(totales.total)}</Typography>
             </Stack>
           </Grid>
 

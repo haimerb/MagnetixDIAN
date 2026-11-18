@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableRow from '@mui/material/TableRow'
-import Typography from '@mui/material/Typography'
 import { api } from '../api/client'
 import type { Validacion } from '../api/client'
+import PageHeader from '../components/ui/PageHeader'
+import SectionCard from '../components/ui/SectionCard'
 
 export default function ReportePage() {
   const { medioId } = useParams()
@@ -29,18 +29,19 @@ export default function ReportePage() {
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-      <Typography variant="h4" component="h1">
-        Reporte interno
-      </Typography>
+      <PageHeader
+        overline="Paso 3 de 3"
+        title="Reporte interno"
+        subtitle="Resumen de la corrida de validación y detalle JSON para revisión."
+      />
 
-      {!medioId && <Alert severity="info">Seleccione un medio magnético desde el panel para ver su reporte.</Alert>}
+      {!medioId && (
+        <Alert severity="info">Seleccione un medio magnético desde el panel para ver su reporte.</Alert>
+      )}
 
       {validacion && (
         <>
-          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-              Resumen de la corrida
-            </Typography>
+          <SectionCard title="Resumen de la corrida">
             <TableContainer>
               <Table size="small" aria-label="Resumen de validación">
                 <TableBody>
@@ -73,16 +74,25 @@ export default function ReportePage() {
                 </TableBody>
               </Table>
             </TableContainer>
-          </Paper>
+          </SectionCard>
 
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              Detalle JSON (revisión interna)
-            </Typography>
-            <Typography variant="caption" component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <SectionCard title="Detalle JSON" subtitle="Revisión interna" padded={false}>
+            <Box
+              component="pre"
+              sx={{
+                m: 0,
+                p: { xs: 2, md: 3 },
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.8125rem',
+                bgcolor: (t) => t.palette.action.hover,
+                borderRadius: '0 0 10px 10px',
+              }}
+            >
               {json}
-            </Typography>
-          </Paper>
+            </Box>
+          </SectionCard>
         </>
       )}
     </Box>

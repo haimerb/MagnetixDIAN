@@ -9,6 +9,8 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import MenuItem from '@mui/material/MenuItem'
+import Stack from '@mui/material/Stack'
+import Tab from '@mui/material/Tab'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
@@ -16,11 +18,15 @@ import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Tabs from '@mui/material/Tabs'
-import Tab from '@mui/material/Tab'
 import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
 import DeleteIcon from '@mui/icons-material/Delete'
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
 import { api, type EmpresaAdmin, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
+import EmptyState from '../components/ui/EmptyState'
+import PageHeader from '../components/ui/PageHeader'
+import SectionCard from '../components/ui/SectionCard'
 
 const ROLES = ['ROLE_ADMIN', 'ROLE_CONTADOR', 'ROLE_CLIENTE']
 const TIPOS_REPORTE = ['GRAN_CONTRIBUYENTE', 'PERSONA_JURIDICA', 'PERSONA_NATURAL']
@@ -112,105 +118,143 @@ export default function AdminPage() {
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-      <Typography variant="h4" component="h1">Administración</Typography>
+      <PageHeader
+        overline="Configuración"
+        title="Administración"
+        subtitle="Gestione empresas, usuarios y el calendario tributario usado para los recordatorios."
+      />
+
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" allowScrollButtonsMobile>
         <Tab label="Empresas" value="empresas" />
         <Tab label="Usuarios" value="usuarios" />
         <Tab label="Calendario DIAN" value="calendario" />
       </Tabs>
 
       {tab === 'empresas' && (
-        <Box sx={{ display: 'grid', gap: 2 }}>
-          <Box><Button variant="contained" onClick={() => { setDialog('empresa'); setFormEmpresa({ nit: '', razonSocial: '', email: '', ciudad: '', regimen: 'ORDINARIO', tipoDocumento: 'NIT' }) }}>Nueva empresa</Button></Box>
-          <TableContainer>
-            <Table size="small" aria-label="Empresas">
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell><TableCell>NIT</TableCell><TableCell>Razón social</TableCell><TableCell>Régimen</TableCell><TableCell>Email</TableCell><TableCell>Ciudad</TableCell><TableCell align="right">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {empresas.map(e => (
-                  <TableRow key={e.id}>
-                    <TableCell>{e.id}</TableCell>
-                    <TableCell>{e.nit}</TableCell>
-                    <TableCell>{e.razonSocial}</TableCell>
-                    <TableCell>{e.regimen}</TableCell>
-                    <TableCell>{e.email ?? '—'}</TableCell>
-                    <TableCell>{e.ciudad ?? '—'}</TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" color="error" onClick={() => eliminarEmpresa(e.id)} aria-label="Eliminar"><DeleteIcon fontSize="small" /></IconButton>
-                    </TableCell>
+        <SectionCard
+          title="Empresas"
+          actions={
+            <Button variant="contained" onClick={() => { setDialog('empresa'); setFormEmpresa({ nit: '', razonSocial: '', email: '', ciudad: '', regimen: 'ORDINARIO', tipoDocumento: 'NIT' }) }}>
+              Nueva empresa
+            </Button>
+          }
+          padded={empresas.length === 0}
+        >
+          {empresas.length === 0 ? (
+            <EmptyState icon={<BusinessOutlinedIcon />} title="Sin empresas registradas" description="Cree la primera empresa para empezar a operar." />
+          ) : (
+            <TableContainer>
+              <Table size="small" aria-label="Empresas">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell><TableCell>NIT</TableCell><TableCell>Razón social</TableCell><TableCell>Régimen</TableCell><TableCell>Email</TableCell><TableCell>Ciudad</TableCell><TableCell align="right">Acciones</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+                </TableHead>
+                <TableBody>
+                  {empresas.map(e => (
+                    <TableRow key={e.id} hover>
+                      <TableCell>{e.id}</TableCell>
+                      <TableCell>{e.nit}</TableCell>
+                      <TableCell>{e.razonSocial}</TableCell>
+                      <TableCell>{e.regimen}</TableCell>
+                      <TableCell>{e.email ?? '—'}</TableCell>
+                      <TableCell>{e.ciudad ?? '—'}</TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" color="error" onClick={() => eliminarEmpresa(e.id)} aria-label="Eliminar"><DeleteIcon fontSize="small" /></IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </SectionCard>
       )}
 
       {tab === 'usuarios' && (
-        <Box sx={{ display: 'grid', gap: 2 }}>
-          <Box><Button variant="contained" onClick={() => { setDialog('usuario'); setFormUsuario({ username: '', password: '', email: '', nombre: '', empresaId: '', roles: 'ROLE_CONTADOR' }) }}>Nuevo usuario</Button></Box>
-          <TableContainer>
-            <Table size="small" aria-label="Usuarios">
-              <TableHead>
-                <TableRow>
-                  <TableCell>ID</TableCell><TableCell>Usuario</TableCell><TableCell>Email</TableCell><TableCell>Nombre</TableCell><TableCell>Roles</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {usuarios.map(u => (
-                  <TableRow key={u.id}>
-                    <TableCell>{u.id}</TableCell>
-                    <TableCell>{u.username}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                    <TableCell>{u.nombre}</TableCell>
-                    <TableCell>{u.roles.map(r => <Chip key={r} size="small" label={r.replace('ROLE_', '')} sx={{ mr: 0.5 }} />)}</TableCell>
-                    <TableCell>
-                      <Chip size="small" color={u.enabled ? 'success' : 'default'} label={u.enabled ? 'Activo' : 'Inactivo'}
-                            onClick={() => toggleEstado(u.id, u.enabled)} clickable sx={{ cursor: 'pointer' }} />
-                    </TableCell>
-                    <TableCell align="right">—</TableCell>
+        <SectionCard
+          title="Usuarios"
+          actions={
+            <Button variant="contained" onClick={() => { setDialog('usuario'); setFormUsuario({ username: '', password: '', email: '', nombre: '', empresaId: '', roles: 'ROLE_CONTADOR' }) }}>
+              Nuevo usuario
+            </Button>
+          }
+          padded={usuarios.length === 0}
+        >
+          {usuarios.length === 0 ? (
+            <EmptyState icon={<PeopleAltOutlinedIcon />} title="Sin usuarios" description="Cree usuarios y asígneles un rol y empresa." />
+          ) : (
+            <TableContainer>
+              <Table size="small" aria-label="Usuarios">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID</TableCell><TableCell>Usuario</TableCell><TableCell>Email</TableCell><TableCell>Nombre</TableCell><TableCell>Roles</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+                </TableHead>
+                <TableBody>
+                  {usuarios.map(u => (
+                    <TableRow key={u.id} hover>
+                      <TableCell>{u.id}</TableCell>
+                      <TableCell>{u.username}</TableCell>
+                      <TableCell>{u.email}</TableCell>
+                      <TableCell>{u.nombre}</TableCell>
+                      <TableCell>{u.roles.map(r => <Chip key={r} size="small" label={r.replace('ROLE_', '')} sx={{ mr: 0.5 }} />)}</TableCell>
+                      <TableCell>
+                        <Chip size="small" color={u.enabled ? 'success' : 'default'} label={u.enabled ? 'Activo' : 'Inactivo'}
+                              onClick={() => toggleEstado(u.id, u.enabled)} clickable sx={{ cursor: 'pointer' }} />
+                      </TableCell>
+                      <TableCell align="right">—</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </SectionCard>
       )}
 
       {tab === 'calendario' && (
-        <Box sx={{ display: 'grid', gap: 2 }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <TextField label="Año gravable" type="number" size="small" value={anioCalendario} onChange={e => setAnioCalendario(Number(e.target.value))} />
-            <Button variant="contained" onClick={() => { setDialog('calendario'); setFormCalendario({ anioPresentacion: anioCalendario + 1, tipoReporte: 'PERSONA_JURIDICA', rangoNitIni: '', rangoNitFin: '', fechaLimite: '' }) }}>Nueva fecha</Button>
-          </Box>
-          <TableContainer>
-            <Table size="small" aria-label="Calendario DIAN">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Tipo reporte</TableCell><TableCell>Rango NIT</TableCell><TableCell>Fecha límite</TableCell><TableCell>Año presentación</TableCell><TableCell align="right">Acciones</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {calendario.map(c => (
-                  <TableRow key={c.id}>
-                    <TableCell>{c.tipoReporte.replace('_', ' ')}</TableCell>
-                    <TableCell>{c.rangoNitIni ?? '*'} – {c.rangoNitFin ?? '*'}</TableCell>
-                    <TableCell>{c.fechaLimite}</TableCell>
-                    <TableCell>{c.anioPresentacion}</TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" color="error" onClick={() => eliminarCalendario(c.id)} aria-label="Eliminar"><DeleteIcon fontSize="small" /></IconButton>
-                    </TableCell>
+        <SectionCard
+          title="Calendario DIAN"
+          actions={
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <TextField label="Año gravable" type="number" size="small" value={anioCalendario} onChange={e => setAnioCalendario(Number(e.target.value))} sx={{ width: 140 }} />
+              <Button variant="contained" onClick={() => { setDialog('calendario'); setFormCalendario({ anioPresentacion: anioCalendario + 1, tipoReporte: 'PERSONA_JURIDICA', rangoNitIni: '', rangoNitFin: '', fechaLimite: '' }) }}>
+                Nueva fecha
+              </Button>
+            </Stack>
+          }
+          padded={calendario.length === 0}
+        >
+          {calendario.length === 0 ? (
+            <EmptyState icon={<EventOutlinedIcon />} title="Sin fechas para este año" description="Agregue las fechas límite del calendario tributario." />
+          ) : (
+            <TableContainer>
+              <Table size="small" aria-label="Calendario DIAN">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tipo reporte</TableCell><TableCell>Rango NIT</TableCell><TableCell>Fecha límite</TableCell><TableCell>Año presentación</TableCell><TableCell align="right">Acciones</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
+                </TableHead>
+                <TableBody>
+                  {calendario.map(c => (
+                    <TableRow key={c.id} hover>
+                      <TableCell>{c.tipoReporte.replace('_', ' ')}</TableCell>
+                      <TableCell>{c.rangoNitIni ?? '*'} – {c.rangoNitFin ?? '*'}</TableCell>
+                      <TableCell>{c.fechaLimite}</TableCell>
+                      <TableCell>{c.anioPresentacion}</TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" color="error" onClick={() => eliminarCalendario(c.id)} aria-label="Eliminar"><DeleteIcon fontSize="small" /></IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </SectionCard>
       )}
 
       <Dialog open={dialog === 'empresa'} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>

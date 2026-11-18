@@ -3,15 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
 import Grid from '@mui/material/Grid2'
-import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined'
 import { api } from '../api/client'
 import type { MedioMagnetico } from '../api/client'
 import EstadoChip from '../components/ui/EstadoChip'
+import EmptyState from '../components/ui/EmptyState'
+import PageHeader from '../components/ui/PageHeader'
+import SectionCard from '../components/ui/SectionCard'
+import StatCard from '../components/ui/StatCard'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 
 export default function DashboardPage() {
@@ -34,53 +39,46 @@ export default function DashboardPage() {
       .finally(() => setCargando(false))
   }, [empresaId])
 
+  const sinErrores = medios.filter((m) => m.estado === 'VALIDADO' || m.estado === 'XML_GENERADO').length
+  const conErrores = medios.filter((m) => m.estado === 'VALIDADO_CON_ERRORES').length
+
   return (
     <Box component="section" sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
-        <Typography variant="h4" component="h1">
-          Panel de reportes
-        </Typography>
-        <Button variant="contained" onClick={() => navigate('/carga')}>
-          Cargar datos
-        </Button>
-      </Box>
+      <PageHeader
+        overline="Información exógena"
+        title="Panel de reportes"
+        subtitle="Resumen de los medios magnéticos cargados para la empresa activa."
+        actions={
+          <Button variant="contained" onClick={() => navigate('/carga')}>
+            Cargar datos
+          </Button>
+        }
+      />
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="caption" color="text.secondary">
-                Reportes del año gravable
-              </Typography>
-              <Typography variant="h3" sx={{ mt: 1 }}>
-                {medios.length}
-              </Typography>
-            </CardContent>
-          </Card>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <StatCard
+            label="Reportes del año gravable"
+            value={medios.length}
+            tone="primary"
+            icon={<DescriptionOutlinedIcon />}
+          />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="caption" color="text.secondary">
-                Sin errores de validación
-              </Typography>
-              <Typography variant="h3" sx={{ mt: 1 }}>
-                {medios.filter((m) => m.estado === 'VALIDADO' || m.estado === 'XML_GENERADO').length}
-              </Typography>
-            </CardContent>
-          </Card>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <StatCard
+            label="Sin errores de validación"
+            value={sinErrores}
+            tone="success"
+            icon={<CheckCircleOutlineIcon />}
+          />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="caption" color="text.secondary">
-                Con errores por corregir
-              </Typography>
-              <Typography variant="h3" sx={{ mt: 1 }}>
-                {medios.filter((m) => m.estado === 'VALIDADO_CON_ERRORES').length}
-              </Typography>
-            </CardContent>
-          </Card>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <StatCard
+            label="Con errores por corregir"
+            value={conErrores}
+            tone="warning"
+            icon={<ErrorOutlineIcon />}
+          />
         </Grid>
       </Grid>
 
@@ -90,52 +88,70 @@ export default function DashboardPage() {
         </Alert>
       )}
 
-      <Paper variant="outlined">
-        <Stack spacing={1} sx={{ p: { xs: 2, md: 3 } }}>
-          <Typography variant="h6" component="h2">
-            Medios magnéticos
+      <SectionCard title="Medios magnéticos" subtitle="Seleccione un reporte para validarlo o ver su detalle.">
+        {cargando && (
+          <Typography variant="body2" color="text.secondary">
+            Cargando…
           </Typography>
-          {cargando && <Typography variant="body2" color="text.secondary">Cargando…</Typography>}
-          {!cargando && medios.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              No hay reportes cargados. Utilice «Cargar datos» para empezar.
-            </Typography>
-          )}
-          {medios.map((m) => (
-            <Box
-              key={m.id}
-              sx={{
-                border: '1px solid divider',
-                borderRadius: 2,
-                p: 2,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 2,
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Box>
-                <Typography variant="subtitle1">
-                  Formato {m.formato} · Año gravable {m.anioGravable}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {m.empresaRazonSocial} — NIT {m.empresaNit}
-                </Typography>
+        )}
+
+        {!cargando && medios.length === 0 && (
+          <EmptyState
+            icon={<InboxOutlinedIcon />}
+            title="Sin reportes cargados"
+            description="Aún no hay medios magnéticos para esta empresa. Cargue un archivo Excel para comenzar."
+            action={
+              <Button variant="contained" onClick={() => navigate('/carga')}>
+                Cargar datos
+              </Button>
+            }
+          />
+        )}
+
+        {!cargando && medios.length > 0 && (
+          <Stack spacing={1.5}>
+            {medios.map((m) => (
+              <Box
+                key={m.id}
+                sx={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: 2,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: (t) => t.palette.divider,
+                  transition: 'border-color 180ms ease, background-color 180ms ease',
+                  '&:hover': {
+                    borderColor: (t) => t.palette.primary.main,
+                    bgcolor: (t) => t.palette.action.hover,
+                  },
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="subtitle1">
+                    Formato {m.formato} · Año gravable {m.anioGravable}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {m.empresaRazonSocial} — NIT {m.empresaNit}
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <EstadoChip estado={m.estado} />
+                  <Button size="small" onClick={() => navigate(`/validacion/${m.id}`)}>
+                    Validar
+                  </Button>
+                  <Button size="small" onClick={() => navigate(`/reporte/${m.id}`)}>
+                    Reporte
+                  </Button>
+                </Stack>
               </Box>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <EstadoChip estado={m.estado} />
-                <Button size="small" onClick={() => navigate(`/validacion/${m.id}`)}>
-                  Validar
-                </Button>
-                <Button size="small" onClick={() => navigate(`/reporte/${m.id}`)}>
-                  Reporte
-                </Button>
-              </Stack>
-            </Box>
-          ))}
-        </Stack>
-      </Paper>
+            ))}
+          </Stack>
+        )}
+      </SectionCard>
     </Box>
   )
 }
