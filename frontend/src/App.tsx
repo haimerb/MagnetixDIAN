@@ -1,17 +1,21 @@
+import Box from '@mui/material/Box'
+import CircularProgress from '@mui/material/CircularProgress'
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { useAuth } from './features/auth/useAuth'
 import AppLayout from './components/layout/AppLayout'
-import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
-import CargaPage from './pages/CargaPage'
-import ValidacionPage from './pages/ValidacionPage'
-import ReportePage from './pages/ReportePage'
-import GuiaMuiscaPage from './pages/GuiaMuiscaPage'
-import AdminPage from './pages/AdminPage'
-import FacturacionPage from './pages/FacturacionPage'
-import FacturaDetallePage from './pages/FacturaDetallePage'
-import ConfigFePage from './pages/ConfigFePage'
+
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const CargaPage = lazy(() => import('./pages/CargaPage'))
+const ValidacionPage = lazy(() => import('./pages/ValidacionPage'))
+const ReportePage = lazy(() => import('./pages/ReportePage'))
+const GuiaMuiscaPage = lazy(() => import('./pages/GuiaMuiscaPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const FacturacionPage = lazy(() => import('./pages/FacturacionPage'))
+const FacturaDetallePage = lazy(() => import('./pages/FacturaDetallePage'))
+const ConfigFePage = lazy(() => import('./pages/ConfigFePage'))
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -19,32 +23,42 @@ function RequiereAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function Cargando() {
+  return (
+    <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
+      <CircularProgress size={28} />
+    </Box>
+  )
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <RequiereAuth>
-                <AppLayout />
-              </RequiereAuth>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="carga" element={<CargaPage />} />
-            <Route path="validacion/:medioId?" element={<ValidacionPage />} />
-            <Route path="reporte/:medioId?" element={<ReportePage />} />
-            <Route path="guia" element={<GuiaMuiscaPage />} />
-            <Route path="facturacion" element={<FacturacionPage />} />
-            <Route path="facturacion/config" element={<ConfigFePage />} />
-            <Route path="facturacion/:id" element={<FacturaDetallePage />} />
-            <Route path="admin" element={<AdminPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<Cargando />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/"
+              element={
+                <RequiereAuth>
+                  <AppLayout />
+                </RequiereAuth>
+              }
+            >
+              <Route index element={<DashboardPage />} />
+              <Route path="carga" element={<CargaPage />} />
+              <Route path="validacion/:medioId?" element={<ValidacionPage />} />
+              <Route path="reporte/:medioId?" element={<ReportePage />} />
+              <Route path="guia" element={<GuiaMuiscaPage />} />
+              <Route path="facturacion" element={<FacturacionPage />} />
+              <Route path="facturacion/config" element={<ConfigFePage />} />
+              <Route path="facturacion/:id" element={<FacturaDetallePage />} />
+              <Route path="admin" element={<AdminPage />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
   )
