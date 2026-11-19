@@ -90,6 +90,43 @@ class ServicioPagosTest {
     }
 
     @Test
+    void obtenerPagoPorReferencia() {
+        EmpresaJpa empresa = mock(EmpresaJpa.class);
+        when(empresa.getId()).thenReturn(1L);
+        PagoJpa pago = mock(PagoJpa.class);
+        when(pago.getEmpresa()).thenReturn(empresa);
+        when(pago.getReferencia()).thenReturn("SIMULADO-1");
+        when(pago.getProveedor()).thenReturn("SIMULADO");
+        when(pago.getPlanCodigo()).thenReturn("PRO");
+        when(pago.getMonto()).thenReturn(new BigDecimal("99000"));
+        when(pago.getMoneda()).thenReturn("COP");
+        when(pago.getEstado()).thenReturn("APROBADO");
+        when(pagoRepo.findByReferencia("SIMULADO-1")).thenReturn(Optional.of(pago));
+
+        PagoDto dto = servicio.obtener(1L, "SIMULADO-1");
+
+        assertEquals("SIMULADO-1", dto.referencia());
+        assertEquals("APROBADO", dto.estado());
+    }
+
+    @Test
+    void obtenerPagoRechazaOtraEmpresa() {
+        EmpresaJpa empresa = mock(EmpresaJpa.class);
+        when(empresa.getId()).thenReturn(2L);
+        PagoJpa pago = mock(PagoJpa.class);
+        when(pago.getEmpresa()).thenReturn(empresa);
+        when(pagoRepo.findByReferencia("WOMPI-1")).thenReturn(Optional.of(pago));
+
+        assertThrows(IllegalArgumentException.class, () -> servicio.obtener(1L, "WOMPI-1"));
+    }
+
+    @Test
+    void obtenerPagoInexistente() {
+        when(pagoRepo.findByReferencia("NO-EXISTE")).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> servicio.obtener(1L, "NO-EXISTE"));
+    }
+
+    @Test
     void webhookDeSimuladaNoHaceNada() {
         servicio.procesarWebhook("SIMULADO", "{}", java.util.Map.of());
         verify(pagoRepo, never()).save(any());

@@ -428,6 +428,20 @@ export type ResultadoImportacion = {
   errores: string[]
 }
 
+export type ReenvioFactura = {
+  enviado: boolean
+  destinatario: string
+}
+
+export async function reenviarFactura(empresaId: number, facturaId: number, destinatario: string) {
+  const { data } = await api.post<ReenvioFactura>(
+    `/facturacion/${empresaId}/${facturaId}/reenviar`,
+    { destinatario },
+    { skipGlobalError: true },
+  )
+  return data
+}
+
 export async function importarFacturas(empresaId: number, archivo: File) {
   const form = new FormData()
   form.append('archivo', archivo)
@@ -578,6 +592,11 @@ export type Pago = {
 
 export async function listarPagos(empresaId: number) {
   const { data } = await api.get<Pago[]>(`/empresas/${empresaId}/pagos`)
+  return data
+}
+
+export async function obtenerPago(empresaId: number, referencia: string) {
+  const { data } = await api.get<Pago>(`/empresas/${empresaId}/pagos/${encodeURIComponent(referencia)}`)
   return data
 }
 

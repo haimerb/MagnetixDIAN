@@ -38,13 +38,16 @@ export PATH="$JAVA_HOME/bin:$PATH"
 backend/src/main/java/com/magnetixdian/
   interfaces/rest/      Controllers REST (AuthController, MedioMagneticoController,
                         FacturaController, ConfiguracionFeController, AdminController,
+                        PlanController, ApiKeyController, PagoController,
                         GlobalExceptionHandler)
   interfaces/dto/       Records de respuesta (NUNCA entidades JPA — open-in-view=false)
                         incluido PaginaDto<T> para listados paginados
   application/          Servicios de caso de uso (AuthService, JwtService, ServicioAdmin,
                         ServicioMedioMagnetico, ServicioValidacion, ServicioFacturacion,
                         ServicioNumeracion, ServicioFirma, ServicioTransmision,
-                        ServicioConfigFe, ServicioGeneracionAutomatica)
+                        ServicioConfigFe, ServicioGeneracionAutomatica, ServicioRecuperacion,
+                        ServicioSuscripciones, ServicioApiKeys, ServicioPagos, PasarelasPago,
+                        AuditoriaService, ProgramadorReintentos, ProgramadorAceptacionTacita)
   domain/
     rule/               ReglaValidacion (interfaz), RuleEngine, reglas 1001/1002, CatalogoConceptos
     rule/factura/       Reglas de facturación (ValidadorFactura + ReglaFactura)
@@ -52,6 +55,9 @@ backend/src/main/java/com/magnetixdian/
     factura/            Modelo de dominio (FacturaDatos, TipoDocumento, LineaFactura, ...)
     firma/              FirmadorXml (interfaz), FirmadorNoOp, FirmadorXades
     transmision/        CanalTransmision (interfaz), ResultadoTransmision
+    suscripcion/        LimiteUso (regla pura de límites)
+    apikey/             ClaveApi (generación/hash SHA-256 de claves de API)
+    pago/               PasarelaPago (interfaz), SolicitudPago, CheckoutPago, EventoPago
     uvt/                UvtManager
     model/              OperacionDatos, ResultadoRegla, Severidad
   infrastructure/
@@ -60,9 +66,11 @@ backend/src/main/java/com/magnetixdian/
                         GeneradorApplicationResponse
     pdf/                GeneradorPdfFactura (OpenPDF)
     transmision/        CanalSimulado, pac/ClientePac, dian/ClienteDianSoap
+    pago/               PasarelaSimulada, PasarelaWompi, PasarelaMercadoPago
     notification/       NotificadorEmail, ServicioNotificaciones, SchedulerJobs
     persistence/        Repositorios y entidades JPA
-  security/             JwtAuthFilter, CustomUserDetailsService, AutorizacionEmpresa
+  security/             JwtAuthFilter, ApiKeyAuthFilter, RateLimitFilter,
+                        CustomUserDetailsService, AutorizacionEmpresa
   config/               SecurityConfig, JwtProperties
 ```
 
@@ -72,7 +80,8 @@ backend/src/main/java/com/magnetixdian/
 - **Reglas format-aware:** `ReglaValidacion.aplicaA(formato)` permite activar/desactivar reglas por formato (1001/1002). `ContextoValidacion` transporta el `formato`.
 - **DTOs en el contrato API:** las respuestas serializan records, no entidades (evita proxys LAZY con `open-in-view: false`).
 - **Java 17 estricto:** no usar features de Java 21 (ej. pattern matching en `switch`).
-- **Autorización por empresa:** `AutorizacionEmpresa` verifica que el usuario autenticado (no-ADMIN) solo acceda a los recursos de su empresa; `ROLE_ADMIN` accede a todo. Se aplica en los controllers de facturación, medios y configuración.
+- **Autorización por empresa:** `AutorizacionEmpresa` verifica que el usuario autenticado (no-ADMIN) solo acceda a los recursos de su empresa; `ROLE_ADMIN` accede a todo. Se aplica en los controllers de facturación, medios, configuración, planes, claves de API y pagos.
+- **Puertos + adaptadores:** las integraciones externas se definen como interfaz (`CanalTransmision`, `PasarelaPago`, `FirmadorXml`) con adaptadores intercambiables; sin credenciales quedan inertes (`CanalSimulado`, `PasarelaSimulada`, `FirmadorNoOp`).
 - **Sin `WebConfig`:** CORS y seguridad se centralizan en `SecurityConfig`.
 
 ## 3. Modelo de datos
@@ -87,6 +96,13 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 | `V4__facturacion_electronica.sql` | Tablas de facturación electrónica |
 | `V5__catalogos_facturacion.sql` | Catálogos DIAN de facturación |
 | `V6__resolucion_demo.sql` | Resolución/prefijo demo por empresa |
+| `V7__notificar_adquirente.sql` | Datos de notificación al adquirente en `empresa_fe_config` |
+| `V8__ampliar_columnas_secretos.sql` | Ampliación de columnas de secretos |
+| `V9__auth_seguridad_auditoria.sql` | `password_reset_token`, `refresh_token`, `evento_auditoria`, columnas de bloqueo/invitación en `usuario` |
+| `V10__envio_factura_reintentos.sql` | `envio_factura` (último envío por factura para reintentos) |
+| `V11__planes_suscripciones.sql` | `plan` + `suscripcion` (seed FREE/PRO/ENTERPRISE y suscripción demo) |
+| `V12__api_keys.sql` | `api_key` (claves de API por empresa, hash SHA-256) |
+| `V13__pagos.sql` | `pago` (intención de pago por pasarela) |
 
 **Tablas de medios magnéticos:** `empresa`, `tercero`, `medio_magnetico`, `operacion`, `uvt_vigencia`, `regla`, `validacion` / `detalle_error`, `calendario_dian`, `notificacion`, `role` / `usuario` / `usuario_role`.
 
@@ -101,6 +117,12 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 | `factura_impuesto` | Impuestos desagregados por línea |
 | `factura_evento` | Eventos/transmisión (EMISION y eventos DIAN 030-034) |
 | `catalogo_dian` | Catálogos DIAN (tipo documento, responsabilidad, tributo, evento, ...) |
+| `envio_factura` | Último envío por factura + reintentos (backoff) |
+| `password_reset_token` / `refresh_token` | Tokens de un solo uso (reset de contraseña y sesión) |
+| `evento_auditoria` | Bitácora de login, cambios de clave, CRUD admin y emisión/rechazo |
+| `plan` / `suscripcion` | Planes (FREE/PRO/ENTERPRISE) y suscripción activa por empresa |
+| `api_key` | Claves de API por empresa (prefijo + hash SHA-256, propietario, último uso) |
+| `pago` | Intención de pago por pasarela (referencia única, monto, estado, URL de checkout) |
 
 **Estados de `medio_magnetico`:** `BORRADOR` → `CARGADO` → `VALIDADO` | `VALIDADO_CON_ERRORES` → `XML_GENERADO` → `PRESENTADO`. Solo se permite `PRESENTADO` desde `VALIDADO`/`VALIDADO_CON_ERRORES`/`XML_GENERADO`.
 
@@ -172,18 +194,33 @@ Límite de reporte: 3 UVT × 49.799 (2025) = **149.397 COP**.
 - **Transmisión:** `ServicioTransmision` usa el canal configurado (`domain/transmision/CanalTransmision`): `CanalSimulado` (default), PAC REST (`ClientePac`) o DIAN SOAP (`SendBillSync`, `ClienteDianSoap`).
 - **PDF:** `GeneradorPdfFactura` (OpenPDF), descargable con el XML.
 - **Notas crédito/débito:** los tipos 91/92 referencian el documento original mediante `cufe_referencia` / `numero_referencia`, reflejados en el UBL.
-- **Eventos DIAN:** los eventos 030-034 (acuse, recibo, reclamo, aceptación) se registran sobre la factura y se persisten en `factura_evento`.
+- **Eventos DIAN (RADIAN):** los eventos 030-034 (acuse, recibo, reclamo, aceptación) se registran sobre la factura y se persisten en `factura_evento`. El evento `ApplicationResponse` calcula su propio **CUDE** (SHA-384 sobre `Num_DE + Fec_Emi + Hor_Emi + NitFE + DocAdq + ResponseCode + ID + DocumentTypeCode + Software-PIN`, §11.5 del anexo FEV v1.9) y se genera vía `GeneradorApplicationResponse`.
+- **Aceptación tácita:** `ProgramadorAceptacionTacita` marca como aceptadas las facturas sin reclamo pasado el plazo (gate `RADIAN_ACEPTACION_TACITA`, default `false`).
+- **Reintentos de transmisión:** `envio_factura` guarda el último envío; `ProgramadorReintentos` reintenta cada 60 s con backoff 1→5→15→60→240 min (máx. 5).
 
 ## 7. API REST
 
 Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 
-### Autenticación y medios magnéticos
+### Autenticación
 
 | Método | Ruta | Descripción |
 |---|---|---|
 | POST | `/api/auth/login` | Login `{username, password}` → `{accessToken, refreshToken, username, roles}` |
-| POST | `/api/auth/refresh` | Renovar token con `{refreshToken}` |
+| POST | `/api/auth/refresh` | Renovar token con `{refreshToken}` (rotación/revocación) |
+| POST | `/api/auth/logout` | Revoca el refresh token |
+| POST | `/api/auth/forgot-password` | Envía enlace de reseteo (token de un solo uso, TTL 30 min) |
+| POST | `/api/auth/reset-password` | Restablece la contraseña con el token |
+| POST | `/api/auth/accept-invite` | Acepta invitación y define la contraseña (TTL 7 días) |
+| POST | `/api/auth/change-password` | Cambio de contraseña autenticado |
+| GET | `/api/auth/me` | Datos del usuario autenticado |
+
+**Endurecimiento:** bloqueo tras 5 intentos fallidos durante 15 min (`423`), rate limit de 20 req/min por IP en `/api/auth/**` (`RateLimitFilter`). Las claves de API (`X-API-Key`) heredan los roles de su usuario propietario (`ApiKeyAuthFilter`).
+
+### Medios magnéticos
+
+| Método | Ruta | Descripción |
+|---|---|---|
 | GET | `/api/mediomagnetico/plantilla?formato=` | Descarga la plantilla Excel (1001/1002) |
 | POST | `/api/mediomagnetico/{empresaId}/cargar` | Multipart: `formato`, `anioGravable`, `archivo` (Excel) |
 | POST | `/api/mediomagnetico/{id}/validar?anioGravable=` | Ejecuta validación → `ValidacionProcesoDto` |
@@ -202,13 +239,33 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 |---|---|---|
 | POST | `/api/facturacion/{empresaId}/validar` | Valida una factura/nota sin emitir |
 | POST | `/api/facturacion/{empresaId}/emitir` | Emite (valida, CUFE, UBL, firma, transmite, persiste) |
+| POST | `/api/facturacion/{empresaId}/importar` | Importación masiva desde CSV/Excel (multipart) |
 | GET | `/api/facturacion/{empresaId}` | Lista documentos de la empresa |
 | GET | `/api/facturacion/{empresaId}/paginado` | Listado paginado (`page`, `size`) |
+| GET | `/api/facturacion/{empresaId}/export` | Exportación contable (CSV) |
 | GET | `/api/facturacion/{empresaId}/{id}` | Detalle del documento |
+| POST | `/api/facturacion/{empresaId}/{id}/eventos` | Registra un evento RADIAN (030-034) sobre la factura |
 | GET | `/api/facturacion/{empresaId}/{id}/pdf` | Descarga el PDF |
 | GET | `/api/facturacion/{empresaId}/{id}/xml` | Descarga el XML firmado |
+| POST | `/api/facturacion/{empresaId}/{id}/reenviar` | Reenvía XML + PDF por correo `{destinatario}` (409 si notificaciones están deshabilitadas) |
 | GET | `/api/facturacion/catalogo/{tipo}` | Catálogo DIAN (`TIPO_DOCUMENTO`, `TRIBUTO`, ...) |
 | GET/PUT | `/api/facturacion/config/{empresaId}` | Obtiene/guarda la configuración DIAN de la empresa |
+
+### Planes, suscripciones, claves de API y pagos
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/planes` | Catálogo de planes activos |
+| GET | `/api/empresas/{empresaId}/suscripcion` | Suscripción activa + uso del mes (documentos/usuarios) |
+| POST | `/api/empresas/{empresaId}/suscripcion` | Cambia de plan `{planCodigo, proveedor}` |
+| DELETE | `/api/empresas/{empresaId}/suscripcion` | Cancela la suscripción |
+| GET | `/api/empresas/{empresaId}/api-keys` | Lista las claves de API de la empresa |
+| POST | `/api/empresas/{empresaId}/api-keys` | Crea una clave `{nombre}` (se devuelve **una sola vez**) |
+| DELETE | `/api/empresas/{empresaId}/api-keys/{id}` | Revoca una clave |
+| GET | `/api/empresas/{empresaId}/pagos` | Historial de pagos de suscripción |
+| GET | `/api/empresas/{empresaId}/pagos/{referencia}` | Estado actual de un pago (útil tras volver del checkout) |
+| POST | `/api/empresas/{empresaId}/pagos/checkout` | Inicia el pago `{planCodigo, proveedor}` → `{url, ...}` |
+| POST | `/api/pagos/webhook/{proveedor}` | Webhook público de la pasarela (`SIMULADO`/`WOMPI`/`MERCADOPAGO`) |
 
 ### Administración (rol ADMIN)
 
@@ -218,10 +275,16 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | GET | `/api/admin/empresas/paginado` | Listado paginado (`page`, `size`) |
 | GET/POST/PUT | `/api/admin/usuarios` | CRUD de usuarios |
 | GET | `/api/admin/usuarios/paginado` | Listado paginado (`page`, `size`) |
+| POST | `/api/admin/usuarios/invitar` | Invita a un usuario (enlace con token de 7 días) |
+| POST | `/api/admin/usuarios/{id}/enlace-acceso` | Genera un enlace de acceso manual |
+| PUT | `/api/admin/usuarios/{id}/estado` | Activa/desactiva un usuario |
+| GET | `/api/admin/auditoria` | Bitácora de auditoría |
+| GET | `/api/admin/transmision` | Estado de transmisión y reintentos |
+| POST | `/api/admin/transmision/{id}/reintentar` | Fuerza el reintento de un envío |
 | GET/POST/DELETE | `/api/admin/calendario` | Calendario DIAN |
 | GET | `/actuator/health` · `/actuator/health/liveness` · `/actuator/health/readiness` | Health checks (sin auth) |
 
-**Seguridad:** salvo `/api/auth/**`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>`. `/api/admin/**` exige además `ROLE_ADMIN`. Los recursos por empresa se filtran con `AutorizacionEmpresa` (403 si no corresponde). CORS configurable con `CORS_ORIGINS` (default `localhost:5173`, `localhost:4173`).
+**Seguridad:** salvo `/api/auth/**`, `/api/pagos/webhook/**`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>` (o `X-API-Key`). `/api/admin/**` exige además `ROLE_ADMIN`. Los recursos por empresa se filtran con `AutorizacionEmpresa` (403 si no corresponde). CORS configurable con `CORS_ORIGINS` (default `localhost:5173`, `localhost:4173`).
 
 **Respuestas de error** (`GlobalExceptionHandler`): `400` argumentos inválidos, `403` acceso denegado, `409` estado inconsistente, `404` no encontrado, JSON limpio.
 
@@ -299,12 +362,27 @@ El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merg
 | `REMINDER_CRON` | `0 0 9 * * *` | cron recordatorios |
 | `GENERATOR_CRON` | `0 0 2 1 1 *` | cron generador automático de XML |
 | `SERVER_PORT` | `8080` | puerto HTTP |
+| `FRONTEND_URL` | `http://localhost:5173` | base para enlaces de correo e retorno de checkout |
+| `AUTH_EXPOSE_TOKEN` | `true` | devuelve enlaces/tokens en la respuesta (usar `false` en producción) |
+| `CRYPTO_KEY` | valor dev | clave de cifrado de secretos (`empresa_fe_config`) |
+| `REINTENTO_TRANSMISION_MS` | `60000` | intervalo del programador de reintentos |
+| `RADIAN_ACEPTACION_TACITA` | `false` | habilita la aceptación tácita automática |
+| `RADIAN_ACEPTACION_TACITA_CRON` | `0 0 6 * * *` | cron de la aceptación tácita |
+| `SENTRY_DSN` / `SENTRY_ENVIRONMENT` / `SENTRY_TRACES_SAMPLE_RATE` | — / `local` / `0.1` | monitoreo backend (inactivo sin DSN) |
+| `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | — | pasarela Wompi (inactiva sin credenciales) |
+| `WOMPI_CHECKOUT_URL` | `https://checkout.wompi.co/p/` | endpoint de checkout de Wompi |
+| `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_BASE_URL` / `MERCADOPAGO_BACK_URL` | — / `https://api.mercadopago.com` / — | pasarela MercadoPago (inactiva sin credenciales) |
+| `MERCADOPAGO_WEBHOOK_SECRET` | — | secreto de firmas `x-signature` (si se define, se valida `id/request-id/ts` con HMAC-SHA256) |
+| `VITE_API_BASE_URL` / `VITE_SENTRY_DSN` | — | frontend (build-time) |
 
 ## 11. Notificaciones, jobs y CI/CD
 
 - **Recordatorios:** `SchedulerJobs` consulta el calendario DIAN y, a 15/7/1 días del vencimiento (`magnetixdian.notifications.days-before-deadline`), crea `notificacion` y envía correo si `NOTIFICATIONS_ENABLED=true` (cron `REMINDER_CRON`).
 - **Generación automática:** `ServicioGeneracionAutomatica` genera el XML de los medios en estado `VALIDADO` (idempotente, un fallo no detiene el lote); programado por `SchedulerJobs` con cron `GENERATOR_CRON`.
 - **Transporte:** `ServicioNotificaciones` + `NotificadorEmail` (SMTP) separan la lógica del transporte.
+- **Reintentos de transmisión:** `ProgramadorReintentos` reintenta cada 60 s con backoff (1→5→15→60→240 min, máx. 5); panel admin en `/api/admin/transmision`.
+- **Aceptación tácita RADIAN:** `ProgramadorAceptacionTacita` (gate `RADIAN_ACEPTACION_TACITA`).
+- **Auditoría:** `AuditoriaService` registra login, cambios de clave, CRUD admin y emisión/rechazo de facturas en `evento_auditoria`.
 - **Tareas programadas** habilitadas con `@EnableScheduling`.
 
 ### CI (GitHub Actions)
@@ -312,6 +390,7 @@ El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merg
 `.github/workflows/ci.yml` ejecuta en cada push/PR a `main`/`develop`:
 - **backend:** `mvn clean package` (JDK 17, cache Maven).
 - **frontend:** `pnpm install --frozen-lockfile && pnpm run lint && pnpm run test && pnpm run build`.
+- **e2e:** Playwright (`frontend/e2e/`) contra Postgres 16 + backend + preview; valida las migraciones Flyway.
 
 ### CD (GitHub Actions)
 
@@ -319,7 +398,7 @@ El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merg
 
 ## 12. Pruebas y smoke test
 
-Suite JUnit en `backend/src/test/java/` (rule engine, reglas de facturación, CUFE/QR, importador Excel, seguridad, generador automático). Suite Vitest en `frontend/src/**/*.test.tsx` (átomos, ErrorBoundary, notificaciones).
+Suite JUnit en `backend/src/test/java/` — **150 pruebas** (rule engine, reglas de facturación, CUFE/QR/CUDE, importador Excel, seguridad, generador automático, suscripciones, claves de API y pasarelas). Suite Vitest en `frontend/src/**/*.test.tsx` — **22 pruebas** (átomos, ErrorBoundary, notificaciones, tema). Suite E2E Playwright en `frontend/e2e/`.
 
 ```bash
 # Backend con tests

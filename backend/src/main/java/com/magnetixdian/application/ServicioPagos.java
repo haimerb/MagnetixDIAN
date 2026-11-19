@@ -55,6 +55,14 @@ public class ServicioPagos {
         return pagoRepo.findByEmpresaIdOrderByCreatedAtDesc(empresaId).stream().map(this::aDto).toList();
     }
 
+    @Transactional(readOnly = true)
+    public PagoDto obtener(Long empresaId, String referencia) {
+        PagoJpa pago = pagoRepo.findByReferencia(referencia)
+                .filter(p -> p.getEmpresa().getId().equals(empresaId))
+                .orElseThrow(() -> new IllegalArgumentException("Pago no encontrado"));
+        return aDto(pago);
+    }
+
     @Transactional
     public PagoDto iniciar(Long empresaId, String planCodigo, String proveedor) {
         var empresa = empresaRepo.findById(empresaId)
