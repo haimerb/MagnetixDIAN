@@ -474,3 +474,59 @@ export async function aceptarInvitacion(token: string, password: string) {
 export async function cambiarPassword(passwordActual: string, passwordNueva: string) {
   await api.post('/auth/change-password', { passwordActual, passwordNueva }, { skipGlobalError: true })
 }
+
+export type Plan = {
+  id: number
+  codigo: string
+  nombre: string
+  descripcion: string | null
+  precioMensual: number
+  moneda: string
+  limiteFacturasMes: number
+  limiteUsuarios: number
+  orden: number
+}
+
+export type UsoSuscripcion = {
+  facturasMes: number
+  facturasRestantes: number | null
+  facturasExcedidas: boolean
+  usuarios: number
+  usuariosRestantes: number | null
+  usuariosExcedidos: boolean
+}
+
+export type Suscripcion = {
+  id: number
+  empresaId: number
+  plan: Plan
+  estado: string
+  proveedor: string
+  referenciaExterna: string | null
+  periodoInicio: string
+  periodoFin: string | null
+  uso: UsoSuscripcion
+}
+
+export async function listarPlanes() {
+  const { data } = await api.get<Plan[]>('/planes')
+  return data
+}
+
+export async function obtenerSuscripcion(empresaId: number) {
+  const { data } = await api.get<Suscripcion | null>(`/empresas/${empresaId}/suscripcion`)
+  return data
+}
+
+export async function cambiarPlan(empresaId: number, planCodigo: string, proveedor?: string) {
+  const { data } = await api.post<Suscripcion>(
+    `/empresas/${empresaId}/suscripcion`,
+    { planCodigo, proveedor },
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function cancelarSuscripcion(empresaId: number) {
+  await api.delete(`/empresas/${empresaId}/suscripcion`, { skipGlobalError: true })
+}

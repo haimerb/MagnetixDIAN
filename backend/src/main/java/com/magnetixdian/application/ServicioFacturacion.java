@@ -89,6 +89,7 @@ public class ServicioFacturacion {
     private final GeneradorApplicationResponse generadorEvento;
     private final AuditoriaService auditoria;
     private final ServicioEnvios envios;
+    private final ServicioSuscripciones suscripciones;
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -104,7 +105,8 @@ public class ServicioFacturacion {
                                NotificadorEmail notificador,
                                GeneradorApplicationResponse generadorEvento,
                                AuditoriaService auditoria,
-                               ServicioEnvios envios) {
+                               ServicioEnvios envios,
+                               ServicioSuscripciones suscripciones) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -120,6 +122,7 @@ public class ServicioFacturacion {
         this.generadorEvento = generadorEvento;
         this.auditoria = auditoria;
         this.envios = envios;
+        this.suscripciones = suscripciones;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -134,6 +137,7 @@ public class ServicioFacturacion {
 
     @Transactional
     public ResultadoEmisionDto emitir(Long empresaId, Long usuarioId, FacturaRequest req) {
+        suscripciones.verificarLimiteDocumentos(empresaId);
         EmpresaJpa empresa = empresa(empresaId);
         EmpresaFeConfigJpa config = config(empresaId);
         TipoDocumento tipo = TipoDocumento.porCodigo(req.tipoDocumento());

@@ -44,6 +44,7 @@ public class ServicioAdmin {
     private final PasswordEncoder passwordEncoder;
     private final ServicioRecuperacion recuperacion;
     private final AuditoriaService auditoria;
+    private final ServicioSuscripciones suscripciones;
 
     public ServicioAdmin(EmpresaRepository empresaRepo,
                          UsuarioRepository usuarioRepo,
@@ -52,7 +53,8 @@ public class ServicioAdmin {
                          MedioMagneticoRepository medioRepo,
                          PasswordEncoder passwordEncoder,
                          ServicioRecuperacion recuperacion,
-                         AuditoriaService auditoria) {
+                         AuditoriaService auditoria,
+                         ServicioSuscripciones suscripciones) {
         this.empresaRepo = empresaRepo;
         this.usuarioRepo = usuarioRepo;
         this.roleRepo = roleRepo;
@@ -61,6 +63,7 @@ public class ServicioAdmin {
         this.passwordEncoder = passwordEncoder;
         this.recuperacion = recuperacion;
         this.auditoria = auditoria;
+        this.suscripciones = suscripciones;
     }
 
     // ---------------------------------------------------------------- Empresas
@@ -167,6 +170,7 @@ public class ServicioAdmin {
         }
         Long empresaId = request.empresaId();
         if (empresaId != null) {
+            suscripciones.verificarLimiteUsuarios(empresaId);
             usuario.setEmpresa(empresaRepo.findById(empresaId)
                     .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada: " + empresaId)));
         }
@@ -196,6 +200,7 @@ public class ServicioAdmin {
             usuario.getRoles().add(rol);
         }
         if (request.empresaId() != null) {
+            suscripciones.verificarLimiteUsuarios(request.empresaId());
             usuario.setEmpresa(empresaRepo.findById(request.empresaId())
                     .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada: " + request.empresaId())));
         }
