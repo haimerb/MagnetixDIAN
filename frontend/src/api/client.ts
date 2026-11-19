@@ -530,3 +530,37 @@ export async function cambiarPlan(empresaId: number, planCodigo: string, proveed
 export async function cancelarSuscripcion(empresaId: number) {
   await api.delete(`/empresas/${empresaId}/suscripcion`, { skipGlobalError: true })
 }
+
+export type ApiKey = {
+  id: number
+  nombre: string
+  prefijo: string
+  activo: boolean
+  ultimoUso: string | null
+  createdAt: string
+}
+
+export type ApiKeyCreada = {
+  id: number
+  nombre: string
+  prefijo: string
+  clave: string
+}
+
+export async function listarApiKeys(empresaId: number) {
+  const { data } = await api.get<ApiKey[]>(`/empresas/${empresaId}/api-keys`)
+  return data
+}
+
+export async function crearApiKey(empresaId: number, nombre: string) {
+  const { data } = await api.post<ApiKeyCreada>(
+    `/empresas/${empresaId}/api-keys`,
+    { nombre },
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function revocarApiKey(empresaId: number, id: number) {
+  await api.delete(`/empresas/${empresaId}/api-keys/${id}`, { skipGlobalError: true })
+}
