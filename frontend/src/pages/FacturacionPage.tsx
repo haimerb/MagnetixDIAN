@@ -129,7 +129,18 @@ export default function FacturacionPage() {
                     <TableRow
                       key={f.id}
                       hover
-                      sx={{ cursor: 'pointer' }}
+                      tabIndex={0}
+                      aria-label={`Abrir documento ${f.numeroCompleto}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(`/facturacion/${f.id}`)
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
+                      }}
                       onClick={() => navigate(`/facturacion/${f.id}`)}
                     >
                       <TableCell sx={{ fontWeight: 600 }}>{f.numeroCompleto}</TableCell>

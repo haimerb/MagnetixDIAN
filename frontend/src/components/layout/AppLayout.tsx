@@ -95,9 +95,20 @@ export default function AppLayout() {
             <Box
               role="button"
               tabIndex={0}
+              aria-label="Ir al panel"
               onClick={() => navigate('/')}
-              onKeyDown={(e) => e.key === 'Enter' && navigate('/')}
-              sx={{ cursor: 'pointer', borderRadius: 1, outlineOffset: 4 }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  navigate('/')
+                }
+              }}
+              sx={{
+                cursor: 'pointer',
+                borderRadius: 1,
+                outlineOffset: 4,
+                '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' },
+              }}
             >
               <Logo size={32} />
             </Box>
@@ -114,6 +125,7 @@ export default function AppLayout() {
                     key={item.to}
                     disableRipple
                     onClick={() => navigate(item.to)}
+                    aria-current={active ? 'page' : undefined}
                     sx={{
                       px: 1.5,
                       position: 'relative',
@@ -203,11 +215,12 @@ export default function AppLayout() {
             </IconButton>
           </Box>
           <Divider />
-          <List disablePadding>
+          <List disablePadding aria-label="Navegación principal">
             {items.map((item) => (
               <ListItemButton
                 key={item.to}
                 selected={isActive(item.to)}
+                aria-current={isActive(item.to) ? 'page' : undefined}
                 onClick={() => {
                   navigate(item.to)
                   setDrawerOpen(false)
