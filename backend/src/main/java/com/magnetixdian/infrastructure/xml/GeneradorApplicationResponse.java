@@ -35,8 +35,9 @@ public class GeneradorApplicationResponse {
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm:ss-05:00");
 
-    public String generar(FacturaJpa f, EventoDian evento, String cufe, String idEvento,
-                          String softwareId, String softwareSecurityCode, String nitAutorizado) {
+    public String generar(FacturaJpa f, EventoDian evento, String cufe, String cude, String idEvento,
+                          OffsetDateTime momento, String softwareId, String softwareSecurityCode,
+                          String nitAutorizado) {
         try {
             Document doc = newDocument();
             Element raiz = el(doc, NS_AR, "ApplicationResponse");
@@ -52,9 +53,10 @@ public class GeneradorApplicationResponse {
             cbc(doc, raiz, "CustomizationID", "urn:oasis:names:specification:ubl:xpath:ApplicationResponse-2.0:sbs-1.0-draft");
             cbc(doc, raiz, "ProfileID", "DIAN 2.1: ApplicationResponse de Factura Electrónica de Venta");
             cbc(doc, raiz, "ID", idEvento);
-            OffsetDateTime ahora = OffsetDateTime.now();
-            cbc(doc, raiz, "IssueDate", ahora.format(FECHA));
-            cbc(doc, raiz, "IssueTime", ahora.format(HORA));
+            Element uuidEvento = cbc(doc, raiz, "UUID", cude == null ? "" : cude);
+            uuidEvento.setAttribute("schemeName", "CUDE-SHA384");
+            cbc(doc, raiz, "IssueDate", momento.format(FECHA));
+            cbc(doc, raiz, "IssueTime", momento.format(HORA));
 
             EmpresaJpa e = f.getEmpresa();
             raiz.appendChild(party(doc, "cac:SenderParty", e.getNit(), "31", e.getRazonSocial()));

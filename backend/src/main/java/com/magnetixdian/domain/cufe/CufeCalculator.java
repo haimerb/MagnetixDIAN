@@ -55,6 +55,37 @@ public final class CufeCalculator {
     }
 
     /**
+     * CUDE de un evento (ApplicationResponse), anexo v1.9 §11.5:
+     * Num_DE + Fec_Emi + Hor_Emi + NitFE + DocAdq + ResponseCode + ID + DocumentTypeCode + Software-PIN.
+     *
+     * @param numeroDocumento   número del documento referenciado (prefijo + número)
+     * @param fechaEmision      fecha del evento (yyyy-MM-dd)
+     * @param horaEmision       hora del evento (HH:mm:ss-05:00)
+     * @param nitEmisor         NIT del emisor de la factura referenciada
+     * @param docAdquirente     documento del adquirente
+     * @param codigoEvento      código del evento (030–034…)
+     * @param idEvento          número/ID del evento
+     * @param tipoDocumentoRef  tipo del documento referenciado (01, 91, 92, 05)
+     * @param softwarePin       PIN del software
+     */
+    public static String calcularEvento(String numeroDocumento, java.time.LocalDate fechaEmision,
+                                        java.time.LocalTime horaEmision, String nitEmisor, String docAdquirente,
+                                        String codigoEvento, String idEvento, String tipoDocumentoRef,
+                                        String softwarePin) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(nvl(numeroDocumento));
+        sb.append(fechaEmision.format(FECHA));
+        sb.append(horaEmision.format(HORA));
+        sb.append(nvl(nitEmisor));
+        sb.append(nvl(docAdquirente));
+        sb.append(nvl(codigoEvento));
+        sb.append(nvl(idEvento));
+        sb.append(nvl(tipoDocumentoRef));
+        sb.append(nvl(softwarePin));
+        return sha384Hex(sb.toString());
+    }
+
+    /**
      * Código de seguridad del software: SHA-384(IdSoftware + PinSoftware + NumeroDocumento).
      */
     public static String softwareSecurityCode(String softwareId, String pin, String numeroDocumento) {
