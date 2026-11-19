@@ -20,6 +20,7 @@ import EmptyState from '../components/ui/EmptyState'
 import EstadoChip from '../components/ui/EstadoChip'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
+import TableSkeleton from '../components/ui/TableSkeleton'
 import FacturaEditor from '../components/facturacion/FacturaEditor'
 
 const FILAS_POR_PAGINA = [10, 25, 50]
@@ -34,9 +35,14 @@ export default function FacturacionPage() {
   const [tamano, setTamano] = useState(FILAS_POR_PAGINA[0])
   const [recarga, setRecarga] = useState(0)
   const [editorAbierto, setEditorAbierto] = useState(false)
+  const [cargando, setCargando] = useState(true)
 
   const cargar = useCallback(() => {
-    if (empresaId == null) return
+    if (empresaId == null) {
+      setCargando(false)
+      return
+    }
+    setCargando(true)
     api
       .get<Pagina<FacturaResumen>>(`/facturacion/${empresaId}/paginado`, {
         params: { page: pagina, size: tamano },
@@ -46,6 +52,7 @@ export default function FacturacionPage() {
         setTotal(res.data.total)
       })
       .catch(() => undefined)
+      .finally(() => setCargando(false))
   }, [empresaId, pagina, tamano])
 
   useEffect(() => {
@@ -95,7 +102,9 @@ export default function FacturacionPage() {
       )}
 
       <SectionCard padded={false}>
-        {facturas.length === 0 ? (
+        {cargando ? (
+          <TableSkeleton filas={5} columnas={6} label="Cargando documentos…" />
+        ) : facturas.length === 0 ? (
           <EmptyState
             icon={<ReceiptLongOutlinedIcon />}
             title="Sin documentos emitidos"
