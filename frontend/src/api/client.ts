@@ -595,6 +595,11 @@ export async function listarPagos(empresaId: number) {
   return data
 }
 
+export async function obtenerPago(empresaId: number, referencia: string) {
+  const { data } = await api.get<Pago>(`/empresas/${empresaId}/pagos/${encodeURIComponent(referencia)}`)
+  return data
+}
+
 export async function iniciarCheckout(empresaId: number, planCodigo: string, proveedor: string) {
   const { data } = await api.post<Pago>(
     `/empresas/${empresaId}/pagos/checkout`,

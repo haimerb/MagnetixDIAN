@@ -40,6 +40,14 @@ public class PagoController {
         return ResponseEntity.ok(servicio.listar(empresaId));
     }
 
+    @GetMapping("/empresas/{empresaId}/pagos/{referencia}")
+    public ResponseEntity<PagoDto> obtener(@PathVariable Long empresaId,
+                                           @PathVariable String referencia,
+                                           Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicio.obtener(empresaId, referencia));
+    }
+
     @PostMapping("/empresas/{empresaId}/pagos/checkout")
     public ResponseEntity<PagoDto> checkout(@PathVariable Long empresaId,
                                             @RequestBody CheckoutRequest request,
@@ -62,6 +70,10 @@ public class PagoController {
         while (nombres != null && nombres.hasMoreElements()) {
             String nombre = nombres.nextElement();
             cabeceras.put(nombre, request.getHeader(nombre));
+        }
+        String dataId = request.getParameter("data.id");
+        if (dataId != null) {
+            cabeceras.put("data.id", dataId);
         }
         return cabeceras;
     }

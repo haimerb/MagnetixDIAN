@@ -13,7 +13,12 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +35,7 @@ public class PasarelaMercadoPago implements PasarelaPago {
     public static final String NOMBRE = "MERCADOPAGO";
 
     private final String accessToken;
+    private final String webhookSecret;
     private final String baseUrl;
     private final String backUrl;
     private final ObjectMapper mapper;
@@ -38,8 +44,10 @@ public class PasarelaMercadoPago implements PasarelaPago {
     public PasarelaMercadoPago(@Value("${magnetixdian.pagos.mercadopago.access-token:}") String accessToken,
                                @Value("${magnetixdian.pagos.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
                                @Value("${magnetixdian.pagos.mercadopago.back-url:}") String backUrl,
+                               @Value("${magnetixdian.pagos.mercadopago.webhook-secret:}") String webhookSecret,
                                ObjectMapper mapper) {
         this.accessToken = accessToken;
+        this.webhookSecret = webhookSecret;
         this.baseUrl = baseUrl;
         this.backUrl = backUrl;
         this.mapper = mapper;
@@ -93,6 +101,15 @@ public class PasarelaMercadoPago implements PasarelaPago {
     public Optional<EventoPago> procesarWebhook(String payload, Map<String, String> headers) {
         try {
             JsonNode raiz = mapper.readTree(payload);
+            String dataId = cabecera(headers, "data.id");
+            if (dataId == null) {
+                dataId = raiz.path("data").path("id").asText(null);
+            }
+            if (!firmaValida(cabecera(headers, "x-signature"), cabecera(headers, "x-request-id"),
+                    dataId, webhookSecret)) {
+                log.warn("Notificación de MercadoPago con firma inválida; se ignora.");
+                return Optional.empty();
+            }
             String tipo = raiz.path("type").asText(raiz.path("topic").asText(""));
             if (!"payment".equals(tipo)) {
                 return Optional.empty();
@@ -119,6 +136,63 @@ public class PasarelaMercadoPago implements PasarelaPago {
         } catch (Exception e) {
             log.warn("No se pudo procesar la notificación de MercadoPago: {}", e.getMessage());
             return Optional.empty();
+        }
+    }
+
+    private static String cabecera(Map<String, String> headers, String nombre) {
+        if (headers == null) {
+            return null;
+        }
+        String valor = headers.get(nombre);
+        if (valor != null) {
+            return valor;
+        }
+        return headers.entrySet().stream()
+                .filter(e -> e.getKey() != null && e.getKey().equalsIgnoreCase(nombre))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
+    }
+
+    static boolean firmaValida(String xSignature, String xRequestId, String dataId, String secret) {
+        if (secret == null || secret.isBlank()) {
+            return true;
+        }
+        if (xSignature == null || dataId == null || dataId.isBlank()) {
+            return false;
+        }
+        String ts = null;
+        String v1 = null;
+        for (String parte : xSignature.split(",")) {
+            String[] par = parte.split("=", 2);
+            if (par.length != 2) {
+                continue;
+            }
+            String clave = par[0].trim();
+            if ("ts".equals(clave)) {
+                ts = par[1].trim();
+            } else if ("v1".equals(clave)) {
+                v1 = par[1].trim();
+            }
+        }
+        if (v1 == null || v1.isBlank()) {
+            return false;
+        }
+        StringBuilder manifiesto = new StringBuilder("id:").append(dataId).append(';');
+        if (xRequestId != null && !xRequestId.isBlank()) {
+            manifiesto.append("request-id:").append(xRequestId).append(';');
+        }
+        if (ts != null && !ts.isBlank()) {
+            manifiesto.append("ts:").append(ts).append(';');
+        }
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String esperado = HexFormat.of().formatHex(mac.doFinal(manifiesto.toString().getBytes(StandardCharsets.UTF_8)));
+            return MessageDigest.isEqual(esperado.getBytes(StandardCharsets.UTF_8),
+                    v1.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            return false;
         }
     }
 

@@ -70,6 +70,7 @@ magnetixdian:
       access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
       base-url: ${MERCADOPAGO_BASE_URL:https://api.mercadopago.com}
       back-url: ${MERCADOPAGO_BACK_URL:}
+      webhook-secret: ${MERCADOPAGO_WEBHOOK_SECRET:}
   upload:
     dir: ${UPLOAD_DIR:./uploads}
   crypto:

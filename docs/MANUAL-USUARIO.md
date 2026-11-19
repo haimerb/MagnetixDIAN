@@ -94,7 +94,7 @@ El módulo de **Facturación** permite emitir facturas (01), notas crédito (91)
 1. En el menú seleccione **Facturación** y pulse **Nueva factura**.
 2. Diligencie adquirente, líneas (producto, cantidad, valor, impuestos) y datos de pago.
 3. Pulse **Validar** para revisar sin emitir; **Emitir** valida, calcula el CUFE, firma el XML (XAdES) y transmite.
-4. Desde el detalle puede **descargar el PDF** y el **XML firmado**, **duplicar** la factura o registrar **eventos RADIAN** (acuse, recibo, reclamo, aceptación).
+4. Desde el detalle puede **descargar el PDF** y el **XML firmado**, **reenviar** ambos por correo, **duplicar** la factura o registrar **eventos RADIAN** (acuse, recibo, reclamo, aceptación).
 5. Use **Importar** para cargar varias facturas desde CSV/Excel y **Exportar** para el archivo contable (CSV).
 
 ## 9. Suscripción y planes
@@ -103,7 +103,7 @@ En el menú **Suscripción** puede:
 
 - Ver su **plan actual**, el consumo del mes (documentos y usuarios) y el precio.
 - **Cambiar de plan**: elija la **pasarela de pago** (Simulada para pruebas, Wompi o MercadoPago) y pulse **Cambiar a este plan**. Con la pasarela simulada el cambio se aplica al instante; con las reales será redirigido al pago.
-- Consultar el **historial de pagos**.
+- Consultar el **historial de pagos** y usar **Actualizar estado** en cada pago para consultar el resultado tras volver del checkout.
 - **Cancelar** la suscripción (los límites dejan de aplicarse si no hay plan activo).
 - Gestionar **claves de API** (ver abajo).
 
