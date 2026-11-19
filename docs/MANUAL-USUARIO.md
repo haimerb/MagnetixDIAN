@@ -87,7 +87,43 @@ En el menú **Administración** (solo visible con rol `ROLE_ADMIN`) puede:
 
 La sección **Reportes** muestra el resumen de la última corrida de validación de cada medio magnético (registros, errores, advertencias, fecha/hora) y el detalle en JSON para soporte técnico.
 
-## 8. Recordatorio final
+## 8. Facturación electrónica
+
+El módulo de **Facturación** permite emitir facturas (01), notas crédito (91), notas débito (92) y documento soporte (05):
+
+1. En el menú seleccione **Facturación** y pulse **Nueva factura**.
+2. Diligencie adquirente, líneas (producto, cantidad, valor, impuestos) y datos de pago.
+3. Pulse **Validar** para revisar sin emitir; **Emitir** valida, calcula el CUFE, firma el XML (XAdES) y transmite.
+4. Desde el detalle puede **descargar el PDF** y el **XML firmado**, **duplicar** la factura o registrar **eventos RADIAN** (acuse, recibo, reclamo, aceptación).
+5. Use **Importar** para cargar varias facturas desde CSV/Excel y **Exportar** para el archivo contable (CSV).
+
+## 9. Suscripción y planes
+
+En el menú **Suscripción** puede:
+
+- Ver su **plan actual**, el consumo del mes (documentos y usuarios) y el precio.
+- **Cambiar de plan**: elija la **pasarela de pago** (Simulada para pruebas, Wompi o MercadoPago) y pulse **Cambiar a este plan**. Con la pasarela simulada el cambio se aplica al instante; con las reales será redirigido al pago.
+- Consultar el **historial de pagos**.
+- **Cancelar** la suscripción (los límites dejan de aplicarse si no hay plan activo).
+- Gestionar **claves de API** (ver abajo).
+
+## 10. Claves de API
+
+Si necesita integrar sus sistemas con MagnetixDIAN:
+
+1. En **Suscripción → Claves de API**, pulse **Crear clave** y asígnele un nombre.
+2. Copie la clave mostrada (**se muestra una sola vez**).
+3. Úsela en sus peticiones con la cabecera `X-API-Key: <clave>`. La clave hereda los permisos de su usuario.
+4. Para invalidarla, pulse **Revocar** (deja de funcionar de inmediato).
+
+## 11. Cuenta y seguridad
+
+- **Olvidé mi contraseña:** en el inicio de sesión use **¿Olvidó su contraseña?** y siga el enlace recibido por correo (válido 30 minutos).
+- **Invitación:** si un administrador lo invitó, abra el enlace del correo y defina su contraseña (válido 7 días).
+- **Bloqueo:** tras 5 intentos fallidos la cuenta se bloquea 15 minutos.
+- **Modo oscuro:** alterne el tema claro/oscuro desde el ícono en la barra superior.
+
+## 12. Recordatorio final
 
 - **Una vez presentado**, el reporte queda en estado `PRESENTADO`; no puede volver a editarse.
 - Revise periódicamente los avisos de **vencimiento** que el sistema envía por correo (si están habilitados en su instalación).

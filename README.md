@@ -74,5 +74,13 @@ Checks previos a commit: backend `mvn clean package`; frontend `pnpm run lint` (
 - [x] Pruebas de frontend (Vitest + Testing Library).
 - [x] Paginación server-side y manejo global de errores.
 - [x] Publicación automática (deploy) tras merge a `main`.
+- [x] Auth endurecida: refresh tokens con rotación, reset de contraseña, invitaciones, bloqueo y rate limit.
+- [x] Auditoría de eventos y cola de reintentos de transmisión con backoff.
+- [x] RADIAN: eventos DIAN 030-034 (CUDE) y aceptación tácita automática.
+- [x] Importación masiva (CSV/Excel) y exportación contable.
+- [x] Modo oscuro y duplicado de facturas.
+- [x] Planes y suscripciones con límites de uso.
+- [x] Claves de API por empresa (`X-API-Key`).
+- [x] Pasarelas de pago (simulada / Wompi / MercadoPago) con webhooks y checkout.
 
 Ver issues del repo para el backlog detallado.
