@@ -57,6 +57,9 @@ magnetixdian:
     expose-token: ${AUTH_EXPOSE_TOKEN:true}
   transmision:
     reintento-ms: ${REINTENTO_TRANSMISION_MS:60000}
+  radian:
+    aceptacion-tacita: ${RADIAN_ACEPTACION_TACITA:false}
+    aceptacion-tacita-cron: ${RADIAN_ACEPTACION_TACITA_CRON:0 0 6 * * *}
   upload:
     dir: ${UPLOAD_DIR:./uploads}
   crypto:

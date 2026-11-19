@@ -5,6 +5,8 @@ import com.magnetixdian.infrastructure.persistence.EmpresaJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaJpa;
 import org.junit.jupiter.api.Test;
 
+import java.time.OffsetDateTime;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class GeneradorApplicationResponseTest {
@@ -25,10 +27,13 @@ class GeneradorApplicationResponseTest {
     @Test
     void generaApplicationResponseConCodigoYReferencia() {
         String xml = generador.generar(factura(), EventoDian.ACEPTACION_EXPRESA,
-                "cufe-abc", "FV-100-033", "sw-1", "sec-1", null);
+                "cufe-abc", "cude-evento", "FV-100-033", OffsetDateTime.now(),
+                "sw-1", "sec-1", null);
 
         assertThat(xml).contains("<cbc:ResponseCode>033</cbc:ResponseCode>");
         assertThat(xml).contains("cufe-abc");
+        assertThat(xml).contains("cude-evento");
+        assertThat(xml).contains("CUDE-SHA384");
         assertThat(xml).contains("FV-100");
         assertThat(xml).contains("ApplicationResponse");
     }
