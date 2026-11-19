@@ -19,6 +19,7 @@ import DownloadIcon from '@mui/icons-material/Download'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import { api, type FacturaDetalle } from '../api/client'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+import { money, totalesLinea } from '../features/facturacion/calculos'
 import EstadoChip from '../components/ui/EstadoChip'
 import SectionCard from '../components/ui/SectionCard'
 
@@ -76,9 +77,6 @@ export default function FacturaDetallePage() {
       setRegistrando(false)
     }
   }
-
-  const money = (v: number) =>
-    v?.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 
   if (error) return <Alert severity="error">{error}</Alert>
   if (!factura) return <Typography color="text.secondary">Cargando…</Typography>
@@ -187,7 +185,7 @@ export default function FacturaDetallePage() {
                 <TableCell align="right">{money(l.valorUnitario)}</TableCell>
                 <TableCell align="right">{l.ivaPct}%</TableCell>
                 <TableCell align="right">
-                  {money(l.cantidad * l.valorUnitario + (l.cantidad * l.valorUnitario * l.ivaPct) / 100)}
+                  {money(totalesLinea(l).total)}
                 </TableCell>
               </TableRow>
             ))}

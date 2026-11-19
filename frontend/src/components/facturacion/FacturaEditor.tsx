@@ -21,6 +21,7 @@ import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { api, type ErrorValidacion, type FacturaRequest, type FacturaResumen, type LineaFacturaRequest, type ResultadoEmision } from '../../api/client'
+import { money, totalesLinea } from '../../features/facturacion/calculos'
 
 const TIPOS = [
   { codigo: '01', label: 'Factura de venta' },
@@ -48,17 +49,6 @@ function lineaVacia(): LineaFacturaRequest {
     incPct: 0,
     codigoUnspsc: '',
   }
-}
-
-function totalLinea(l: LineaFacturaRequest) {
-  const base = l.cantidad * l.valorUnitario - l.descuento
-  const iva = (base * l.ivaPct) / 100
-  const inc = (base * l.incPct) / 100
-  return { base, iva, inc, total: base + iva + inc }
-}
-
-function money(v: number) {
-  return v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 }
 
 export default function FacturaEditor({
@@ -122,7 +112,7 @@ export default function FacturaEditor({
     let subtotal = 0
     let impuestos = 0
     for (const l of lineas) {
-      const t = totalLinea(l)
+      const t = totalesLinea(l)
       subtotal += t.base
       impuestos += t.iva + t.inc
     }
@@ -360,7 +350,7 @@ export default function FacturaEditor({
                         onChange={(e) => actualizarLinea(idx, { codigoUnspsc: e.target.value })}
                       />
                     </TableCell>
-                    <TableCell align="right">{money(totalLinea(l).total)}</TableCell>
+                    <TableCell align="right">{money(totalesLinea(l).total)}</TableCell>
                     <TableCell>
                       <IconButton
                         size="small"
