@@ -10,12 +10,22 @@ import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import AddIcon from '@mui/icons-material/Add'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import SettingsIcon from '@mui/icons-material/Settings'
-import { api, type FacturaResumen, type Pagina, type ResultadoEmision } from '../api/client'
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
+import {
+  api,
+  type FacturaDetalle,
+  type FacturaRequest,
+  type FacturaResumen,
+  type Pagina,
+  type ResultadoEmision,
+} from '../api/client'
 import { descargarArchivo } from '../api/descargas'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import { useNotificaciones } from '../features/notificaciones/contexto'
@@ -39,6 +49,7 @@ export default function FacturacionPage() {
   const [tamano, setTamano] = useState(FILAS_POR_PAGINA[0])
   const [recarga, setRecarga] = useState(0)
   const [editorAbierto, setEditorAbierto] = useState(false)
+  const [duplicarDesde, setDuplicarDesde] = useState<FacturaRequest | null>(null)
   const [importadorAbierto, setImportadorAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -71,6 +82,34 @@ export default function FacturacionPage() {
     notificar(`Documento ${r.numeroCompleto} emitido (${r.estado}).`, 'success')
     setPagina(0)
     setRecarga((n) => n + 1)
+  }
+
+  const nuevaFactura = () => {
+    setDuplicarDesde(null)
+    setEditorAbierto(true)
+  }
+
+  const duplicar = async (f: FacturaResumen) => {
+    if (empresaId == null) return
+    setError(null)
+    try {
+      const { data } = await api.get<FacturaDetalle>(`/facturacion/${empresaId}/${f.id}`)
+      setDuplicarDesde({
+        tipoDocumento: data.tipoDocumento,
+        adquirente: data.adquirente,
+        lineas: data.lineas,
+        observaciones: data.observaciones,
+        formaPago: data.formaPago,
+        medioPago: data.medioPago,
+        tipoOperacion: '10',
+        fechaVencimiento: null,
+        cufeReferencia: null,
+        numeroReferencia: null,
+      })
+      setEditorAbierto(true)
+    } catch {
+      setError('No se pudo cargar el documento para duplicar.')
+    }
   }
 
   const exportar = async () => {
@@ -121,7 +160,7 @@ export default function FacturacionPage() {
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setEditorAbierto(true)}
+              onClick={nuevaFactura}
               disabled={empresaId == null}
             >
               Nueva factura
@@ -150,7 +189,7 @@ export default function FacturacionPage() {
       {(cargando || (error == null && empresaId != null)) && (
         <SectionCard padded={false}>
           {cargando ? (
-            <TableSkeleton filas={5} columnas={6} label="Cargando documentos…" />
+            <TableSkeleton filas={5} columnas={7} label="Cargando documentos…" />
           ) : facturas.length === 0 ? (
           <EmptyState
             icon={<ReceiptLongOutlinedIcon />}
@@ -169,6 +208,7 @@ export default function FacturacionPage() {
                     <TableCell>Adquirente</TableCell>
                     <TableCell align="right">Total</TableCell>
                     <TableCell>Estado</TableCell>
+                    <TableCell align="right">Acciones</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -198,6 +238,22 @@ export default function FacturacionPage() {
                       <TableCell>
                         <EstadoChip estado={f.estado} />
                       </TableCell>
+                      <TableCell align="right">
+                        {f.tipoDocumento === '01' && (
+                          <Tooltip title="Duplicar como nueva factura">
+                            <IconButton
+                              size="small"
+                              aria-label={`Duplicar ${f.numeroCompleto}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                duplicar(f)
+                              }}
+                            >
+                              <ContentCopyOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -226,7 +282,11 @@ export default function FacturacionPage() {
         <FacturaEditor
           empresaId={empresaId}
           abierto={editorAbierto}
-          onCerrar={() => setEditorAbierto(false)}
+          inicial={duplicarDesde}
+          onCerrar={() => {
+            setEditorAbierto(false)
+            setDuplicarDesde(null)
+          }}
           onEmitida={onEmitida}
         />
       )}

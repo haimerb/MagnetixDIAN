@@ -57,11 +57,13 @@ export default function FacturaEditor({
   abierto,
   onCerrar,
   onEmitida,
+  inicial = null,
 }: {
   empresaId: number
   abierto: boolean
   onCerrar: () => void
   onEmitida: (r: ResultadoEmision) => void
+  inicial?: FacturaRequest | null
 }) {
   const [tipoDocumento, setTipoDocumento] = useState('01')
   const [adquirente, setAdquirente] = useState({
@@ -97,6 +99,49 @@ export default function FacturaEditor({
       .then((res) => setFacturas(res.data.filter((f) => f.tipoDocumento === '01')))
       .catch(() => setErrorFacturas('No se pudieron cargar las facturas de referencia.'))
   }, [abierto, empresaId])
+
+  useEffect(() => {
+    if (!abierto) return
+    setErrores([])
+    setError(null)
+    if (!inicial) {
+      setTipoDocumento('01')
+      setAdquirente({
+        tipoDocumento: '13',
+        numeroDocumento: '',
+        digitoVerificacion: '',
+        nombre: '',
+        email: '',
+        direccion: '',
+        municipio: '',
+        regimen: 'ORDINARIO',
+        responsabilidadFiscal: 'R-99-PN',
+      })
+      setLineas([lineaVacia()])
+      setObservaciones('')
+      setCufeReferencia(null)
+      setNumeroReferencia(null)
+      setReferenciaId('')
+      return
+    }
+    setTipoDocumento(inicial.tipoDocumento)
+    setAdquirente({
+      tipoDocumento: inicial.adquirente.tipoDocumento,
+      numeroDocumento: inicial.adquirente.numeroDocumento,
+      digitoVerificacion:
+        inicial.adquirente.digitoVerificacion == null ? '' : String(inicial.adquirente.digitoVerificacion),
+      nombre: inicial.adquirente.nombre,
+      email: inicial.adquirente.email ?? '',
+      direccion: inicial.adquirente.direccion ?? '',
+      municipio: inicial.adquirente.municipio ?? '',
+      regimen: inicial.adquirente.regimen ?? 'ORDINARIO',
+      responsabilidadFiscal: inicial.adquirente.responsabilidadFiscal ?? 'R-99-PN',
+    })
+    setLineas(inicial.lineas.length > 0 ? inicial.lineas.map((l) => ({ ...l })) : [lineaVacia()])
+    setObservaciones(inicial.observaciones ?? '')
+    setCufeReferencia(inicial.cufeReferencia ?? null)
+    setNumeroReferencia(inicial.numeroReferencia ?? null)
+  }, [abierto, inicial])
 
   const seleccionarReferencia = (id: number | '') => {
     setReferenciaId(id)

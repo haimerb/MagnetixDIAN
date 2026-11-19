@@ -9,12 +9,10 @@ import '@fontsource/space-grotesk/latin-600.css'
 import '@fontsource/space-grotesk/latin-700.css'
 import '@fontsource/jetbrains-mono/latin-400.css'
 import '@fontsource/jetbrains-mono/latin-500.css'
-import CssBaseline from '@mui/material/CssBaseline'
-import { ThemeProvider } from '@mui/material/styles'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { NotificacionesProvider } from './features/notificaciones/NotificacionesProvider'
-import theme from './theme/theme'
+import ThemeModeProvider from './theme/ThemeModeProvider'
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined
 if (sentryDsn) {
@@ -28,13 +26,12 @@ if (sentryDsn) {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ThemeModeProvider>
       <ErrorBoundary>
         <NotificacionesProvider>
           <App />
         </NotificacionesProvider>
       </ErrorBoundary>
-    </ThemeProvider>
+    </ThemeModeProvider>
   </React.StrictMode>,
 )
