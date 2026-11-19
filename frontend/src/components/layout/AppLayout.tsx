@@ -14,14 +14,18 @@ import ListItemText from '@mui/material/ListItemText'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Toolbar from '@mui/material/Toolbar'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined'
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined'
 import LockResetIcon from '@mui/icons-material/LockReset'
 import LogoutIcon from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
 import { alpha } from '@mui/material/styles'
 import Logo from '../ui/Logo'
 import { useAuth } from '../../features/auth/useAuth'
+import { useThemeMode } from '../../theme/useThemeMode'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Panel' },
@@ -43,6 +47,7 @@ export default function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { sesion, logout } = useAuth()
+  const { mode, alternar } = useThemeMode()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
 
@@ -157,6 +162,16 @@ export default function AppLayout() {
             </Box>
 
             <Box sx={{ flexGrow: 1 }} />
+
+            <Tooltip title={mode === 'dark' ? 'Tema claro' : 'Tema oscuro'}>
+              <IconButton
+                onClick={alternar}
+                aria-label={mode === 'dark' ? 'Activar tema claro' : 'Activar tema oscuro'}
+                size="small"
+              >
+                {mode === 'dark' ? <LightModeOutlinedIcon /> : <DarkModeOutlinedIcon />}
+              </IconButton>
+            </Tooltip>
 
             <IconButton
               onClick={(e) => setMenuAnchor(e.currentTarget)}
