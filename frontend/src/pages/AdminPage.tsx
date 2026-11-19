@@ -193,7 +193,7 @@ export default function AdminPage() {
 
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" allowScrollButtonsMobile>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" allowScrollButtonsMobile aria-label="Secciones de administración">
         <Tab label="Empresas" value="empresas" />
         <Tab label="Usuarios" value="usuarios" />
         <Tab label="Calendario DIAN" value="calendario" />

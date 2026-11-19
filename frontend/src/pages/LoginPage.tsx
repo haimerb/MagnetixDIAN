@@ -124,6 +124,7 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={cargando}
+              autoFocus
               required
             />
             <TextField
@@ -141,7 +142,7 @@ export default function LoginPage() {
             </Button>
           </Box>
 
-          <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
             Usuario demo: admin / admin123
           </Typography>
         </Paper>

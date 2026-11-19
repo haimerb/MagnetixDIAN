@@ -92,7 +92,18 @@ export default function CargaPage() {
 
       <SectionCard title="Archivo de operaciones">
         <Box
-          {...getRootProps()}
+          {...getRootProps({
+            role: 'button',
+            tabIndex: cargando ? -1 : 0,
+            'aria-label': 'Seleccionar archivo Excel para cargar',
+            onKeyDown: (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                const input = e.currentTarget.querySelector('input[type="file"]')
+                if (input instanceof HTMLInputElement) input.click()
+              }
+            },
+          })}
           sx={{
             p: { xs: 3, md: 5 },
             cursor: 'pointer',
@@ -108,6 +119,7 @@ export default function CargaPage() {
             opacity: cargando ? 0.6 : 1,
             pointerEvents: cargando ? 'none' : undefined,
             transition: 'border-color 180ms ease, background-color 180ms ease',
+            '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
           }}
         >
           <input {...getInputProps()} aria-label="Archivo Excel a cargar" />
