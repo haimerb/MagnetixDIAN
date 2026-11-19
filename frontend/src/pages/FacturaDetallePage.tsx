@@ -4,6 +4,10 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
 import Grid from '@mui/material/Grid2'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
@@ -17,8 +21,9 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DownloadIcon from '@mui/icons-material/Download'
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
-import { api, type FacturaDetalle } from '../api/client'
+import { api, reenviarFactura, type FacturaDetalle } from '../api/client'
 import { descargarArchivo } from '../api/descargas'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import { money, totalesLinea } from '../features/facturacion/calculos'
@@ -44,6 +49,10 @@ export default function FacturaDetallePage() {
   const [registrando, setRegistrando] = useState(false)
   const [descargando, setDescargando] = useState<'pdf' | 'xml' | null>(null)
   const [cargando, setCargando] = useState(true)
+  const [reenvioAbierto, setReenvioAbierto] = useState(false)
+  const [destinatario, setDestinatario] = useState('')
+  const [reenviando, setReenviando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     if (id == null || empresaId == null) {
@@ -97,6 +106,29 @@ export default function FacturaDetallePage() {
 
   const cufe = factura.cufe ?? factura.cude ?? ''
 
+  const abrirReenvio = () => {
+    setDestinatario(factura.adquirente.email ?? '')
+    setAviso(null)
+    setError(null)
+    setReenvioAbierto(true)
+  }
+
+  const onReenviar = async () => {
+    if (empresaId == null) return
+    setReenviando(true)
+    setError(null)
+    try {
+      const resultado = await reenviarFactura(empresaId, factura.id, destinatario)
+      setAviso(`Factura reenviada a ${resultado.destinatario}.`)
+      setReenvioAbierto(false)
+    } catch (e: unknown) {
+      const detalle = (e as { response?: { data?: { message?: string } } }).response?.data?.message
+      setError(detalle ?? 'No se pudo reenviar la factura.')
+    } finally {
+      setReenviando(false)
+    }
+  }
+
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
       <Stack
@@ -114,6 +146,9 @@ export default function FacturaDetallePage() {
           <EstadoChip estado={factura.estado} />
         </Stack>
         <Stack direction="row" spacing={1}>
+          <Button variant="outlined" startIcon={<EmailOutlinedIcon />} onClick={abrirReenvio}>
+            Reenviar
+          </Button>
           <Button
             variant="outlined"
             startIcon={<PictureAsPdfIcon />}
@@ -136,6 +171,7 @@ export default function FacturaDetallePage() {
       </Stack>
 
       {error && <Alert severity="error">{error}</Alert>}
+      {aviso && <Alert severity="success" onClose={() => setAviso(null)}>{aviso}</Alert>}
 
       <SectionCard title="Datos del documento">
         <Grid container spacing={3}>
@@ -277,6 +313,28 @@ export default function FacturaDetallePage() {
           )}
         </Stack>
       </SectionCard>
+
+      <Dialog open={reenvioAbierto} onClose={() => { if (!reenviando) setReenvioAbierto(false) }} fullWidth maxWidth="xs">
+        <DialogTitle>Reenviar factura por correo</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
+          <Typography variant="body2" color="text.secondary">
+            Se enviarán el XML firmado y el PDF de {factura.numeroCompleto} al correo indicado.
+          </Typography>
+          <TextField
+            label="Correo electrónico"
+            type="email"
+            value={destinatario}
+            onChange={(e) => setDestinatario(e.target.value)}
+            fullWidth
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReenvioAbierto(false)} disabled={reenviando}>Cancelar</Button>
+          <Button variant="contained" onClick={onReenviar} disabled={!destinatario.trim()} loading={reenviando}>
+            Enviar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
