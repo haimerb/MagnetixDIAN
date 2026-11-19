@@ -67,7 +67,7 @@ export default function AdminPage() {
     return api
       .get<Pagina<EmpresaAdmin>>('/admin/empresas/paginado', { params: { page: paginaEmpresas, size: tamanoEmpresas } })
       .then(r => { setEmpresas(r.data.contenido); setTotalEmpresas(r.data.total) })
-      .catch(() => undefined)
+      .catch(() => setError('No se pudieron cargar las empresas.'))
       .finally(() => setCargandoEmpresas(false))
   }
   const cargarUsuarios = () => {
@@ -75,7 +75,7 @@ export default function AdminPage() {
     return api
       .get<Pagina<UsuarioAdmin>>('/admin/usuarios/paginado', { params: { page: paginaUsuarios, size: tamanoUsuarios } })
       .then(r => { setUsuarios(r.data.contenido); setTotalUsuarios(r.data.total) })
-      .catch(() => undefined)
+      .catch(() => setError('No se pudieron cargar los usuarios.'))
       .finally(() => setCargandoUsuarios(false))
   }
   const cargarCalendario = () => {
@@ -83,7 +83,7 @@ export default function AdminPage() {
     return api
       .get<CalendarioAdmin[]>(`/admin/calendario?anioGravable=${anioCalendario}`)
       .then(r => setCalendario(r.data))
-      .catch(() => undefined)
+      .catch(() => setError('No se pudo cargar el calendario.'))
       .finally(() => setCargandoCalendario(false))
   }
 
@@ -204,7 +204,7 @@ export default function AdminPage() {
         >
           {cargandoEmpresas ? (
             <TableSkeleton filas={6} columnas={7} label="Cargando empresas…" />
-          ) : empresas.length === 0 ? (
+          ) : empresas.length === 0 && !error ? (
             <EmptyState icon={<BusinessOutlinedIcon />} title="Sin empresas registradas" description="Cree la primera empresa para empezar a operar." />
           ) : (
             <TableContainer>
@@ -262,7 +262,7 @@ export default function AdminPage() {
         >
           {cargandoUsuarios ? (
             <TableSkeleton filas={6} columnas={7} label="Cargando usuarios…" />
-          ) : usuarios.length === 0 ? (
+          ) : usuarios.length === 0 && !error ? (
             <EmptyState icon={<PeopleAltOutlinedIcon />} title="Sin usuarios" description="Cree usuarios y asígneles un rol y empresa." />
           ) : (
             <TableContainer>
@@ -322,7 +322,7 @@ export default function AdminPage() {
         >
           {cargandoCalendario ? (
             <TableSkeleton filas={5} columnas={5} label="Cargando calendario…" />
-          ) : calendario.length === 0 ? (
+          ) : calendario.length === 0 && !error ? (
             <EmptyState icon={<EventOutlinedIcon />} title="Sin fechas para este año" description="Agregue las fechas límite del calendario tributario." />
           ) : (
             <TableContainer>

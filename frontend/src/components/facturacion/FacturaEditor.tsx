@@ -81,6 +81,7 @@ export default function FacturaEditor({
   const [enviando, setEnviando] = useState(false)
   const [validando, setValidando] = useState(false)
   const [facturas, setFacturas] = useState<FacturaResumen[]>([])
+  const [errorFacturas, setErrorFacturas] = useState<string | null>(null)
   const [referenciaId, setReferenciaId] = useState<number | ''>('')
   const [cufeReferencia, setCufeReferencia] = useState<string | null>(null)
   const [numeroReferencia, setNumeroReferencia] = useState<string | null>(null)
@@ -89,10 +90,11 @@ export default function FacturaEditor({
 
   useEffect(() => {
     if (!abierto) return
+    setErrorFacturas(null)
     api
       .get<FacturaResumen[]>(`/facturacion/${empresaId}`)
       .then((res) => setFacturas(res.data.filter((f) => f.tipoDocumento === '01')))
-      .catch(() => setFacturas([]))
+      .catch(() => setErrorFacturas('No se pudieron cargar las facturas de referencia.'))
   }, [abierto, empresaId])
 
   const seleccionarReferencia = (id: number | '') => {
@@ -209,7 +211,8 @@ export default function FacturaEditor({
                 label="Documento referenciado (factura original)"
                 value={referenciaId}
                 onChange={(e) => seleccionarReferencia(e.target.value === '' ? '' : Number(e.target.value))}
-                helperText="La nota crédito/débito debe referenciar la factura que modifica"
+                error={Boolean(errorFacturas)}
+                helperText={errorFacturas ?? 'La nota crédito/débito debe referenciar la factura que modifica'}
               >
                 {facturas.length === 0 && <MenuItem value="" disabled>No hay facturas emitidas</MenuItem>}
                 {facturas.map((f) => (

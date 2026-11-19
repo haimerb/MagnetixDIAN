@@ -26,6 +26,8 @@ export default function DashboardPage() {
   const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
   const [medios, setMedios] = useState<MedioMagnetico[]>([])
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [recarga, setRecarga] = useState(0)
 
   useEffect(() => {
     if (empresaId == null) {
@@ -34,17 +36,18 @@ export default function DashboardPage() {
       return
     }
     setCargando(true)
+    setError(null)
     api
       .get<MedioMagnetico[]>(`/mediomagnetico/empresa/${empresaId}`)
       .then((res) => setMedios(res.data))
-      .catch(() => setMedios([]))
+      .catch(() => setError('No se pudieron cargar los medios magnéticos.'))
       .finally(() => setCargando(false))
-  }, [empresaId])
+  }, [empresaId, recarga])
 
   const sinErrores = medios.filter((m) => m.estado === 'VALIDADO' || m.estado === 'XML_GENERADO').length
   const conErrores = medios.filter((m) => m.estado === 'VALIDADO_CON_ERRORES').length
   const valorMetrica = (valor: number) =>
-    cargando ? <Skeleton variant="text" width={64} height={44} /> : valor
+    cargando ? <Skeleton variant="text" width={64} height={44} /> : error ? '—' : valor
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
@@ -92,6 +95,19 @@ export default function DashboardPage() {
         </Alert>
       )}
 
+      {error && (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => setRecarga((n) => n + 1)}>
+              Reintentar
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      )}
+
       <SectionCard title="Medios magnéticos" subtitle="Seleccione un reporte para validarlo o ver su detalle.">
         {cargando && (
           <Box role="status" aria-live="polite" aria-busy="true">
@@ -123,7 +139,7 @@ export default function DashboardPage() {
           </Box>
         )}
 
-        {!cargando && medios.length === 0 && (
+        {!cargando && !error && medios.length === 0 && (
           <EmptyState
             icon={<InboxOutlinedIcon />}
             title="Sin reportes cargados"
