@@ -33,6 +33,7 @@ export default function ValidacionPage() {
   const [cargandoInicial, setCargandoInicial] = useState(true)
   const [accion, setAccion] = useState<AccionValidacion | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorTerceros, setErrorTerceros] = useState<string | null>(null)
 
   useEffect(() => {
     if (cargandoEmpresa) return
@@ -66,10 +67,11 @@ export default function ValidacionPage() {
 
   useEffect(() => {
     if (medioId) {
+      setErrorTerceros(null)
       api
         .get<TercerosResumen>(`/mediomagnetico/${medioId}/terceros`)
         .then((r) => setTerceros(r.data))
-        .catch(() => undefined)
+        .catch(() => setErrorTerceros('No se pudo cargar el resumen de terceros.'))
     }
   }, [medioId, validacion])
 
@@ -199,6 +201,8 @@ export default function ValidacionPage() {
       )}
 
       {cargandoInicial && <LoadingState label="Cargando validación…" minHeight="30vh" />}
+
+      {errorTerceros && <Alert severity="warning">{errorTerceros}</Alert>}
 
       {validacion && (
         <SectionCard title="Resultado de la validación">

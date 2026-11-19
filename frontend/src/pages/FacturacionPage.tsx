@@ -36,6 +36,7 @@ export default function FacturacionPage() {
   const [recarga, setRecarga] = useState(0)
   const [editorAbierto, setEditorAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
     if (empresaId == null) {
@@ -43,6 +44,7 @@ export default function FacturacionPage() {
       return
     }
     setCargando(true)
+    setError(null)
     api
       .get<Pagina<FacturaResumen>>(`/facturacion/${empresaId}/paginado`, {
         params: { page: pagina, size: tamano },
@@ -51,7 +53,7 @@ export default function FacturacionPage() {
         setFacturas(res.data.contenido)
         setTotal(res.data.total)
       })
-      .catch(() => undefined)
+      .catch(() => setError('No se pudieron cargar los documentos electrónicos.'))
       .finally(() => setCargando(false))
   }, [empresaId, pagina, tamano])
 
@@ -101,10 +103,24 @@ export default function FacturacionPage() {
         <Alert severity="info">No hay una empresa asociada para emitir documentos.</Alert>
       )}
 
-      <SectionCard padded={false}>
-        {cargando ? (
-          <TableSkeleton filas={5} columnas={6} label="Cargando documentos…" />
-        ) : facturas.length === 0 ? (
+      {error && (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => setRecarga((n) => n + 1)}>
+              Reintentar
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      )}
+
+      {(cargando || (error == null && empresaId != null)) && (
+        <SectionCard padded={false}>
+          {cargando ? (
+            <TableSkeleton filas={5} columnas={6} label="Cargando documentos…" />
+          ) : facturas.length === 0 ? (
           <EmptyState
             icon={<ReceiptLongOutlinedIcon />}
             title="Sin documentos emitidos"
@@ -162,6 +178,7 @@ export default function FacturacionPage() {
           </>
         )}
       </SectionCard>
+      )}
 
       {empresaId != null && (
         <FacturaEditor
