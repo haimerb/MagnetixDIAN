@@ -19,6 +19,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'))
 const FacturacionPage = lazy(() => import('./pages/FacturacionPage'))
 const FacturaDetallePage = lazy(() => import('./pages/FacturaDetallePage'))
 const ConfigFePage = lazy(() => import('./pages/ConfigFePage'))
+const SuscripcionPage = lazy(() => import('./pages/SuscripcionPage'))
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="facturacion" element={<FacturacionPage />} />
               <Route path="facturacion/config" element={<ConfigFePage />} />
               <Route path="facturacion/:id" element={<FacturaDetallePage />} />
+              <Route path="suscripcion" element={<SuscripcionPage />} />
               <Route path="admin" element={<AdminPage />} />
               <Route path="cuenta" element={<CambiarPasswordPage />} />
             </Route>
