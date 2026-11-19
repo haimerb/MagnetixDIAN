@@ -1,10 +1,10 @@
-import Box from '@mui/material/Box'
-import CircularProgress from '@mui/material/CircularProgress'
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { useAuth } from './features/auth/useAuth'
 import AppLayout from './components/layout/AppLayout'
+import GlobalProgress from './components/layout/GlobalProgress'
+import LoadingState from './components/ui/LoadingState'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -23,19 +23,12 @@ function RequiereAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-function Cargando() {
-  return (
-    <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
-      <CircularProgress size={28} />
-    </Box>
-  )
-}
-
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Suspense fallback={<Cargando />}>
+        <GlobalProgress />
+        <Suspense fallback={<LoadingState label="Cargando página…" minHeight="60vh" />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route
