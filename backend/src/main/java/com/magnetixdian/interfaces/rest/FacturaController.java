@@ -1,6 +1,7 @@
 package com.magnetixdian.interfaces.rest;
 
 import com.magnetixdian.application.AuthService;
+import com.magnetixdian.application.ImportadorFacturas;
 import com.magnetixdian.application.ServicioFacturacion;
 import com.magnetixdian.infrastructure.persistence.CatalogoDianJpa;
 import com.magnetixdian.infrastructure.persistence.CatalogoDianRepository;
@@ -12,6 +13,7 @@ import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.RegistrarEventoRequest;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
+import com.magnetixdian.interfaces.dto.ResultadoImportacionDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,8 +28,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -40,14 +44,16 @@ import java.util.List;
 public class FacturaController {
 
     private final ServicioFacturacion servicio;
+    private final ImportadorFacturas importador;
     private final AuthService authService;
     private final CatalogoDianRepository catalogoRepository;
     private final AutorizacionEmpresa autorizacion;
 
-    public FacturaController(ServicioFacturacion servicio, AuthService authService,
+    public FacturaController(ServicioFacturacion servicio, ImportadorFacturas importador, AuthService authService,
                              CatalogoDianRepository catalogoRepository,
                              AutorizacionEmpresa autorizacion) {
         this.servicio = servicio;
+        this.importador = importador;
         this.authService = authService;
         this.catalogoRepository = catalogoRepository;
         this.autorizacion = autorizacion;
@@ -68,6 +74,16 @@ public class FacturaController {
         autorizacion.verificar(empresaId, authentication);
         Long usuarioId = authService.perfil(authentication.getName()).id();
         return ResponseEntity.ok(servicio.emitir(empresaId, usuarioId, request));
+    }
+
+    @PostMapping(value = "/{empresaId}/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResultadoImportacionDto> importar(@PathVariable Long empresaId,
+                                                            @RequestParam("archivo") MultipartFile archivo,
+                                                            Authentication authentication) throws IOException {
+        autorizacion.verificar(empresaId, authentication);
+        Long usuarioId = authService.perfil(authentication.getName()).id();
+        return ResponseEntity.ok(importador.importar(empresaId, usuarioId, archivo.getBytes(),
+                archivo.getOriginalFilename()));
     }
 
     @GetMapping("/{empresaId}")

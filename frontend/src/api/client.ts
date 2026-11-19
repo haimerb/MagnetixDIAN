@@ -421,6 +421,22 @@ export type EnvioFactura = {
   actualizadoAt: string
 }
 
+export type ResultadoImportacion = {
+  facturasEmitidas: number
+  facturasRechazadas: number
+  lineasImportadas: number
+  errores: string[]
+}
+
+export async function importarFacturas(empresaId: number, archivo: File) {
+  const form = new FormData()
+  form.append('archivo', archivo)
+  const { data } = await api.post<ResultadoImportacion>(`/facturacion/${empresaId}/importar`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
 export async function generarEnlaceAcceso(id: number) {
   const { data } = await api.post<EnlaceAcceso>(`/admin/usuarios/${id}/enlace-acceso`)
   return data
