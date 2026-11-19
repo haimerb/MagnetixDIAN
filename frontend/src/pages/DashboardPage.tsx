@@ -4,6 +4,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Grid from '@mui/material/Grid2'
+import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
@@ -17,6 +18,7 @@ import EmptyState from '../components/ui/EmptyState'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import StatCard from '../components/ui/StatCard'
+import { srOnly } from '../components/ui/srOnly'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 
 export default function DashboardPage() {
@@ -41,6 +43,8 @@ export default function DashboardPage() {
 
   const sinErrores = medios.filter((m) => m.estado === 'VALIDADO' || m.estado === 'XML_GENERADO').length
   const conErrores = medios.filter((m) => m.estado === 'VALIDADO_CON_ERRORES').length
+  const valorMetrica = (valor: number) =>
+    cargando ? <Skeleton variant="text" width={64} height={44} /> : valor
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
@@ -59,7 +63,7 @@ export default function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard
             label="Reportes del año gravable"
-            value={medios.length}
+            value={valorMetrica(medios.length)}
             tone="primary"
             icon={<DescriptionOutlinedIcon />}
           />
@@ -67,7 +71,7 @@ export default function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard
             label="Sin errores de validación"
-            value={sinErrores}
+            value={valorMetrica(sinErrores)}
             tone="success"
             icon={<CheckCircleOutlineIcon />}
           />
@@ -75,7 +79,7 @@ export default function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard
             label="Con errores por corregir"
-            value={conErrores}
+            value={valorMetrica(conErrores)}
             tone="warning"
             icon={<ErrorOutlineIcon />}
           />
@@ -90,9 +94,33 @@ export default function DashboardPage() {
 
       <SectionCard title="Medios magnéticos" subtitle="Seleccione un reporte para validarlo o ver su detalle.">
         {cargando && (
-          <Typography variant="body2" color="text.secondary">
-            Cargando…
-          </Typography>
+          <Box role="status" aria-live="polite" aria-busy="true">
+            <Box sx={srOnly}>Cargando medios magnéticos…</Box>
+            <Stack spacing={1.5} aria-hidden="true">
+              {[0, 1, 2].map((fila) => (
+                <Box
+                  key={fila}
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    p: 2,
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: (t) => t.palette.divider,
+                  }}
+                >
+                  <Box sx={{ display: 'grid', gap: 0.5, flex: 1, minWidth: 180 }}>
+                    <Skeleton variant="text" width="45%" />
+                    <Skeleton variant="text" width="65%" />
+                  </Box>
+                  <Skeleton variant="rounded" width={92} height={34} />
+                </Box>
+              ))}
+            </Stack>
+          </Box>
         )}
 
         {!cargando && medios.length === 0 && (
