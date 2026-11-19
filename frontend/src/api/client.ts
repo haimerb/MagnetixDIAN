@@ -564,3 +564,28 @@ export async function crearApiKey(empresaId: number, nombre: string) {
 export async function revocarApiKey(empresaId: number, id: number) {
   await api.delete(`/empresas/${empresaId}/api-keys/${id}`, { skipGlobalError: true })
 }
+
+export type Pago = {
+  id: number
+  referencia: string
+  proveedor: string
+  planCodigo: string
+  monto: number
+  moneda: string
+  estado: string
+  url: string | null
+}
+
+export async function listarPagos(empresaId: number) {
+  const { data } = await api.get<Pago[]>(`/empresas/${empresaId}/pagos`)
+  return data
+}
+
+export async function iniciarCheckout(empresaId: number, planCodigo: string, proveedor: string) {
+  const { data } = await api.post<Pago>(
+    `/empresas/${empresaId}/pagos/checkout`,
+    { planCodigo, proveedor },
+    { skipGlobalError: true },
+  )
+  return data
+}

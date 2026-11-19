@@ -60,6 +60,16 @@ magnetixdian:
   radian:
     aceptacion-tacita: ${RADIAN_ACEPTACION_TACITA:false}
     aceptacion-tacita-cron: ${RADIAN_ACEPTACION_TACITA_CRON:0 0 6 * * *}
+  pagos:
+    wompi:
+      public-key: ${WOMPI_PUBLIC_KEY:}
+      integrity-secret: ${WOMPI_INTEGRITY_SECRET:}
+      events-secret: ${WOMPI_EVENTS_SECRET:}
+      checkout-url: ${WOMPI_CHECKOUT_URL:https://checkout.wompi.co/p/}
+    mercadopago:
+      access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
+      base-url: ${MERCADOPAGO_BASE_URL:https://api.mercadopago.com}
+      back-url: ${MERCADOPAGO_BACK_URL:}
   upload:
     dir: ${UPLOAD_DIR:./uploads}
   crypto:
