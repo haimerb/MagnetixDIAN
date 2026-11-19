@@ -32,17 +32,26 @@ public class NotificadorEmail {
     }
 
     /**
-     * Envía un recordatorio de vencimiento al destinatario indicado.
+     * Envía un correo de texto plano (recuperación de contraseña, invitaciones).
+     * Devuelve true si el correo se entregó al servidor SMTP.
      */
-    public void enviarRecordatorio(String destinatario, String asunto, String cuerpo) {
+    public boolean enviarTexto(String destinatario, String asunto, String cuerpo) {
         if (!enabled) {
-            return;
+            return false;
         }
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(destinatario);
         message.setSubject(asunto);
         message.setText(cuerpo);
         mailSender.send(message);
+        return true;
+    }
+
+    /**
+     * Envía un recordatorio de vencimiento al destinatario indicado.
+     */
+    public void enviarRecordatorio(String destinatario, String asunto, String cuerpo) {
+        enviarTexto(destinatario, asunto, cuerpo);
     }
 
     /**

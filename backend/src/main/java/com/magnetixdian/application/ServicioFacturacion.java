@@ -84,6 +84,7 @@ public class ServicioFacturacion {
     private final ServicioTransmision transmision;
     private final NotificadorEmail notificador;
     private final GeneradorApplicationResponse generadorEvento;
+    private final AuditoriaService auditoria;
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -97,7 +98,8 @@ public class ServicioFacturacion {
                                ServicioFirma firma,
                                ServicioTransmision transmision,
                                NotificadorEmail notificador,
-                               GeneradorApplicationResponse generadorEvento) {
+                               GeneradorApplicationResponse generadorEvento,
+                               AuditoriaService auditoria) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -111,6 +113,7 @@ public class ServicioFacturacion {
         this.transmision = transmision;
         this.notificador = notificador;
         this.generadorEvento = generadorEvento;
+        this.auditoria = auditoria;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -132,6 +135,8 @@ public class ServicioFacturacion {
         FacturaDatos preliminar = construirDatos(empresa, config, req, 0L, "");
         List<ResultadoRegla> resultados = validador.validar(new ContextoFactura(preliminar, config));
         if (validador.tieneErrores(resultados)) {
+            auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_RECHAZADA_VALIDACION", "empresa",
+                    empresaId, req.tipoDocumento());
             return new ResultadoEmisionDto(false, null, null, null, "RECHAZADO", null,
                     "El documento tiene errores de validación", resultados.stream().filter(x -> !x.valida())
                     .map(this::aError).toList());
@@ -160,6 +165,8 @@ public class ServicioFacturacion {
         eventoRepository.save(evento);
 
         notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_EMITIDA", "factura", factura.getId(),
+                numeroCompleto + " · " + factura.getEstado());
 
         return new ResultadoEmisionDto(true, factura.getId(), numeroCompleto, cufe, factura.getEstado(),
                 qrUrl, transmisionResultado.mensaje(), List.of());

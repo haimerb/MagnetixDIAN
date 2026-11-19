@@ -10,10 +10,11 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Emisión y validación de tokens JWT (access + refresh).
- * Incluye el username y los roles del usuario en los claims.
+ * Incluye el username, los roles y un identificador único (jti) en los claims.
  */
 @Service
 public class JwtService {
@@ -27,17 +28,18 @@ public class JwtService {
     }
 
     public String generarAccessToken(String username, List<String> roles) {
-        return construir(username, roles, properties.expirationMs());
+        return construir(username, roles, properties.expirationMs(), UUID.randomUUID().toString());
     }
 
-    public String generarRefreshToken(String username) {
-        return construir(username, List.of(), properties.refreshExpirationMs());
+    public String generarRefreshToken(String username, String jti) {
+        return construir(username, List.of(), properties.refreshExpirationMs(), jti);
     }
 
-    private String construir(String username, List<String> roles, long expMs) {
+    private String construir(String username, List<String> roles, long expMs, String jti) {
         Date ahora = new Date();
         Date expiracion = new Date(ahora.getTime() + expMs);
         return Jwts.builder()
+                .id(jti)
                 .subject(username)
                 .claims(Map.of("roles", roles))
                 .issuedAt(ahora)
@@ -48,6 +50,10 @@ public class JwtService {
 
     public String extraerUsername(String token) {
         return claims(token).getSubject();
+    }
+
+    public String extraerJti(String token) {
+        return claims(token).getId();
     }
 
     @SuppressWarnings("unchecked")
@@ -61,6 +67,10 @@ public class JwtService {
     public boolean esValido(String token, String username) {
         Claims claims = claims(token);
         return claims.getSubject().equals(username) && claims.getExpiration().after(new Date());
+    }
+
+    public long refreshExpirationMs() {
+        return properties.refreshExpirationMs();
     }
 
     private Claims claims(String token) {

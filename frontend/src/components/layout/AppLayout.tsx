@@ -16,6 +16,7 @@ import MenuItem from '@mui/material/MenuItem'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
+import LockResetIcon from '@mui/icons-material/LockReset'
 import LogoutIcon from '@mui/icons-material/Logout'
 import MenuIcon from '@mui/icons-material/Menu'
 import { alpha } from '@mui/material/styles'
@@ -200,6 +201,10 @@ export default function AppLayout() {
           </Typography>
         </Box>
         <Divider />
+        <MenuItem onClick={() => { setMenuAnchor(null); navigate('/cuenta') }}>
+          <LockResetIcon fontSize="small" sx={{ mr: 1 }} />
+          Cambiar contraseña
+        </MenuItem>
         <MenuItem onClick={onLogout}>
           <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
           Salir
@@ -238,6 +243,14 @@ export default function AppLayout() {
               {roles || 'Sin rol'}
             </Typography>
           </Box>
+          <Button
+            color="inherit"
+            startIcon={<LockResetIcon />}
+            onClick={() => { setDrawerOpen(false); navigate('/cuenta') }}
+            sx={{ justifyContent: 'flex-start' }}
+          >
+            Cambiar contraseña
+          </Button>
           <Button color="inherit" startIcon={<LogoutIcon />} onClick={onLogout} sx={{ justifyContent: 'flex-start' }}>
             Salir
           </Button>

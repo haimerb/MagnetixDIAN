@@ -1,10 +1,14 @@
 package com.magnetixdian.interfaces.rest;
 
+import com.magnetixdian.application.AuditoriaService;
 import com.magnetixdian.application.ServicioAdmin;
 import com.magnetixdian.interfaces.dto.CalendarioDianDto;
 import com.magnetixdian.interfaces.dto.CalendarioDianRequest;
 import com.magnetixdian.interfaces.dto.EmpresaDto;
 import com.magnetixdian.interfaces.dto.EmpresaRequest;
+import com.magnetixdian.interfaces.dto.EventoAuditoriaDto;
+import com.magnetixdian.interfaces.dto.InvitacionRequest;
+import com.magnetixdian.interfaces.dto.InvitacionResponse;
 import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.UsuarioDto;
 import com.magnetixdian.interfaces.dto.UsuarioRequest;
@@ -32,9 +36,11 @@ import java.util.Map;
 public class AdminController {
 
     private final ServicioAdmin servicio;
+    private final AuditoriaService auditoria;
 
-    public AdminController(ServicioAdmin servicio) {
+    public AdminController(ServicioAdmin servicio, AuditoriaService auditoria) {
         this.servicio = servicio;
+        this.auditoria = auditoria;
     }
 
     // ---------------------------------------------------------------- Empresas
@@ -87,11 +93,27 @@ public class AdminController {
         return ResponseEntity.ok(servicio.crearUsuario(request));
     }
 
+    @PostMapping("/usuarios/invitar")
+    public ResponseEntity<InvitacionResponse> invitarUsuario(@Valid @RequestBody InvitacionRequest request) {
+        return ResponseEntity.ok(servicio.invitarUsuario(request));
+    }
+
     @PutMapping("/usuarios/{id}/estado")
     public ResponseEntity<UsuarioDto> alternarEstado(@PathVariable Long id,
                                                      @RequestBody Map<String, Boolean> body) {
         return ResponseEntity.ok(servicio.alternarEstadoUsuario(
                 id, Boolean.TRUE.equals(body.get("enabled"))));
+    }
+
+    // ---------------------------------------------------------------- Auditoría
+
+    @GetMapping("/auditoria")
+    public ResponseEntity<PaginaDto<EventoAuditoriaDto>> listarAuditoria(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String accion,
+            @RequestParam(required = false) String usuario) {
+        return ResponseEntity.ok(auditoria.listar(page, size, accion, usuario));
     }
 
     // ---------------------------------------------------------------- Calendario

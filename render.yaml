@@ -32,3 +32,11 @@ services:
         value: /tmp/uploads
       - key: NOTIFICATIONS_ENABLED
         value: "false"
+      - key: FRONTEND_URL
+        value: https://magnetixdian.hbarbetti-ing.workers.dev
+      - key: AUTH_EXPOSE_TOKEN
+        value: "false"
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
