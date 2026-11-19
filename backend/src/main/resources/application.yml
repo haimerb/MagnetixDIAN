@@ -55,6 +55,8 @@ magnetixdian:
     frontend-url: ${FRONTEND_URL:http://localhost:5173}
   auth:
     expose-token: ${AUTH_EXPOSE_TOKEN:true}
+  transmision:
+    reintento-ms: ${REINTENTO_TRANSMISION_MS:60000}
   upload:
     dir: ${UPLOAD_DIR:./uploads}
   crypto:

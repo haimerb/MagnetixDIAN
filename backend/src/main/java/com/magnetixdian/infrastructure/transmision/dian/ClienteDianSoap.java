@@ -1,7 +1,7 @@
 package com.magnetixdian.infrastructure.transmision.dian;
 
-import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.domain.transmision.CanalTransmision;
+import com.magnetixdian.domain.transmision.DatosEnvio;
 import com.magnetixdian.domain.transmision.ResultadoTransmision;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigJpa;
 import org.springframework.stereotype.Component;
@@ -31,7 +31,7 @@ public class ClienteDianSoap implements CanalTransmision {
     }
 
     @Override
-    public ResultadoTransmision enviar(String xmlFirmado, String cufe, FacturaDatos datos, EmpresaFeConfigJpa config) {
+    public ResultadoTransmision enviar(String xmlFirmado, String cufe, DatosEnvio datos, EmpresaFeConfigJpa config) {
         String endpoint = datos.ambiente() == 1 ? URL_PROD : URL_HAB;
         try {
             String fileName = (datos.prefijo() == null ? "" : datos.prefijo()) + datos.numero();

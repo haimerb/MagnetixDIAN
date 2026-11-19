@@ -2,10 +2,12 @@ package com.magnetixdian.interfaces.rest;
 
 import com.magnetixdian.application.AuditoriaService;
 import com.magnetixdian.application.ServicioAdmin;
+import com.magnetixdian.application.ServicioEnvios;
 import com.magnetixdian.interfaces.dto.CalendarioDianDto;
 import com.magnetixdian.interfaces.dto.CalendarioDianRequest;
 import com.magnetixdian.interfaces.dto.EmpresaDto;
 import com.magnetixdian.interfaces.dto.EmpresaRequest;
+import com.magnetixdian.interfaces.dto.EnvioFacturaDto;
 import com.magnetixdian.interfaces.dto.EventoAuditoriaDto;
 import com.magnetixdian.interfaces.dto.InvitacionRequest;
 import com.magnetixdian.interfaces.dto.InvitacionResponse;
@@ -37,10 +39,12 @@ public class AdminController {
 
     private final ServicioAdmin servicio;
     private final AuditoriaService auditoria;
+    private final ServicioEnvios envios;
 
-    public AdminController(ServicioAdmin servicio, AuditoriaService auditoria) {
+    public AdminController(ServicioAdmin servicio, AuditoriaService auditoria, ServicioEnvios envios) {
         this.servicio = servicio;
         this.auditoria = auditoria;
+        this.envios = envios;
     }
 
     // ---------------------------------------------------------------- Empresas
@@ -114,6 +118,21 @@ public class AdminController {
             @RequestParam(required = false) String accion,
             @RequestParam(required = false) String usuario) {
         return ResponseEntity.ok(auditoria.listar(page, size, accion, usuario));
+    }
+
+    // ---------------------------------------------------------------- Transmisión
+
+    @GetMapping("/transmision")
+    public ResponseEntity<PaginaDto<EnvioFacturaDto>> listarEnvios(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String estado) {
+        return ResponseEntity.ok(envios.listar(estado, page, size));
+    }
+
+    @PostMapping("/transmision/{id}/reintentar")
+    public ResponseEntity<EnvioFacturaDto> reintentarEnvio(@PathVariable Long id) {
+        return ResponseEntity.ok(envios.reintentar(id, true));
     }
 
     // ---------------------------------------------------------------- Calendario

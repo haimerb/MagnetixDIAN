@@ -1,6 +1,5 @@
 package com.magnetixdian.domain.transmision;
 
-import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigJpa;
 
 /**
@@ -11,5 +10,5 @@ public interface CanalTransmision {
 
     String nombre();
 
-    ResultadoTransmision enviar(String xmlFirmado, String cufe, FacturaDatos datos, EmpresaFeConfigJpa config);
+    ResultadoTransmision enviar(String xmlFirmado, String cufe, DatosEnvio datos, EmpresaFeConfigJpa config);
 }
