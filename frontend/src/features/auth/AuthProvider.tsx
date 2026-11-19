@@ -33,6 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(() => {
+    const refresh = localStorage.getItem('magnetixdian_refresh')
+    if (refresh) {
+      api.post('/auth/logout', { refreshToken: refresh }).catch(() => undefined)
+    }
     clearTokens()
     setSesion(null)
   }, [])

@@ -39,6 +39,18 @@ public class UsuarioJpa {
     @Column(nullable = false)
     private Boolean enabled = Boolean.TRUE;
 
+    @Column(name = "intentos_fallidos", nullable = false)
+    private Integer intentosFallidos = 0;
+
+    @Column(name = "bloqueado_hasta")
+    private OffsetDateTime bloqueadoHasta;
+
+    @Column(name = "password_actualizado_at")
+    private OffsetDateTime passwordActualizadoAt;
+
+    @Column(name = "invitacion_pendiente", nullable = false)
+    private Boolean invitacionPendiente = Boolean.FALSE;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "usuario_role",
             joinColumns = @JoinColumn(name = "usuario_id"),
@@ -82,6 +94,42 @@ public class UsuarioJpa {
 
     public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public Integer getIntentosFallidos() {
+        return intentosFallidos;
+    }
+
+    public void setIntentosFallidos(Integer intentosFallidos) {
+        this.intentosFallidos = intentosFallidos;
+    }
+
+    public OffsetDateTime getBloqueadoHasta() {
+        return bloqueadoHasta;
+    }
+
+    public void setBloqueadoHasta(OffsetDateTime bloqueadoHasta) {
+        this.bloqueadoHasta = bloqueadoHasta;
+    }
+
+    public OffsetDateTime getPasswordActualizadoAt() {
+        return passwordActualizadoAt;
+    }
+
+    public void setPasswordActualizadoAt(OffsetDateTime passwordActualizadoAt) {
+        this.passwordActualizadoAt = passwordActualizadoAt;
+    }
+
+    public Boolean getInvitacionPendiente() {
+        return invitacionPendiente;
+    }
+
+    public void setInvitacionPendiente(Boolean invitacionPendiente) {
+        this.invitacionPendiente = invitacionPendiente;
+    }
+
+    public boolean estaBloqueado() {
+        return bloqueadoHasta != null && bloqueadoHasta.isAfter(OffsetDateTime.now());
     }
 
     public Set<RoleJpa> getRoles() {

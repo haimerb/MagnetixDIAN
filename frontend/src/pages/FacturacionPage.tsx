@@ -11,9 +11,11 @@ import TableHead from '@mui/material/TableHead'
 import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
 import AddIcon from '@mui/icons-material/Add'
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { api, type FacturaResumen, type Pagina, type ResultadoEmision } from '../api/client'
+import { descargarArchivo } from '../api/descargas'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import { useNotificaciones } from '../features/notificaciones/contexto'
 import EmptyState from '../components/ui/EmptyState'
@@ -68,6 +70,16 @@ export default function FacturacionPage() {
     setRecarga((n) => n + 1)
   }
 
+  const exportar = async () => {
+    if (empresaId == null) return
+    setError(null)
+    try {
+      await descargarArchivo(`/api/facturacion/${empresaId}/export`, `facturas-${empresaId}.csv`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo exportar el archivo.')
+    }
+  }
+
   const money = (v: number) =>
     v?.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 
@@ -86,6 +98,14 @@ export default function FacturacionPage() {
               disabled={cargandoEmpresa}
             >
               Configuración DIAN
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadOutlinedIcon />}
+              onClick={exportar}
+              disabled={empresaId == null || cargando}
+            >
+              Exportar CSV
             </Button>
             <Button
               variant="contained"

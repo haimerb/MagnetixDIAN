@@ -51,6 +51,12 @@ magnetixdian:
     secret: ${JWT_SECRET:bWFnbmV0aXhkaWFuLXN1cGVyLXNlY3JldC1rZXktZm9yLWp3dC1zaWduaW5nLTIwMjYtcGt6ZDEyM2ZiYQ==}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+  app:
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  auth:
+    expose-token: ${AUTH_EXPOSE_TOKEN:true}
+  transmision:
+    reintento-ms: ${REINTENTO_TRANSMISION_MS:60000}
   upload:
     dir: ${UPLOAD_DIR:./uploads}
   crypto:
@@ -67,6 +73,13 @@ magnetixdian:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:local}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.1}
+  send-default-pii: false
+  exception-resolver-order: -2147483648
 
 management:
   endpoints:

@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Link from '@mui/material/Link'
 import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -140,6 +141,9 @@ export default function LoginPage() {
             <Button type="submit" variant="contained" size="large" disabled={cargando} loading={cargando}>
               Ingresar
             </Button>
+            <Link component={RouterLink} to="/recuperar" variant="body2" sx={{ justifySelf: 'center' }}>
+              ¿Olvidó su contraseña?
+            </Link>
           </Box>
 
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>

@@ -1,7 +1,7 @@
 package com.magnetixdian.application;
 
-import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.domain.transmision.CanalTransmision;
+import com.magnetixdian.domain.transmision.DatosEnvio;
 import com.magnetixdian.domain.transmision.ResultadoTransmision;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigJpa;
 import com.magnetixdian.infrastructure.transmision.CanalSimulado;
@@ -26,7 +26,7 @@ public class ServicioTransmision {
         this.canalSimulado = canalSimulado;
     }
 
-    public ResultadoTransmision enviar(String xmlFirmado, String cufe, FacturaDatos datos, EmpresaFeConfigJpa config) {
+    public ResultadoTransmision enviar(String xmlFirmado, String cufe, DatosEnvio datos, EmpresaFeConfigJpa config) {
         CanalTransmision canal = seleccionar(config);
         return canal.enviar(xmlFirmado, cufe, datos, config);
     }

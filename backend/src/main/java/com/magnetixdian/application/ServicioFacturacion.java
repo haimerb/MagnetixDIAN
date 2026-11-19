@@ -14,6 +14,7 @@ import com.magnetixdian.domain.model.Severidad;
 import com.magnetixdian.domain.rule.NitDigitoVerificacionRegla;
 import com.magnetixdian.domain.rule.factura.ContextoFactura;
 import com.magnetixdian.domain.rule.factura.ValidadorFactura;
+import com.magnetixdian.domain.transmision.DatosEnvio;
 import com.magnetixdian.domain.transmision.ResultadoTransmision;
 import com.magnetixdian.infrastructure.notification.NotificadorEmail;
 import com.magnetixdian.infrastructure.pdf.GeneradorPdfFactura;
@@ -84,6 +85,8 @@ public class ServicioFacturacion {
     private final ServicioTransmision transmision;
     private final NotificadorEmail notificador;
     private final GeneradorApplicationResponse generadorEvento;
+    private final AuditoriaService auditoria;
+    private final ServicioEnvios envios;
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -97,7 +100,9 @@ public class ServicioFacturacion {
                                ServicioFirma firma,
                                ServicioTransmision transmision,
                                NotificadorEmail notificador,
-                               GeneradorApplicationResponse generadorEvento) {
+                               GeneradorApplicationResponse generadorEvento,
+                               AuditoriaService auditoria,
+                               ServicioEnvios envios) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -111,6 +116,8 @@ public class ServicioFacturacion {
         this.transmision = transmision;
         this.notificador = notificador;
         this.generadorEvento = generadorEvento;
+        this.auditoria = auditoria;
+        this.envios = envios;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -132,6 +139,8 @@ public class ServicioFacturacion {
         FacturaDatos preliminar = construirDatos(empresa, config, req, 0L, "");
         List<ResultadoRegla> resultados = validador.validar(new ContextoFactura(preliminar, config));
         if (validador.tieneErrores(resultados)) {
+            auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_RECHAZADA_VALIDACION", "empresa",
+                    empresaId, req.tipoDocumento());
             return new ResultadoEmisionDto(false, null, null, null, "RECHAZADO", null,
                     "El documento tiene errores de validación", resultados.stream().filter(x -> !x.valida())
                     .map(this::aError).toList());
@@ -146,7 +155,7 @@ public class ServicioFacturacion {
         String xml = generadorUbl.generar(datos, cufe);
         String xmlFirmado = firma.firmar(xml, config);
 
-        ResultadoTransmision transmisionResultado = transmision.enviar(xmlFirmado, cufe, datos, config);
+        ResultadoTransmision transmisionResultado = transmision.enviar(xmlFirmado, cufe, DatosEnvio.de(datos), config);
 
         FacturaJpa factura = persistir(empresa, usuarioId, config, datos, cufe, qrUrl, xml, xmlFirmado,
                 transmisionResultado);
@@ -158,8 +167,11 @@ public class ServicioFacturacion {
         evento.setXml(xmlFirmado);
         evento.setRespuesta(transmisionResultado.respuestaCruda());
         eventoRepository.save(evento);
+        envios.registrarIntento(factura, config, cufe, transmisionResultado);
 
         notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_EMITIDA", "factura", factura.getId(),
+                numeroCompleto + " · " + factura.getEstado());
 
         return new ResultadoEmisionDto(true, factura.getId(), numeroCompleto, cufe, factura.getEstado(),
                 qrUrl, transmisionResultado.mensaje(), List.of());
@@ -206,6 +218,36 @@ public class ServicioFacturacion {
         Page<FacturaResumenDto> page = facturaRepository.findByEmpresaId(empresaId, pageable)
                 .map(this::aResumen);
         return PaginaDto.desde(page);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportarCsv(Long empresaId, LocalDate desde, LocalDate hasta) {
+        List<FacturaJpa> facturas = facturaRepository.findByEmpresaIdOrderByCreatedAtDesc(empresaId);
+        StringBuilder csv = new StringBuilder("\uFEFF");
+        csv.append(CsvFacturas.fila("Tipo", "Numero", "Fecha", "Adquirente", "NIT", "Subtotal",
+                "Impuestos", "Retenciones", "Total", "Estado", "CUFE")).append("\r\n");
+        for (FacturaJpa f : facturas) {
+            LocalDate fecha = f.getFechaEmision();
+            if (desde != null && (fecha == null || fecha.isBefore(desde))) {
+                continue;
+            }
+            if (hasta != null && (fecha == null || fecha.isAfter(hasta))) {
+                continue;
+            }
+            csv.append(CsvFacturas.fila(
+                    f.getTipoDocumento(),
+                    f.getNumeroCompleto(),
+                    fecha == null ? "" : fecha.toString(),
+                    f.getAdquirenteNombre(),
+                    f.getAdquirenteNumDoc(),
+                    f.getSubtotal() == null ? "" : f.getSubtotal().toPlainString(),
+                    f.getTotalImpuestos() == null ? "" : f.getTotalImpuestos().toPlainString(),
+                    f.getTotalRetenciones() == null ? "" : f.getTotalRetenciones().toPlainString(),
+                    f.getTotal() == null ? "" : f.getTotal().toPlainString(),
+                    f.getEstado(),
+                    f.getCufe() != null ? f.getCufe() : f.getCude())).append("\r\n");
+        }
+        return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     private FacturaResumenDto aResumen(FacturaJpa f) {

@@ -13,6 +13,8 @@ import com.magnetixdian.interfaces.dto.CalendarioDianDto;
 import com.magnetixdian.interfaces.dto.CalendarioDianRequest;
 import com.magnetixdian.interfaces.dto.EmpresaDto;
 import com.magnetixdian.interfaces.dto.EmpresaRequest;
+import com.magnetixdian.interfaces.dto.InvitacionRequest;
+import com.magnetixdian.interfaces.dto.InvitacionResponse;
 import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.UsuarioDto;
 import com.magnetixdian.interfaces.dto.UsuarioRequest;
@@ -39,19 +41,25 @@ public class ServicioAdmin {
     private final CalendarioDianRepository calendarioRepo;
     private final MedioMagneticoRepository medioRepo;
     private final PasswordEncoder passwordEncoder;
+    private final ServicioRecuperacion recuperacion;
+    private final AuditoriaService auditoria;
 
     public ServicioAdmin(EmpresaRepository empresaRepo,
                          UsuarioRepository usuarioRepo,
                          RoleRepository roleRepo,
                          CalendarioDianRepository calendarioRepo,
                          MedioMagneticoRepository medioRepo,
-                         PasswordEncoder passwordEncoder) {
+                         PasswordEncoder passwordEncoder,
+                         ServicioRecuperacion recuperacion,
+                         AuditoriaService auditoria) {
         this.empresaRepo = empresaRepo;
         this.usuarioRepo = usuarioRepo;
         this.roleRepo = roleRepo;
         this.calendarioRepo = calendarioRepo;
         this.medioRepo = medioRepo;
         this.passwordEncoder = passwordEncoder;
+        this.recuperacion = recuperacion;
+        this.auditoria = auditoria;
     }
 
     // ---------------------------------------------------------------- Empresas
@@ -75,7 +83,9 @@ public class ServicioAdmin {
         }
         EmpresaJpa empresa = new EmpresaJpa(request.nit(), request.razonSocial());
         aplicar(empresa, request);
-        return toDto(empresaRepo.save(empresa));
+        EmpresaDto dto = toDto(empresaRepo.save(empresa));
+        auditoria.registrar(AuditoriaService.usuarioActual(), "EMPRESA_CREADA", "empresa", dto.id(), dto.nit());
+        return dto;
     }
 
     @Transactional
@@ -88,7 +98,9 @@ public class ServicioAdmin {
         empresa.setNit(request.nit());
         empresa.setRazonSocial(request.razonSocial());
         aplicar(empresa, request);
-        return toDto(empresaRepo.save(empresa));
+        EmpresaDto dto = toDto(empresaRepo.save(empresa));
+        auditoria.registrar(AuditoriaService.usuarioActual(), "EMPRESA_ACTUALIZADA", "empresa", dto.id(), dto.nit());
+        return dto;
     }
 
     @Transactional
@@ -97,6 +109,7 @@ public class ServicioAdmin {
             throw new IllegalStateException("No se puede eliminar: la empresa tiene medios magnéticos asociados.");
         }
         empresaRepo.deleteById(id);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "EMPRESA_ELIMINADA", "empresa", id, null);
     }
 
     private void aplicar(EmpresaJpa empresa, EmpresaRequest request) {
@@ -156,7 +169,38 @@ public class ServicioAdmin {
             usuario.setEmpresa(empresaRepo.findById(empresaId)
                     .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada: " + empresaId)));
         }
-        return toDto(usuarioRepo.save(usuario));
+        UsuarioDto dto = toDto(usuarioRepo.save(usuario));
+        auditoria.registrar(AuditoriaService.usuarioActual(), "USUARIO_CREADO", "usuario", dto.id(), dto.username());
+        return dto;
+    }
+
+    @Transactional
+    public InvitacionResponse invitarUsuario(InvitacionRequest request) {
+        if (usuarioRepo.existsByUsername(request.username())) {
+            throw new IllegalArgumentException("Ya existe un usuario con el nombre " + request.username());
+        }
+        if (usuarioRepo.existsByEmailIgnoreCase(request.email())) {
+            throw new IllegalArgumentException("Ya existe un usuario con el correo " + request.email());
+        }
+        UsuarioJpa usuario = new UsuarioJpa();
+        usuario.setUsername(request.username());
+        usuario.setEmail(request.email());
+        usuario.setNombre(request.nombre());
+        usuario.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+        usuario.setEnabled(Boolean.TRUE);
+        usuario.setInvitacionPendiente(Boolean.TRUE);
+        for (String codigo : request.roles()) {
+            RoleJpa rol = roleRepo.findByCode(codigo)
+                    .orElseThrow(() -> new IllegalArgumentException("Rol no existe: " + codigo));
+            usuario.getRoles().add(rol);
+        }
+        if (request.empresaId() != null) {
+            usuario.setEmpresa(empresaRepo.findById(request.empresaId())
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada: " + request.empresaId())));
+        }
+        UsuarioJpa guardado = usuarioRepo.save(usuario);
+        String enlace = recuperacion.crearInvitacion(guardado);
+        return new InvitacionResponse(toDto(guardado), enlace);
     }
 
     @Transactional
@@ -164,7 +208,10 @@ public class ServicioAdmin {
         UsuarioJpa usuario = usuarioRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + id));
         usuario.setEnabled(enabled);
-        return toDto(usuarioRepo.save(usuario));
+        UsuarioDto dto = toDto(usuarioRepo.save(usuario));
+        auditoria.registrar(AuditoriaService.usuarioActual(), enabled ? "USUARIO_HABILITADO" : "USUARIO_DESHABILITADO",
+                "usuario", id, usuario.getUsername());
+        return dto;
     }
 
     private UsuarioDto toDto(UsuarioJpa u) {
@@ -191,12 +238,16 @@ public class ServicioAdmin {
         CalendarioDianJpa entrada = new CalendarioDianJpa(
                 request.anioGravable(), request.anioPresentacion(), request.tipoReporte(),
                 request.rangoNitIni(), request.rangoNitFin(), request.fechaLimite());
-        return toDto(calendarioRepo.save(entrada));
+        CalendarioDianDto dto = toDto(calendarioRepo.save(entrada));
+        auditoria.registrar(AuditoriaService.usuarioActual(), "CALENDARIO_CREADO", "calendario", dto.id(),
+                request.tipoReporte() + " " + request.anioGravable());
+        return dto;
     }
 
     @Transactional
     public void eliminarCalendario(Long id) {
         calendarioRepo.deleteById(id);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "CALENDARIO_ELIMINADO", "calendario", id, null);
     }
 
     private CalendarioDianDto toDto(CalendarioDianJpa c) {

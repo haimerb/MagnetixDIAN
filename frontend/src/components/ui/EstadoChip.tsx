@@ -13,6 +13,8 @@ const ESTADOS: Record<string, { tone: Tone; label: string }> = {
   ACEPTADO: { tone: 'success', label: 'Aceptado' },
   RECHAZADO: { tone: 'error', label: 'Rechazado' },
   PENDIENTE: { tone: 'warning', label: 'Pendiente' },
+  EXITOSO: { tone: 'success', label: 'Enviado' },
+  AGOTADO: { tone: 'error', label: 'Agotado' },
 }
 
 export default function EstadoChip({ estado }: { estado: string }) {

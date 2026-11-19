@@ -24,8 +24,14 @@ import TextField from '@mui/material/TextField'
 import DeleteIcon from '@mui/icons-material/Delete'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined'
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined'
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
+import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined'
 import { api, type EmpresaAdmin, type Pagina, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
+import AuditoriaPanel from '../components/admin/AuditoriaPanel'
+import EnviosPanel from '../components/admin/EnviosPanel'
+import InvitacionUsuarioDialog from '../components/admin/InvitacionUsuarioDialog'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import PageHeader from '../components/ui/PageHeader'
@@ -36,7 +42,7 @@ const ROLES = ['ROLE_ADMIN', 'ROLE_CONTADOR', 'ROLE_CLIENTE']
 const TIPOS_REPORTE = ['GRAN_CONTRIBUYENTE', 'PERSONA_JURIDICA', 'PERSONA_NATURAL']
 const FILAS_POR_PAGINA = [10, 25, 50]
 
-type TabIdx = 'empresas' | 'usuarios' | 'calendario'
+type TabIdx = 'empresas' | 'usuarios' | 'calendario' | 'envios' | 'auditoria'
 
 export default function AdminPage() {
   const [tab, setTab] = useState<TabIdx>('empresas')
@@ -46,6 +52,7 @@ export default function AdminPage() {
   const [anioCalendario, setAnioCalendario] = useState(2025)
   const [error, setError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'empresa' | 'usuario' | 'calendario' | null>(null)
+  const [invitacionAbierta, setInvitacionAbierta] = useState(false)
   const [paginaEmpresas, setPaginaEmpresas] = useState(0)
   const [tamanoEmpresas, setTamanoEmpresas] = useState(FILAS_POR_PAGINA[0])
   const [totalEmpresas, setTotalEmpresas] = useState(0)
@@ -197,6 +204,8 @@ export default function AdminPage() {
         <Tab label="Empresas" value="empresas" />
         <Tab label="Usuarios" value="usuarios" />
         <Tab label="Calendario DIAN" value="calendario" />
+        <Tab label="Reintentos" value="envios" icon={<SyncOutlinedIcon />} iconPosition="start" />
+        <Tab label="Auditoría" value="auditoria" icon={<HistoryOutlinedIcon />} iconPosition="start" />
       </Tabs>
 
       {tab === 'empresas' && (
@@ -261,9 +270,18 @@ export default function AdminPage() {
         <SectionCard
           title="Usuarios"
           actions={
-            <Button variant="contained" onClick={() => { setDialog('usuario'); setFormUsuario({ username: '', password: '', email: '', nombre: '', empresaId: '', roles: 'ROLE_CONTADOR' }) }}>
-              Nuevo usuario
-            </Button>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                startIcon={<PersonAddAlt1OutlinedIcon />}
+                onClick={() => setInvitacionAbierta(true)}
+              >
+                Invitar
+              </Button>
+              <Button variant="contained" onClick={() => { setDialog('usuario'); setFormUsuario({ username: '', password: '', email: '', nombre: '', empresaId: '', roles: 'ROLE_CONTADOR' }) }}>
+                Nuevo usuario
+              </Button>
+            </Stack>
           }
           padded={!cargandoUsuarios && usuarios.length === 0}
         >
@@ -359,6 +377,15 @@ export default function AdminPage() {
           )}
         </SectionCard>
       )}
+
+      {tab === 'envios' && <EnviosPanel />}
+      {tab === 'auditoria' && <AuditoriaPanel />}
+
+      <InvitacionUsuarioDialog
+        abierto={invitacionAbierta}
+        onCerrar={() => setInvitacionAbierta(false)}
+        onInvitado={cargarUsuarios}
+      />
 
       <Dialog open={dialog === 'empresa'} onClose={() => { if (!guardando) setDialog(null) }} maxWidth="sm" fullWidth>
         <DialogTitle>Nueva empresa</DialogTitle>
