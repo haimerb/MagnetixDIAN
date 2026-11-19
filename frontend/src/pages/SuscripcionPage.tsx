@@ -13,6 +13,7 @@ import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import EstadoChip from '../components/ui/EstadoChip'
 import LoadingState from '../components/ui/LoadingState'
+import ApiKeysPanel from '../components/suscripcion/ApiKeysPanel'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import {
   cambiarPlan,
@@ -269,6 +270,8 @@ export default function SuscripcionPage() {
           })}
         </Grid>
       </SectionCard>
+
+      <ApiKeysPanel empresaId={empresaId} />
     </Box>
   )
 }
