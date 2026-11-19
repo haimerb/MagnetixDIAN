@@ -247,6 +247,7 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | POST | `/api/facturacion/{empresaId}/{id}/eventos` | Registra un evento RADIAN (030-034) sobre la factura |
 | GET | `/api/facturacion/{empresaId}/{id}/pdf` | Descarga el PDF |
 | GET | `/api/facturacion/{empresaId}/{id}/xml` | Descarga el XML firmado |
+| POST | `/api/facturacion/{empresaId}/{id}/reenviar` | Reenvía XML + PDF por correo `{destinatario}` (409 si notificaciones están deshabilitadas) |
 | GET | `/api/facturacion/catalogo/{tipo}` | Catálogo DIAN (`TIPO_DOCUMENTO`, `TRIBUTO`, ...) |
 | GET/PUT | `/api/facturacion/config/{empresaId}` | Obtiene/guarda la configuración DIAN de la empresa |
 
@@ -262,6 +263,7 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | POST | `/api/empresas/{empresaId}/api-keys` | Crea una clave `{nombre}` (se devuelve **una sola vez**) |
 | DELETE | `/api/empresas/{empresaId}/api-keys/{id}` | Revoca una clave |
 | GET | `/api/empresas/{empresaId}/pagos` | Historial de pagos de suscripción |
+| GET | `/api/empresas/{empresaId}/pagos/{referencia}` | Estado actual de un pago (útil tras volver del checkout) |
 | POST | `/api/empresas/{empresaId}/pagos/checkout` | Inicia el pago `{planCodigo, proveedor}` → `{url, ...}` |
 | POST | `/api/pagos/webhook/{proveedor}` | Webhook público de la pasarela (`SIMULADO`/`WOMPI`/`MERCADOPAGO`) |
 
@@ -370,6 +372,7 @@ El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merg
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | — | pasarela Wompi (inactiva sin credenciales) |
 | `WOMPI_CHECKOUT_URL` | `https://checkout.wompi.co/p/` | endpoint de checkout de Wompi |
 | `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_BASE_URL` / `MERCADOPAGO_BACK_URL` | — / `https://api.mercadopago.com` / — | pasarela MercadoPago (inactiva sin credenciales) |
+| `MERCADOPAGO_WEBHOOK_SECRET` | — | secreto de firmas `x-signature` (si se define, se valida `id/request-id/ts` con HMAC-SHA256) |
 | `VITE_API_BASE_URL` / `VITE_SENTRY_DSN` | — | frontend (build-time) |
 
 ## 11. Notificaciones, jobs y CI/CD

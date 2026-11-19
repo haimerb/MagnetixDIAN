@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined'
 import SectionCard from '../ui/SectionCard'
 import EmptyState from '../ui/EmptyState'
 import EstadoChip from '../ui/EstadoChip'
-import { listarPagos, type Pago } from '../../api/client'
+import { listarPagos, obtenerPago, type Pago } from '../../api/client'
 
 function formatearMonto(pago: Pago) {
   return new Intl.NumberFormat('es-CO', {
@@ -22,6 +25,19 @@ function formatearMonto(pago: Pago) {
 export default function PagosPanel({ empresaId }: { empresaId: number }) {
   const [pagos, setPagos] = useState<Pago[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [actualizando, setActualizando] = useState<string | null>(null)
+
+  const actualizar = async (referencia: string) => {
+    setActualizando(referencia)
+    try {
+      const actualizado = await obtenerPago(empresaId, referencia)
+      setPagos((previos) => previos.map((pago) => (pago.id === actualizado.id ? actualizado : pago)))
+    } catch {
+      setError('No se pudo actualizar el estado del pago.')
+    } finally {
+      setActualizando(null)
+    }
+  }
 
   const cargar = useCallback(async () => {
     try {
@@ -47,7 +63,23 @@ export default function PagosPanel({ empresaId }: { empresaId: number }) {
               <ListItem
                 key={pago.id}
                 divider
-                secondaryAction={<EstadoChip estado={pago.estado} />}
+                secondaryAction={
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Tooltip title="Actualizar estado">
+                      <span>
+                        <IconButton
+                          size="small"
+                          aria-label={`Actualizar estado de ${pago.referencia}`}
+                          disabled={actualizando === pago.referencia}
+                          onClick={() => void actualizar(pago.referencia)}
+                        >
+                          <RefreshOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <EstadoChip estado={pago.estado} />
+                  </Stack>
+                }
               >
                 <ListItemText
                   primary={
