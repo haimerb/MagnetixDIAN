@@ -13,6 +13,7 @@ const ESTADOS: Record<string, { tone: Tone; label: string }> = {
   ACEPTADO: { tone: 'success', label: 'Aceptado' },
   RECHAZADO: { tone: 'error', label: 'Rechazado' },
   PENDIENTE: { tone: 'warning', label: 'Pendiente' },
+  APROBADO: { tone: 'success', label: 'Aprobado' },
   EXITOSO: { tone: 'success', label: 'Enviado' },
   AGOTADO: { tone: 'error', label: 'Agotado' },
 }

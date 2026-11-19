@@ -4,8 +4,12 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
+import FormControl from '@mui/material/FormControl'
 import Grid from '@mui/material/Grid2'
+import InputLabel from '@mui/material/InputLabel'
 import LinearProgress from '@mui/material/LinearProgress'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
@@ -14,17 +18,22 @@ import SectionCard from '../components/ui/SectionCard'
 import EstadoChip from '../components/ui/EstadoChip'
 import LoadingState from '../components/ui/LoadingState'
 import ApiKeysPanel from '../components/suscripcion/ApiKeysPanel'
+import PagosPanel from '../components/suscripcion/PagosPanel'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import {
-  cambiarPlan,
   cancelarSuscripcion,
+  iniciarCheckout,
   listarPlanes,
   obtenerSuscripcion,
   type Plan,
   type Suscripcion,
 } from '../api/client'
 
-const PROVEEDOR_POR_DEFECTO = 'SIMULADO'
+const PASARELAS = [
+  { valor: 'SIMULADO', etiqueta: 'Simulada (pruebas)' },
+  { valor: 'WOMPI', etiqueta: 'Wompi' },
+  { valor: 'MERCADOPAGO', etiqueta: 'MercadoPago' },
+]
 
 function formatearPrecio(plan: Plan) {
   if (plan.precioMensual <= 0) return 'Gratis'
@@ -74,6 +83,8 @@ export default function SuscripcionPage() {
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null)
   const [cargando, setCargando] = useState(true)
   const [procesando, setProcesando] = useState<string | null>(null)
+  const [proveedor, setProveedor] = useState('SIMULADO')
+  const [refrescoPagos, setRefrescoPagos] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
 
@@ -108,12 +119,17 @@ export default function SuscripcionPage() {
     setError(null)
     setOk(null)
     try {
-      const actualizada = await cambiarPlan(empresaId, codigo, PROVEEDOR_POR_DEFECTO)
-      setSuscripcion(actualizada)
-      setOk(`Plan ${actualizada.plan.nombre} activado.`)
+      const pago = await iniciarCheckout(empresaId, codigo, proveedor)
+      if (pago.url) {
+        window.location.href = pago.url
+        return
+      }
+      await cargar()
+      setRefrescoPagos((n) => n + 1)
+      setOk(`Pago aprobado. Plan ${codigo} activado.`)
     } catch (e: unknown) {
       const detalle = (e as { response?: { data?: { message?: string } } }).response?.data?.message
-      setError(detalle ?? 'No se pudo cambiar el plan.')
+      setError(detalle ?? 'No se pudo iniciar el pago.')
     } finally {
       setProcesando(null)
     }
@@ -209,7 +225,27 @@ export default function SuscripcionPage() {
         </Alert>
       )}
 
-      <SectionCard title="Planes disponibles" padded={false}>
+      <SectionCard
+        title="Planes disponibles"
+        padded={false}
+        actions={
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel id="pasarela-label">Pasarela de pago</InputLabel>
+            <Select
+              labelId="pasarela-label"
+              label="Pasarela de pago"
+              value={proveedor}
+              onChange={(e) => setProveedor(e.target.value)}
+            >
+              {PASARELAS.map((p) => (
+                <MenuItem key={p.valor} value={p.valor}>
+                  {p.etiqueta}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        }
+      >
         <Grid container spacing={2} sx={{ p: { xs: 2, md: 3 } }}>
           {planes.map((plan) => {
             const actual = suscripcion?.plan.codigo === plan.codigo
@@ -270,6 +306,8 @@ export default function SuscripcionPage() {
           })}
         </Grid>
       </SectionCard>
+
+      <PagosPanel key={refrescoPagos} empresaId={empresaId} />
 
       <ApiKeysPanel empresaId={empresaId} />
     </Box>
