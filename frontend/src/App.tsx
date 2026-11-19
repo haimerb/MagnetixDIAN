@@ -7,6 +7,9 @@ import GlobalProgress from './components/layout/GlobalProgress'
 import LoadingState from './components/ui/LoadingState'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RecuperarPasswordPage = lazy(() => import('./pages/RecuperarPasswordPage'))
+const ActivarCuentaPage = lazy(() => import('./pages/ActivarCuentaPage'))
+const CambiarPasswordPage = lazy(() => import('./pages/CambiarPasswordPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const CargaPage = lazy(() => import('./pages/CargaPage'))
 const ValidacionPage = lazy(() => import('./pages/ValidacionPage'))
@@ -31,6 +34,9 @@ export default function App() {
         <Suspense fallback={<LoadingState label="Cargando página…" minHeight="60vh" />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/recuperar" element={<RecuperarPasswordPage />} />
+            <Route path="/restablecer" element={<RecuperarPasswordPage />} />
+            <Route path="/activar" element={<ActivarCuentaPage />} />
             <Route
               path="/"
               element={
@@ -48,6 +54,7 @@ export default function App() {
               <Route path="facturacion/config" element={<ConfigFePage />} />
               <Route path="facturacion/:id" element={<FacturaDetallePage />} />
               <Route path="admin" element={<AdminPage />} />
+              <Route path="cuenta" element={<CambiarPasswordPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

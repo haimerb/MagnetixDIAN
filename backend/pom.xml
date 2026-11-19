@@ -144,6 +144,13 @@
             <version>${zxing.version}</version>
         </dependency>
 
+        <!-- Observabilidad: Sentry (se activa solo si SENTRY_DSN está definido) -->
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+            <version>8.16.0</version>
+        </dependency>
+
         <!-- OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>

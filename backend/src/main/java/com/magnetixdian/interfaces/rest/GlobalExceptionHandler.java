@@ -40,6 +40,12 @@ public class GlobalExceptionHandler {
         return respuesta(HttpStatus.BAD_REQUEST, mensaje);
     }
 
+    @ExceptionHandler(com.magnetixdian.application.CuentaBloqueadaException.class)
+    public ResponseEntity<Map<String, Object>> cuentaBloqueada(
+            com.magnetixdian.application.CuentaBloqueadaException ex) {
+        return respuesta(HttpStatus.LOCKED, ex.getMessage());
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> noAutenticado(AuthenticationException ex) {
         return respuesta(HttpStatus.UNAUTHORIZED, "Credenciales inválidas o usuario inactivo.");

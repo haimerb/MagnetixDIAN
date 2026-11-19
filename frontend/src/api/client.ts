@@ -50,6 +50,23 @@ api.interceptors.request.use(
   },
 )
 
+let refrescoEnCurso: Promise<void> | null = null
+
+function refrescarSesion(): Promise<void> {
+  if (!refrescoEnCurso) {
+    const refresh = localStorage.getItem(REFRESH_KEY)
+    refrescoEnCurso = (async () => {
+      if (!refresh) throw new Error('Sin token de refresco')
+      const { data } = await axios.post(`${API_BASE}/api/auth/refresh`, { refreshToken: refresh })
+      localStorage.setItem(TOKEN_KEY, data.accessToken)
+      localStorage.setItem(REFRESH_KEY, data.refreshToken)
+    })().finally(() => {
+      refrescoEnCurso = null
+    })
+  }
+  return refrescoEnCurso
+}
+
 api.interceptors.response.use(
   (response) => {
     finalizarPeticion()
@@ -60,12 +77,9 @@ api.interceptors.response.use(
     const original = error.config as { _retry?: boolean } & typeof error.config
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
-      const refresh = localStorage.getItem(REFRESH_KEY)
-      if (refresh) {
+      if (localStorage.getItem(REFRESH_KEY)) {
         try {
-          const { data } = await axios.post(`${API_BASE}/api/auth/refresh`, { refreshToken: refresh })
-          localStorage.setItem(TOKEN_KEY, data.accessToken)
-          localStorage.setItem(REFRESH_KEY, data.refreshToken)
+          await refrescarSesion()
           return api(original)
         } catch {
           localStorage.removeItem(TOKEN_KEY)
@@ -369,4 +383,41 @@ export type Pagina<T> = {
   totalPaginas: number
   primera: boolean
   ultima: boolean
+}
+
+export type EventoAuditoria = {
+  id: number
+  usuario: string | null
+  accion: string
+  entidad: string | null
+  entidadId: string | null
+  detalle: string | null
+  ip: string | null
+  createdAt: string
+}
+
+export type InvitacionResponse = {
+  usuario: UsuarioAdmin
+  enlace: string | null
+}
+
+export async function solicitarRecuperacion(identificador: string) {
+  const { data } = await api.post<{ mensaje: string; enlace: string | null }>(
+    '/auth/forgot-password',
+    { identificador },
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function restablecerPassword(token: string, password: string) {
+  await api.post('/auth/reset-password', { token, password }, { skipGlobalError: true })
+}
+
+export async function aceptarInvitacion(token: string, password: string) {
+  await api.post('/auth/accept-invite', { token, password }, { skipGlobalError: true })
+}
+
+export async function cambiarPassword(passwordActual: string, passwordNueva: string) {
+  await api.post('/auth/change-password', { passwordActual, passwordNueva }, { skipGlobalError: true })
 }

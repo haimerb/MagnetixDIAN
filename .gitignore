@@ -17,3 +17,11 @@ uploads/
 .DS_Store
 Thumbs.db
 *.swp
+
+frontend/playwright-report/
+frontend/test-results/
+frontend/e2e/.cache/
+
+# Entorno
+.env
+.env.*
