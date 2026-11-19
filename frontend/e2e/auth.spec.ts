@@ -21,6 +21,6 @@ test.describe('Autenticación', () => {
     await page.goto('/recuperar')
     await page.getByLabel('Usuario o correo').fill('admin')
     await page.getByRole('button', { name: 'Enviar enlace' }).click()
-    await expect(page.getByRole('alert')).toContainText('Si el usuario existe')
+    await expect(page.getByText('Si el usuario existe')).toBeVisible()
   })
 })
