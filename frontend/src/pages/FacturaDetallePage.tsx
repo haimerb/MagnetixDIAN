@@ -18,9 +18,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DownloadIcon from '@mui/icons-material/Download'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import { api, type FacturaDetalle } from '../api/client'
+import { descargarArchivo } from '../api/descargas'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import { money, totalesLinea } from '../features/facturacion/calculos'
 import EstadoChip from '../components/ui/EstadoChip'
+import LoadingState from '../components/ui/LoadingState'
 import SectionCard from '../components/ui/SectionCard'
 
 const EVENTOS = [
@@ -31,19 +33,6 @@ const EVENTOS = [
   { codigo: '034', label: 'Aceptación tácita' },
 ]
 
-async function descargar(url: string, nombre: string) {
-  const token = localStorage.getItem('magnetixdian_token')
-  const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
-  if (!res.ok) return
-  const blob = await res.blob()
-  const objectUrl = URL.createObjectURL(blob)
-  const a = window.document.createElement('a')
-  a.href = objectUrl
-  a.download = nombre
-  a.click()
-  URL.revokeObjectURL(objectUrl)
-}
-
 export default function FacturaDetallePage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -52,14 +41,20 @@ export default function FacturaDetallePage() {
   const [error, setError] = useState<string | null>(null)
   const [tipoEvento, setTipoEvento] = useState('030')
   const [registrando, setRegistrando] = useState(false)
+  const [descargando, setDescargando] = useState<'pdf' | 'xml' | null>(null)
+  const [cargando, setCargando] = useState(true)
 
   const cargar = useCallback(() => {
-    if (id && empresaId != null) {
-      api
-        .get<FacturaDetalle>(`/facturacion/${empresaId}/${id}`)
-        .then((res) => setFactura(res.data))
-        .catch(() => setError('No se pudo cargar el documento.'))
+    if (id == null || empresaId == null) {
+      setCargando(false)
+      return
     }
+    setCargando(true)
+    api
+      .get<FacturaDetalle>(`/facturacion/${empresaId}/${id}`)
+      .then((res) => setFactura(res.data))
+      .catch(() => setError('No se pudo cargar el documento.'))
+      .finally(() => setCargando(false))
   }, [id, empresaId])
 
   useEffect(cargar, [cargar])
@@ -78,8 +73,26 @@ export default function FacturaDetallePage() {
     }
   }
 
-  if (error) return <Alert severity="error">{error}</Alert>
-  if (!factura) return <Typography color="text.secondary">Cargando…</Typography>
+  if (!factura) {
+    if (error) return <Alert severity="error">{error}</Alert>
+    if (cargando) return <LoadingState label="Cargando documento…" minHeight="40vh" />
+    return <Alert severity="info">No se encontró el documento.</Alert>
+  }
+
+  const onDescargar = async (tipo: 'pdf' | 'xml') => {
+    setDescargando(tipo)
+    setError(null)
+    try {
+      await descargarArchivo(
+        `/api/facturacion/${empresaId}/${factura.id}/${tipo}`,
+        `factura-${factura.numeroCompleto}.${tipo}`,
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo descargar el archivo.')
+    } finally {
+      setDescargando(null)
+    }
+  }
 
   const cufe = factura.cufe ?? factura.cude ?? ''
 
@@ -103,23 +116,25 @@ export default function FacturaDetallePage() {
           <Button
             variant="outlined"
             startIcon={<PictureAsPdfIcon />}
-            onClick={() =>
-              descargar(`/api/facturacion/${empresaId}/${factura.id}/pdf`, `factura-${factura.numeroCompleto}.pdf`)
-            }
+            onClick={() => onDescargar('pdf')}
+            disabled={descargando !== null}
+            loading={descargando === 'pdf'}
           >
             PDF
           </Button>
           <Button
             variant="outlined"
             startIcon={<DownloadIcon />}
-            onClick={() =>
-              descargar(`/api/facturacion/${empresaId}/${factura.id}/xml`, `factura-${factura.numeroCompleto}.xml`)
-            }
+            onClick={() => onDescargar('xml')}
+            disabled={descargando !== null}
+            loading={descargando === 'xml'}
           >
             XML
           </Button>
         </Stack>
       </Stack>
+
+      {error && <Alert severity="error">{error}</Alert>}
 
       <SectionCard title="Datos del documento">
         <Grid container spacing={3}>
@@ -241,8 +256,8 @@ export default function FacturaDetallePage() {
               </MenuItem>
             ))}
           </TextField>
-          <Button variant="outlined" onClick={registrarEvento} disabled={registrando}>
-            {registrando ? 'Registrando…' : 'Registrar'}
+          <Button variant="outlined" onClick={registrarEvento} disabled={registrando} loading={registrando}>
+            Registrar
           </Button>
         </Stack>
       </SectionCard>

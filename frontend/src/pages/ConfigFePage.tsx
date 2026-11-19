@@ -15,6 +15,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveIcon from '@mui/icons-material/Save'
 import { api, type ConfigFe } from '../api/client'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+import LoadingState from '../components/ui/LoadingState'
 import SectionCard from '../components/ui/SectionCard'
 
 const VACIO: ConfigFe = {
@@ -53,15 +54,34 @@ export default function ConfigFePage() {
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [subiendoCert, setSubiendoCert] = useState(false)
+  const [cargando, setCargando] = useState(true)
   const archivoRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (empresaId == null) return
+    if (cargandoEmpresa) return
+    if (empresaId == null) {
+      setCargando(false)
+      return
+    }
+    let activo = true
+    setCargando(true)
     api
       .get<ConfigFe>(`/facturacion/config/${empresaId}`)
-      .then((res) => setConfig({ ...VACIO, ...res.data, softwarePin: '', pacApiKey: '', certificadoPassword: '' }))
-      .catch(() => setError('No se pudo cargar la configuración.'))
-  }, [empresaId])
+      .then((res) => {
+        if (activo) {
+          setConfig({ ...VACIO, ...res.data, softwarePin: '', pacApiKey: '', certificadoPassword: '' })
+        }
+      })
+      .catch(() => {
+        if (activo) setError('No se pudo cargar la configuración.')
+      })
+      .finally(() => {
+        if (activo) setCargando(false)
+      })
+    return () => {
+      activo = false
+    }
+  }, [empresaId, cargandoEmpresa])
 
   const set = <K extends keyof ConfigFe>(clave: K, valor: ConfigFe[K]) =>
     setConfig((c) => ({ ...c, [clave]: valor }))
@@ -101,7 +121,7 @@ export default function ConfigFePage() {
     }
   }
 
-  if (cargandoEmpresa) return <Typography color="text.secondary">Cargando…</Typography>
+  if (cargandoEmpresa || cargando) return <LoadingState label="Cargando configuración…" minHeight="40vh" />
   if (empresaId == null) return <Alert severity="info">No hay una empresa asociada.</Alert>
 
   return (
@@ -122,8 +142,14 @@ export default function ConfigFePage() {
         <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
           {config.tieneCertificado && <Chip color="success" label="Certificado cargado" />}
           {config.tienePacKey && <Chip color="success" label="API key PAC" />}
-          <Button variant="contained" startIcon={<SaveIcon />} onClick={onGuardar} disabled={guardando}>
-            {guardando ? 'Guardando…' : 'Guardar'}
+          <Button
+            variant="contained"
+            startIcon={<SaveIcon />}
+            onClick={onGuardar}
+            disabled={guardando || subiendoCert}
+            loading={guardando}
+          >
+            Guardar
           </Button>
         </Stack>
       </Stack>
@@ -131,7 +157,16 @@ export default function ConfigFePage() {
       {mensaje && <Alert severity="success">{mensaje}</Alert>}
       {error && <Alert severity="error">{error}</Alert>}
 
-      <SectionCard title="General">
+      <Box
+        aria-busy={guardando}
+        sx={{
+          display: 'grid',
+          gap: 3,
+          pointerEvents: guardando ? 'none' : undefined,
+          opacity: guardando ? 0.6 : 1,
+        }}
+      >
+        <SectionCard title="General">
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 3 }}>
             <TextField select fullWidth label="Ambiente" value={config.ambiente} onChange={(e) => set('ambiente', Number(e.target.value))}>
@@ -223,8 +258,13 @@ export default function ConfigFePage() {
           </Grid>
           <Grid size={{ xs: 12 }}>
             <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-              <Button variant="outlined" disabled={subiendoCert} onClick={() => archivoRef.current?.click()}>
-                {subiendoCert ? 'Subiendo…' : 'Subir certificado (.p12)'}
+              <Button
+                variant="outlined"
+                disabled={subiendoCert || guardando}
+                loading={subiendoCert}
+                onClick={() => archivoRef.current?.click()}
+              >
+                Subir certificado (.p12)
               </Button>
               <Typography variant="body2" color="text.secondary">
                 {config.tieneCertificado
@@ -244,8 +284,9 @@ export default function ConfigFePage() {
               />
             </Stack>
           </Grid>
-        </Grid>
-      </SectionCard>
+          </Grid>
+        </SectionCard>
+      </Box>
     </Box>
   )
 }

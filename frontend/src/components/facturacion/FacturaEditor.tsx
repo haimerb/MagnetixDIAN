@@ -79,6 +79,7 @@ export default function FacturaEditor({
   const [errores, setErrores] = useState<ErrorValidacion[]>([])
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [validando, setValidando] = useState(false)
   const [facturas, setFacturas] = useState<FacturaResumen[]>([])
   const [referenciaId, setReferenciaId] = useState<number | ''>('')
   const [cufeReferencia, setCufeReferencia] = useState<string | null>(null)
@@ -143,6 +144,7 @@ export default function FacturaEditor({
   })
 
   const onValidar = async () => {
+    setValidando(true)
     setError(null)
     try {
       const { data } = await api.post<ErrorValidacion[]>(`/facturacion/${empresaId}/validar`, construirRequest())
@@ -150,6 +152,8 @@ export default function FacturaEditor({
       if (data.length === 0) setErrores([])
     } catch {
       setError('No se pudo validar el documento.')
+    } finally {
+      setValidando(false)
     }
   }
 
@@ -173,9 +177,12 @@ export default function FacturaEditor({
   }
 
   return (
-    <Dialog open={abierto} onClose={onCerrar} fullWidth maxWidth="lg">
+    <Dialog open={abierto} onClose={() => { if (!enviando) onCerrar() }} fullWidth maxWidth="lg">
       <DialogTitle>Nueva factura electrónica</DialogTitle>
-      <DialogContent dividers>
+      <DialogContent
+        dividers
+        sx={{ pointerEvents: enviando ? 'none' : undefined, opacity: enviando ? 0.7 : 1 }}
+      >
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
@@ -416,10 +423,10 @@ export default function FacturaEditor({
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCerrar}>Cancelar</Button>
-        <Button onClick={onValidar} disabled={enviando}>Validar</Button>
-        <Button variant="contained" onClick={onEmitir} disabled={enviando}>
-          {enviando ? 'Emitiendo…' : 'Emitir'}
+        <Button onClick={onCerrar} disabled={enviando}>Cancelar</Button>
+        <Button onClick={onValidar} disabled={enviando || validando} loading={validando}>Validar</Button>
+        <Button variant="contained" onClick={onEmitir} disabled={enviando || validando} loading={enviando}>
+          Emitir
         </Button>
       </DialogActions>
     </Dialog>
