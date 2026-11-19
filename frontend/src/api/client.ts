@@ -200,6 +200,12 @@ export type UsuarioAdmin = {
   empresaId: number | null
 }
 
+export type EnlaceAcceso = {
+  enlace: string
+  tipo: 'ACTIVACION' | 'RECUPERACION'
+  usuario: string
+}
+
 export type CalendarioAdmin = {
   id: number
   anioGravable: number
@@ -413,6 +419,11 @@ export type EnvioFactura = {
   proximoIntento: string
   ultimoError: string | null
   actualizadoAt: string
+}
+
+export async function generarEnlaceAcceso(id: number) {
+  const { data } = await api.post<EnlaceAcceso>(`/admin/usuarios/${id}/enlace-acceso`)
+  return data
 }
 
 export async function listarEnvios(estado?: string, pagina = 0, tamano = 20) {

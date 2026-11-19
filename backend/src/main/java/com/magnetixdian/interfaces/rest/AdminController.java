@@ -7,6 +7,7 @@ import com.magnetixdian.interfaces.dto.CalendarioDianDto;
 import com.magnetixdian.interfaces.dto.CalendarioDianRequest;
 import com.magnetixdian.interfaces.dto.EmpresaDto;
 import com.magnetixdian.interfaces.dto.EmpresaRequest;
+import com.magnetixdian.interfaces.dto.EnlaceAccesoResponse;
 import com.magnetixdian.interfaces.dto.EnvioFacturaDto;
 import com.magnetixdian.interfaces.dto.EventoAuditoriaDto;
 import com.magnetixdian.interfaces.dto.InvitacionRequest;
@@ -100,6 +101,11 @@ public class AdminController {
     @PostMapping("/usuarios/invitar")
     public ResponseEntity<InvitacionResponse> invitarUsuario(@Valid @RequestBody InvitacionRequest request) {
         return ResponseEntity.ok(servicio.invitarUsuario(request));
+    }
+
+    @PostMapping("/usuarios/{id}/enlace-acceso")
+    public ResponseEntity<EnlaceAccesoResponse> enlaceAcceso(@PathVariable Long id) {
+        return ResponseEntity.ok(servicio.generarEnlaceAcceso(id));
     }
 
     @PutMapping("/usuarios/{id}/estado")
