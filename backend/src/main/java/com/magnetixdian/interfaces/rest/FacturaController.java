@@ -15,6 +15,8 @@ import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -82,6 +85,22 @@ public class FacturaController {
             Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicio.listarPaginado(empresaId, page, size));
+    }
+
+    @GetMapping("/{empresaId}/export")
+    public ResponseEntity<byte[]> exportar(@PathVariable Long empresaId,
+                                           @RequestParam(required = false)
+                                           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+                                           @RequestParam(required = false)
+                                           @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta,
+                                           Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        byte[] contenido = servicio.exportarCsv(empresaId, desde, hasta);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("facturas-" + empresaId + ".csv").build().toString())
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .body(contenido);
     }
 
     @GetMapping("/{empresaId}/{id}")
