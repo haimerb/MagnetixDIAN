@@ -10,6 +10,7 @@ import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
@@ -180,67 +181,71 @@ export default function FacturaDetallePage() {
       </SectionCard>
 
       <SectionCard title="Detalle" padded={false}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>#</TableCell>
-              <TableCell>Descripción</TableCell>
-              <TableCell align="right">Cant.</TableCell>
-              <TableCell align="right">V. unitario</TableCell>
-              <TableCell align="right">IVA</TableCell>
-              <TableCell align="right">Total</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {factura.lineas.map((l, idx) => (
-              <TableRow key={idx}>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell>{l.descripcion}</TableCell>
-                <TableCell align="right">{l.cantidad}</TableCell>
-                <TableCell align="right">{money(l.valorUnitario)}</TableCell>
-                <TableCell align="right">{l.ivaPct}%</TableCell>
-                <TableCell align="right">
-                  {money(totalesLinea(l).total)}
-                </TableCell>
+        <TableContainer>
+          <Table size="small" sx={{ minWidth: 600 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>#</TableCell>
+                <TableCell>Descripción</TableCell>
+                <TableCell align="right">Cant.</TableCell>
+                <TableCell align="right">V. unitario</TableCell>
+                <TableCell align="right">IVA</TableCell>
+                <TableCell align="right">Total</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {factura.lineas.map((l, idx) => (
+                <TableRow key={idx}>
+                  <TableCell>{idx + 1}</TableCell>
+                  <TableCell>{l.descripcion}</TableCell>
+                  <TableCell align="right">{l.cantidad}</TableCell>
+                  <TableCell align="right">{money(l.valorUnitario)}</TableCell>
+                  <TableCell align="right">{l.ivaPct}%</TableCell>
+                  <TableCell align="right">
+                    {money(totalesLinea(l).total)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </SectionCard>
 
       <SectionCard title="Eventos DIAN" padded={false}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Código</TableCell>
-              <TableCell>Evento</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Fecha</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {factura.eventos.length === 0 ? (
+        <TableContainer>
+          <Table size="small" sx={{ minWidth: 520 }}>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    Sin eventos registrados.
-                  </Typography>
-                </TableCell>
+                <TableCell>Código</TableCell>
+                <TableCell>Evento</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell>Fecha</TableCell>
               </TableRow>
-            ) : (
-              factura.eventos.map((ev) => (
-                <TableRow key={ev.id}>
-                  <TableCell>{ev.tipoEvento}</TableCell>
-                  <TableCell>{ev.descripcion}</TableCell>
-                  <TableCell>
-                    <Chip size="small" label={ev.estado} />
+            </TableHead>
+            <TableBody>
+              {factura.eventos.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    <Typography variant="body2" color="text.secondary">
+                      Sin eventos registrados.
+                    </Typography>
                   </TableCell>
-                  <TableCell>{new Date(ev.fecha).toLocaleString('es-CO')}</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                factura.eventos.map((ev) => (
+                  <TableRow key={ev.id}>
+                    <TableCell>{ev.tipoEvento}</TableCell>
+                    <TableCell>{ev.descripcion}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={ev.estado} />
+                    </TableCell>
+                    <TableCell>{new Date(ev.fecha).toLocaleString('es-CO')}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
         <Stack direction="row" spacing={2} sx={{ p: 2, alignItems: 'center' }}>
           <TextField
             select
