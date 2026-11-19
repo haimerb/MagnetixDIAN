@@ -26,6 +26,7 @@ import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
 import { api, type EmpresaAdmin, type Pagina, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
@@ -56,6 +57,7 @@ export default function AdminPage() {
   const [cargandoCalendario, setCargandoCalendario] = useState(false)
   const [guardando, setGuardando] = useState<'empresa' | 'usuario' | 'calendario' | null>(null)
   const [eliminando, setEliminando] = useState<number | null>(null)
+  const [confirmacion, setConfirmacion] = useState<{ tipo: 'empresa' | 'calendario'; id: number } | null>(null)
   const [cambiandoEstado, setCambiandoEstado] = useState<number | null>(null)
 
   const [formEmpresa, setFormEmpresa] = useState({ nit: '', razonSocial: '', email: '', ciudad: '', regimen: 'ORDINARIO', tipoDocumento: 'NIT' })
@@ -104,14 +106,26 @@ export default function AdminPage() {
     }
   }
 
-  const eliminarEmpresa = async (id: number) => {
-    if (!window.confirm('¿Eliminar esta empresa?')) return
+  const solicitarEliminar = (tipo: 'empresa' | 'calendario', id: number) => {
+    setConfirmacion({ tipo, id })
+  }
+
+  const confirmarEliminar = async () => {
+    if (!confirmacion) return
+    const { tipo, id } = confirmacion
     setEliminando(id)
     try {
-      await api.delete(`/admin/empresas/${id}`, { skipGlobalError: true })
-      cargarEmpresas()
+      if (tipo === 'empresa') {
+        await api.delete(`/admin/empresas/${id}`, { skipGlobalError: true })
+        cargarEmpresas()
+      } else {
+        await api.delete(`/admin/calendario/${id}`, { skipGlobalError: true })
+        cargarCalendario()
+      }
+      setConfirmacion(null)
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'No se pudo eliminar la empresa')
+      const porDefecto = tipo === 'empresa' ? 'No se pudo eliminar la empresa' : 'No se pudo eliminar la fecha'
+      setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? porDefecto)
     } finally {
       setEliminando(null)
     }
@@ -165,15 +179,8 @@ export default function AdminPage() {
     }
   }
 
-  const eliminarCalendario = async (id: number) => {
-    if (!window.confirm('¿Eliminar esta fecha del calendario?')) return
-    setEliminando(id)
-    try {
-      await api.delete(`/admin/calendario/${id}`)
-      cargarCalendario()
-    } finally {
-      setEliminando(null)
-    }
+  const eliminarCalendario = (id: number) => {
+    solicitarEliminar('calendario', id)
   }
 
   return (
@@ -224,7 +231,7 @@ export default function AdminPage() {
                       <TableCell>{e.email ?? '—'}</TableCell>
                       <TableCell>{e.ciudad ?? '—'}</TableCell>
                       <TableCell align="right">
-                        <IconButton size="small" color="error" onClick={() => eliminarEmpresa(e.id)} aria-label="Eliminar" disabled={eliminando === e.id}>
+                        <IconButton size="small" color="error" onClick={() => solicitarEliminar('empresa', e.id)} aria-label="Eliminar" disabled={eliminando === e.id}>
                           {eliminando === e.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
                         </IconButton>
                       </TableCell>
@@ -428,6 +435,19 @@ export default function AdminPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        abierto={confirmacion !== null}
+        titulo={confirmacion?.tipo === 'empresa' ? 'Eliminar empresa' : 'Eliminar fecha del calendario'}
+        mensaje={
+          confirmacion?.tipo === 'empresa'
+            ? '¿Confirma que desea eliminar esta empresa? Esta acción no se puede deshacer.'
+            : '¿Confirma que desea eliminar esta fecha del calendario? Esta acción no se puede deshacer.'
+        }
+        cargando={confirmacion !== null && eliminando === confirmacion.id}
+        onConfirmar={confirmarEliminar}
+        onCancelar={() => setConfirmacion(null)}
+      />
     </Box>
   )
 }

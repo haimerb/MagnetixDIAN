@@ -18,12 +18,14 @@ import LoadingState from '../components/ui/LoadingState'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+import { useNotificaciones } from '../features/notificaciones/contexto'
 
 type AccionValidacion = 'validar' | 'xml' | 'descargar' | 'presentar' | 'dv'
 
 export default function ValidacionPage() {
   const { medioId } = useParams()
   const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
+  const { notificar } = useNotificaciones()
   const [medio, setMedio] = useState<MedioMagnetico | null>(null)
   const [validacion, setValidacion] = useState<Validacion | null>(null)
   const [terceros, setTerceros] = useState<TercerosResumen | null>(null)
@@ -136,7 +138,7 @@ export default function ValidacionPage() {
     setError(null)
     try {
       const { data } = await api.post<{ corregidos: number }>(`/mediomagnetico/${medioId}/aplicar-dv`)
-      alert(`${data.corregidos} registros corregidos.`)
+      notificar(`${data.corregidos} registros corregidos.`, 'success')
       const res = await api.get<TercerosResumen>(`/mediomagnetico/${medioId}/terceros`)
       setTerceros(res.data)
     } catch {
