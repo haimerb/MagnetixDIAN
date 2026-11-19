@@ -401,6 +401,32 @@ export type InvitacionResponse = {
   enlace: string | null
 }
 
+export type EnvioFactura = {
+  id: number
+  facturaId: number
+  numeroCompleto: string
+  cufe: string | null
+  canal: string
+  estado: string
+  intentos: number
+  maxIntentos: number
+  proximoIntento: string
+  ultimoError: string | null
+  actualizadoAt: string
+}
+
+export async function listarEnvios(estado?: string, pagina = 0, tamano = 20) {
+  const { data } = await api.get<Pagina<EnvioFactura>>('/admin/transmision', {
+    params: { page: pagina, size: tamano, estado: estado || undefined },
+  })
+  return data
+}
+
+export async function reintentarEnvio(id: number) {
+  const { data } = await api.post<EnvioFactura>(`/admin/transmision/${id}/reintentar`)
+  return data
+}
+
 export async function solicitarRecuperacion(identificador: string) {
   const { data } = await api.post<{ mensaje: string; enlace: string | null }>(
     '/auth/forgot-password',

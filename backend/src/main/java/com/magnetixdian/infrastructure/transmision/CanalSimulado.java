@@ -1,7 +1,7 @@
 package com.magnetixdian.infrastructure.transmision;
 
-import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.domain.transmision.CanalTransmision;
+import com.magnetixdian.domain.transmision.DatosEnvio;
 import com.magnetixdian.domain.transmision.ResultadoTransmision;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigJpa;
 import org.springframework.stereotype.Component;
@@ -19,7 +19,7 @@ public class CanalSimulado implements CanalTransmision {
     }
 
     @Override
-    public ResultadoTransmision enviar(String xmlFirmado, String cufe, FacturaDatos datos, EmpresaFeConfigJpa config) {
+    public ResultadoTransmision enviar(String xmlFirmado, String cufe, DatosEnvio datos, EmpresaFeConfigJpa config) {
         String respuesta = "{\"canal\":\"SIMULADO\",\"resultado\":\"ACEPTADO\",\"cufe\":\"" + cufe
                 + "\",\"numero\":\"" + datos.numeroCompleto() + "\"}";
         return ResultadoTransmision.ok(cufe,

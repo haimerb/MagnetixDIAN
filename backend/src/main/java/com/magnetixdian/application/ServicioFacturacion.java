@@ -14,6 +14,7 @@ import com.magnetixdian.domain.model.Severidad;
 import com.magnetixdian.domain.rule.NitDigitoVerificacionRegla;
 import com.magnetixdian.domain.rule.factura.ContextoFactura;
 import com.magnetixdian.domain.rule.factura.ValidadorFactura;
+import com.magnetixdian.domain.transmision.DatosEnvio;
 import com.magnetixdian.domain.transmision.ResultadoTransmision;
 import com.magnetixdian.infrastructure.notification.NotificadorEmail;
 import com.magnetixdian.infrastructure.pdf.GeneradorPdfFactura;
@@ -85,6 +86,7 @@ public class ServicioFacturacion {
     private final NotificadorEmail notificador;
     private final GeneradorApplicationResponse generadorEvento;
     private final AuditoriaService auditoria;
+    private final ServicioEnvios envios;
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -99,7 +101,8 @@ public class ServicioFacturacion {
                                ServicioTransmision transmision,
                                NotificadorEmail notificador,
                                GeneradorApplicationResponse generadorEvento,
-                               AuditoriaService auditoria) {
+                               AuditoriaService auditoria,
+                               ServicioEnvios envios) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -114,6 +117,7 @@ public class ServicioFacturacion {
         this.notificador = notificador;
         this.generadorEvento = generadorEvento;
         this.auditoria = auditoria;
+        this.envios = envios;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -151,7 +155,7 @@ public class ServicioFacturacion {
         String xml = generadorUbl.generar(datos, cufe);
         String xmlFirmado = firma.firmar(xml, config);
 
-        ResultadoTransmision transmisionResultado = transmision.enviar(xmlFirmado, cufe, datos, config);
+        ResultadoTransmision transmisionResultado = transmision.enviar(xmlFirmado, cufe, DatosEnvio.de(datos), config);
 
         FacturaJpa factura = persistir(empresa, usuarioId, config, datos, cufe, qrUrl, xml, xmlFirmado,
                 transmisionResultado);
@@ -163,6 +167,7 @@ public class ServicioFacturacion {
         evento.setXml(xmlFirmado);
         evento.setRespuesta(transmisionResultado.respuestaCruda());
         eventoRepository.save(evento);
+        envios.registrarIntento(factura, config, cufe, transmisionResultado);
 
         notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
         auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_EMITIDA", "factura", factura.getId(),

@@ -25,10 +25,12 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined'
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined'
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
 import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined'
 import { api, type EmpresaAdmin, type Pagina, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
 import AuditoriaPanel from '../components/admin/AuditoriaPanel'
+import EnviosPanel from '../components/admin/EnviosPanel'
 import InvitacionUsuarioDialog from '../components/admin/InvitacionUsuarioDialog'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
@@ -40,7 +42,7 @@ const ROLES = ['ROLE_ADMIN', 'ROLE_CONTADOR', 'ROLE_CLIENTE']
 const TIPOS_REPORTE = ['GRAN_CONTRIBUYENTE', 'PERSONA_JURIDICA', 'PERSONA_NATURAL']
 const FILAS_POR_PAGINA = [10, 25, 50]
 
-type TabIdx = 'empresas' | 'usuarios' | 'calendario' | 'auditoria'
+type TabIdx = 'empresas' | 'usuarios' | 'calendario' | 'envios' | 'auditoria'
 
 export default function AdminPage() {
   const [tab, setTab] = useState<TabIdx>('empresas')
@@ -202,6 +204,7 @@ export default function AdminPage() {
         <Tab label="Empresas" value="empresas" />
         <Tab label="Usuarios" value="usuarios" />
         <Tab label="Calendario DIAN" value="calendario" />
+        <Tab label="Reintentos" value="envios" icon={<SyncOutlinedIcon />} iconPosition="start" />
         <Tab label="Auditoría" value="auditoria" icon={<HistoryOutlinedIcon />} iconPosition="start" />
       </Tabs>
 
@@ -375,6 +378,7 @@ export default function AdminPage() {
         </SectionCard>
       )}
 
+      {tab === 'envios' && <EnviosPanel />}
       {tab === 'auditoria' && <AuditoriaPanel />}
 
       <InvitacionUsuarioDialog
