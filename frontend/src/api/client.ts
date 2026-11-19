@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { finalizarPeticion, iniciarPeticion } from './progreso'
 
 const TOKEN_KEY = 'magnetixdian_token'
 const REFRESH_KEY = 'magnetixdian_refresh'
@@ -34,17 +35,28 @@ function mensajeDeError(error: unknown): string {
   return 'Ocurrió un error inesperado.'
 }
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(TOKEN_KEY)
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+api.interceptors.request.use(
+  (config) => {
+    iniciarPeticion()
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    finalizarPeticion()
+    return Promise.reject(error)
+  },
+)
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    finalizarPeticion()
+    return response
+  },
   async (error) => {
+    finalizarPeticion()
     const original = error.config as { _retry?: boolean } & typeof error.config
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
