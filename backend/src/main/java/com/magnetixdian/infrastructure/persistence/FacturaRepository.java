@@ -23,4 +23,9 @@ public interface FacturaRepository extends JpaRepository<FacturaJpa, Long> {
     @Query("select f from FacturaJpa f where f.tipoDocumento = '01' and f.estado = 'ACEPTADO' "
             + "and f.fechaEmision <= :limite order by f.fechaEmision asc")
     List<FacturaJpa> candidatasAceptacionTacita(@Param("limite") LocalDate limite);
+
+    @Query("select count(f) from FacturaJpa f where f.empresa.id = :empresaId "
+            + "and f.estado <> 'BORRADOR' and f.fechaEmision >= :desde and f.fechaEmision < :hasta")
+    long contarEmitidasEntre(@Param("empresaId") Long empresaId, @Param("desde") LocalDate desde,
+                             @Param("hasta") LocalDate hasta);
 }
