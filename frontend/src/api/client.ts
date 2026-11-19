@@ -200,6 +200,12 @@ export type UsuarioAdmin = {
   empresaId: number | null
 }
 
+export type EnlaceAcceso = {
+  enlace: string
+  tipo: 'ACTIVACION' | 'RECUPERACION'
+  usuario: string
+}
+
 export type CalendarioAdmin = {
   id: number
   anioGravable: number
@@ -413,6 +419,27 @@ export type EnvioFactura = {
   proximoIntento: string
   ultimoError: string | null
   actualizadoAt: string
+}
+
+export type ResultadoImportacion = {
+  facturasEmitidas: number
+  facturasRechazadas: number
+  lineasImportadas: number
+  errores: string[]
+}
+
+export async function importarFacturas(empresaId: number, archivo: File) {
+  const form = new FormData()
+  form.append('archivo', archivo)
+  const { data } = await api.post<ResultadoImportacion>(`/facturacion/${empresaId}/importar`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function generarEnlaceAcceso(id: number) {
+  const { data } = await api.post<EnlaceAcceso>(`/admin/usuarios/${id}/enlace-acceso`)
+  return data
 }
 
 export async function listarEnvios(estado?: string, pagina = 0, tamano = 20) {

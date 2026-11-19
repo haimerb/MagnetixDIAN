@@ -52,6 +52,14 @@ class CufeCalculatorTest {
     }
 
     @Test
+    void cudeDeEventoCoincideConEjemploDelAnexo() {
+        String cude = CufeCalculator.calcularEvento("1", LocalDate.of(2019, 4, 30),
+                LocalTime.of(19, 48, 50), "99998888", "800197268", "030", "FE123", "01", "11111");
+        assertEquals("0d91ba25b01f5e7dbda870a11b274501d3a62a73e91932c473c86c93f12a142a"
+                + "2ac45876efcde3e679024a01c0be41f9", cude);
+    }
+
+    @Test
     void codigoSeguridadSoftwareEsHex() {
         String c = CufeCalculator.softwareSecurityCode("sw-1", "12345", "FV-1");
         assertEquals(96, c.length());

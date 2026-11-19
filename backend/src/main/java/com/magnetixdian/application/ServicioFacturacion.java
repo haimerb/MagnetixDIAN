@@ -54,10 +54,12 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Servicio principal de facturación electrónica: valida, numera, genera el UBL,
@@ -293,9 +295,18 @@ public class ServicioFacturacion {
         EventoDian evento = EventoDian.porCodigo(tipoEvento)
                 .orElseThrow(() -> new IllegalArgumentException("Evento DIAN no soportado: " + tipoEvento));
         EmpresaFeConfigJpa config = config(empresaId);
+        return registrarEvento(f, evento, config, OffsetDateTime.now());
+    }
+
+    @Transactional
+    public FacturaEventoDto registrarEvento(FacturaJpa f, EventoDian evento, EmpresaFeConfigJpa config,
+                                            OffsetDateTime momento) {
         String cufe = f.getCufe() != null ? f.getCufe() : f.getCude();
         String idEvento = f.getNumeroCompleto() + "-" + evento.getCodigo();
-        String xml = generadorEvento.generar(f, evento, cufe, idEvento,
+        String cude = CufeCalculator.calcularEvento(f.getNumeroCompleto(), momento.toLocalDate(),
+                momento.toLocalTime(), f.getEmpresa().getNit(), f.getAdquirenteNumDoc(), evento.getCodigo(),
+                idEvento, f.getTipoDocumento(), config.getSoftwarePin());
+        String xml = generadorEvento.generar(f, evento, cufe, cude, idEvento, momento,
                 config.getSoftwareId(), config.getSoftwareSecurityCode(), null);
         String xmlFirmado = firma.firmar(xml, config);
 
@@ -303,10 +314,31 @@ public class ServicioFacturacion {
         ev.setFactura(f);
         ev.setTipoEvento(evento.getCodigo());
         ev.setEstado("REGISTRADO");
-        ev.setCude(cufe);
+        ev.setCude(cude);
         ev.setXml(xmlFirmado);
         ev.setRespuesta(evento.getDescripcion());
+        ev.setFecha(momento);
         return aEvento(eventoRepository.save(ev));
+    }
+
+    /**
+     * Registra la aceptación tácita (034) si la factura no tiene reclamo (031), aceptación expresa (033)
+     * ni aceptación tácita (034) previos. Devuelve vacío si ya existía un evento que la impide.
+     */
+    @Transactional
+    public Optional<FacturaEventoDto> registrarAceptacionTacita(Long facturaId) {
+        FacturaJpa f = facturaRepository.findById(facturaId).orElse(null);
+        if (f == null) {
+            return Optional.empty();
+        }
+        boolean bloqueado = eventoRepository.findByFacturaIdOrderByFechaDesc(facturaId).stream()
+                .map(FacturaEventoJpa::getTipoEvento)
+                .anyMatch(t -> "031".equals(t) || "033".equals(t) || "034".equals(t));
+        if (bloqueado) {
+            return Optional.empty();
+        }
+        EmpresaFeConfigJpa config = config(f.getEmpresa().getId());
+        return Optional.of(registrarEvento(f, EventoDian.ACEPTACION_TACITA, config, OffsetDateTime.now()));
     }
 
     private FacturaEventoDto aEvento(FacturaEventoJpa e) {

@@ -21,14 +21,16 @@ import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
 import Tabs from '@mui/material/Tabs'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import DeleteIcon from '@mui/icons-material/Delete'
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined'
 import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined'
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined'
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
 import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined'
-import { api, type EmpresaAdmin, type Pagina, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
+import { api, generarEnlaceAcceso, type EmpresaAdmin, type Pagina, type UsuarioAdmin, type CalendarioAdmin, type EnlaceAcceso } from '../api/client'
 import AuditoriaPanel from '../components/admin/AuditoriaPanel'
 import EnviosPanel from '../components/admin/EnviosPanel'
 import InvitacionUsuarioDialog from '../components/admin/InvitacionUsuarioDialog'
@@ -53,6 +55,9 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'empresa' | 'usuario' | 'calendario' | null>(null)
   const [invitacionAbierta, setInvitacionAbierta] = useState(false)
+  const [enlaceAcceso, setEnlaceAcceso] = useState<EnlaceAcceso | null>(null)
+  const [generandoEnlace, setGenerandoEnlace] = useState<number | null>(null)
+  const [copiado, setCopiado] = useState(false)
   const [paginaEmpresas, setPaginaEmpresas] = useState(0)
   const [tamanoEmpresas, setTamanoEmpresas] = useState(FILAS_POR_PAGINA[0])
   const [totalEmpresas, setTotalEmpresas] = useState(0)
@@ -190,6 +195,29 @@ export default function AdminPage() {
     solicitarEliminar('calendario', id)
   }
 
+  const abrirEnlaceAcceso = async (id: number) => {
+    setGenerandoEnlace(id)
+    setError(null)
+    try {
+      setEnlaceAcceso(await generarEnlaceAcceso(id))
+      setCopiado(false)
+    } catch {
+      setError('No se pudo generar el enlace de acceso.')
+    } finally {
+      setGenerandoEnlace(null)
+    }
+  }
+
+  const copiarEnlace = async () => {
+    if (!enlaceAcceso) return
+    try {
+      await navigator.clipboard.writeText(enlaceAcceso.enlace)
+      setCopiado(true)
+    } catch {
+      setError('No se pudo copiar automáticamente; seleccione el enlace manualmente.')
+    }
+  }
+
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
       <PageHeader
@@ -309,7 +337,15 @@ export default function AdminPage() {
                         <Chip size="small" color={u.enabled ? 'success' : 'default'} label={u.enabled ? 'Activo' : 'Inactivo'}
                               onClick={() => toggleEstado(u.id, u.enabled)} clickable disabled={cambiandoEstado === u.id} sx={{ cursor: 'pointer' }} />
                       </TableCell>
-                      <TableCell align="right">—</TableCell>
+                      <TableCell align="right">
+                        <Tooltip title="Generar enlace de acceso">
+                          <span>
+                            <IconButton size="small" onClick={() => abrirEnlaceAcceso(u.id)} aria-label={`Enlace de acceso para ${u.username}`} disabled={generandoEnlace === u.id}>
+                              {generandoEnlace === u.id ? <CircularProgress size={16} /> : <LinkOutlinedIcon fontSize="small" />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -380,6 +416,21 @@ export default function AdminPage() {
 
       {tab === 'envios' && <EnviosPanel />}
       {tab === 'auditoria' && <AuditoriaPanel />}
+
+      <Dialog open={Boolean(enlaceAcceso)} onClose={() => setEnlaceAcceso(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>Enlace de {enlaceAcceso?.tipo === 'ACTIVACION' ? 'activación' : 'recuperación'}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
+          <Alert severity="info">
+            Comparta este enlace con <strong>{enlaceAcceso?.usuario}</strong> por un canal seguro. Vence en
+            {enlaceAcceso?.tipo === 'ACTIVACION' ? ' 7 días' : ' 30 minutos'} y solo puede usarse una vez.
+          </Alert>
+          <TextField label="Enlace" value={enlaceAcceso?.enlace ?? ''} fullWidth multiline minRows={2} slotProps={{ input: { readOnly: true } }} onFocus={e => e.target.select()} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEnlaceAcceso(null)}>Cerrar</Button>
+          <Button variant="contained" onClick={copiarEnlace}>{copiado ? 'Copiado' : 'Copiar enlace'}</Button>
+        </DialogActions>
+      </Dialog>
 
       <InvitacionUsuarioDialog
         abierto={invitacionAbierta}

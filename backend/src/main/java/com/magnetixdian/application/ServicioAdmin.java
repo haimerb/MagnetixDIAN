@@ -12,6 +12,7 @@ import com.magnetixdian.infrastructure.persistence.UsuarioRepository;
 import com.magnetixdian.interfaces.dto.CalendarioDianDto;
 import com.magnetixdian.interfaces.dto.CalendarioDianRequest;
 import com.magnetixdian.interfaces.dto.EmpresaDto;
+import com.magnetixdian.interfaces.dto.EnlaceAccesoResponse;
 import com.magnetixdian.interfaces.dto.EmpresaRequest;
 import com.magnetixdian.interfaces.dto.InvitacionRequest;
 import com.magnetixdian.interfaces.dto.InvitacionResponse;
@@ -212,6 +213,19 @@ public class ServicioAdmin {
         auditoria.registrar(AuditoriaService.usuarioActual(), enabled ? "USUARIO_HABILITADO" : "USUARIO_DESHABILITADO",
                 "usuario", id, usuario.getUsername());
         return dto;
+    }
+
+    @Transactional
+    public EnlaceAccesoResponse generarEnlaceAcceso(Long id) {
+        UsuarioJpa usuario = usuarioRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + id));
+        boolean activacion = !Boolean.TRUE.equals(usuario.getEnabled());
+        String enlace = activacion
+                ? recuperacion.crearEnlaceInvitacion(usuario)
+                : recuperacion.crearEnlaceReset(usuario);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "ENLACE_ACCESO_GENERADO", "usuario", id,
+                usuario.getUsername() + " (" + (activacion ? "activación" : "recuperación") + ")");
+        return new EnlaceAccesoResponse(enlace, activacion ? "ACTIVACION" : "RECUPERACION", usuario.getUsername());
     }
 
     private UsuarioDto toDto(UsuarioJpa u) {

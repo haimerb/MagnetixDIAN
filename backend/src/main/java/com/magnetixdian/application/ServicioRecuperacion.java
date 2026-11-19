@@ -114,6 +114,35 @@ public class ServicioRecuperacion {
 
     @Transactional
     public String crearInvitacion(UsuarioJpa usuario) {
+        return crearInvitacion(usuario, false);
+    }
+
+    /**
+     * Genera un enlace de activación que el administrador puede entregar manualmente,
+     * útil cuando el SMTP está deshabilitado en producción.
+     */
+    @Transactional
+    public String crearEnlaceInvitacion(UsuarioJpa usuario) {
+        return crearInvitacion(usuario, true);
+    }
+
+    /**
+     * Genera un enlace de restablecimiento de contraseña para entrega manual por un
+     * administrador (no depende del envío de correo).
+     */
+    @Transactional
+    public String crearEnlaceReset(UsuarioJpa usuario) {
+        String token = generarToken();
+        tokenRepo.invalidarPendientes(usuario.getId(), PasswordResetTokenJpa.TIPO_RESET);
+        tokenRepo.save(new PasswordResetTokenJpa(usuario, hash(token), PasswordResetTokenJpa.TIPO_RESET,
+                OffsetDateTime.now().plusMinutes(MINUTOS_RESET)));
+        String enlace = frontendUrl + "/restablecer?token=" + token;
+        auditoria.registrar(AuditoriaService.usuarioActual(), "PASSWORD_RESET_ENLACE_GENERADO", "usuario",
+                usuario.getId(), usuario.getUsername());
+        return enlace;
+    }
+
+    private String crearInvitacion(UsuarioJpa usuario, boolean forzarEnlace) {
         String token = generarToken();
         tokenRepo.invalidarPendientes(usuario.getId(), PasswordResetTokenJpa.TIPO_INVITACION);
         tokenRepo.save(new PasswordResetTokenJpa(usuario, hash(token), PasswordResetTokenJpa.TIPO_INVITACION,
@@ -130,7 +159,7 @@ public class ServicioRecuperacion {
 
         auditoria.registrar(usuario.getUsername(), "INVITACION_ENVIADA", "usuario", usuario.getId(),
                 enviado ? "Correo enviado" : "Correo no enviado (SMTP deshabilitado)");
-        return exposeToken && !enviado ? enlace : null;
+        return forzarEnlace || (exposeToken && !enviado) ? enlace : null;
     }
 
     private PasswordResetTokenJpa tokenVigente(String token, String tipo) {
