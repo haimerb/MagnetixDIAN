@@ -14,6 +14,7 @@ import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
@@ -297,7 +298,8 @@ export default function FacturaEditor({
                 Agregar línea
               </Button>
             </Stack>
-            <Table size="small">
+            <TableContainer>
+              <Table size="small" sx={{ minWidth: 640 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Descripción</TableCell>
@@ -374,7 +376,8 @@ export default function FacturaEditor({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </TableContainer>
           </Grid>
 
           <Grid size={{ xs: 12 }}>
