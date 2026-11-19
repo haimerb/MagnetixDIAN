@@ -6,6 +6,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
+import LinearProgress from '@mui/material/LinearProgress'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import TextField from '@mui/material/TextField'
@@ -14,17 +15,21 @@ import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import { api } from '../api/client'
 import type { CargaResultado } from '../api/client'
+import { descargarArchivo } from '../api/descargas'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+import { useNotificaciones } from '../features/notificaciones/contexto'
 
 export default function CargaPage() {
   const navigate = useNavigate()
+  const { notificar } = useNotificaciones()
   const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
   const [archivo, setArchivo] = useState<File | null>(null)
   const [anioGravable, setAnioGravable] = useState('2025')
   const [formato, setFormato] = useState('1001')
   const [cargando, setCargando] = useState(false)
+  const [descargandoPlantilla, setDescargandoPlantilla] = useState(false)
   const [resultado, setResultado] = useState<CargaResultado | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -37,21 +42,18 @@ export default function CargaPage() {
     onDrop,
     accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
     maxFiles: 1,
+    disabled: cargando,
   })
 
   const onDescargarPlantilla = async () => {
-    const token = localStorage.getItem('magnetixdian_token')
-    const res = await fetch(`/api/mediomagnetico/plantilla?formato=${formato}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    })
-    if (!res.ok) return
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    const a = window.document.createElement('a')
-    a.href = url
-    a.download = `plantilla-${formato}.xlsx`
-    a.click()
-    URL.revokeObjectURL(url)
+    setDescargandoPlantilla(true)
+    try {
+      await descargarArchivo(`/api/mediomagnetico/plantilla?formato=${formato}`, `plantilla-${formato}.xlsx`)
+    } catch (e) {
+      notificar(e instanceof Error ? e.message : 'No se pudo descargar la plantilla.', 'error')
+    } finally {
+      setDescargandoPlantilla(false)
+    }
   }
 
   const onCargar = async () => {
@@ -82,7 +84,7 @@ export default function CargaPage() {
         title="Carga de datos"
         subtitle={`Suba el archivo Excel con las operaciones del formato ${formato} en la plantilla del prevalidador DIAN. Las recargas reemplazan la información existente.`}
         actions={
-          <Button variant="outlined" onClick={onDescargarPlantilla}>
+          <Button variant="outlined" onClick={onDescargarPlantilla} loading={descargandoPlantilla}>
             Descargar plantilla (.xlsx)
           </Button>
         }
@@ -90,7 +92,18 @@ export default function CargaPage() {
 
       <SectionCard title="Archivo de operaciones">
         <Box
-          {...getRootProps()}
+          {...getRootProps({
+            role: 'button',
+            tabIndex: cargando ? -1 : 0,
+            'aria-label': 'Seleccionar archivo Excel para cargar',
+            onKeyDown: (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                const input = e.currentTarget.querySelector('input[type="file"]')
+                if (input instanceof HTMLInputElement) input.click()
+              }
+            },
+          })}
           sx={{
             p: { xs: 3, md: 5 },
             cursor: 'pointer',
@@ -103,7 +116,10 @@ export default function CargaPage() {
             borderColor: isDragActive ? 'primary.main' : (t) => t.palette.divider,
             bgcolor: isDragActive ? (t) => t.palette.primary.main : (t) => t.palette.action.hover,
             color: isDragActive ? 'primary.contrastText' : 'text.secondary',
+            opacity: cargando ? 0.6 : 1,
+            pointerEvents: cargando ? 'none' : undefined,
             transition: 'border-color 180ms ease, background-color 180ms ease',
+            '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
           }}
         >
           <input {...getInputProps()} aria-label="Archivo Excel a cargar" />
@@ -152,13 +168,14 @@ export default function CargaPage() {
           />
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, mt: 3 }}>
+        <Box sx={{ display: 'flex', gap: 2, mt: 3, alignItems: 'center' }}>
           <Button
             variant="contained"
-            disabled={!archivo || cargando || empresaId == null}
+            disabled={!archivo || empresaId == null}
+            loading={cargando}
             onClick={onCargar}
           >
-            {cargando ? 'Cargando…' : 'Cargar archivo'}
+            Cargar archivo
           </Button>
           {resultado && !error && (
             <Button variant="outlined" onClick={() => navigate(`/validacion/${resultado.medioMagneticoId}`)}>
@@ -166,6 +183,8 @@ export default function CargaPage() {
             </Button>
           )}
         </Box>
+
+        {cargando && <LinearProgress sx={{ mt: 3 }} />}
       </SectionCard>
 
       {!cargandoEmpresa && empresaId == null && (

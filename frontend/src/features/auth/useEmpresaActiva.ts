@@ -17,12 +17,21 @@ export function useEmpresaActiva() {
         activo = false
       }
     }
+    if (!sesion?.roles?.includes('ROLE_ADMIN')) {
+      setEmpresaId(null)
+      setCargando(false)
+      return () => {
+        activo = false
+      }
+    }
     api
-      .get<EmpresaAdmin[]>('/admin/empresas')
+      .get<EmpresaAdmin[]>('/admin/empresas', { skipGlobalError: true })
       .then((res) => {
         if (activo) setEmpresaId(res.data[0]?.id ?? null)
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (activo) setEmpresaId(null)
+      })
       .finally(() => {
         if (activo) setCargando(false)
       })

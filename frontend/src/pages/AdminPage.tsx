@@ -3,6 +3,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import CircularProgress from '@mui/material/CircularProgress'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
@@ -25,9 +26,11 @@ import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined'
 import { api, type EmpresaAdmin, type Pagina, type UsuarioAdmin, type CalendarioAdmin } from '../api/client'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
 import EmptyState from '../components/ui/EmptyState'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
+import TableSkeleton from '../components/ui/TableSkeleton'
 
 const ROLES = ['ROLE_ADMIN', 'ROLE_CONTADOR', 'ROLE_CLIENTE']
 const TIPOS_REPORTE = ['GRAN_CONTRIBUYENTE', 'PERSONA_JURIDICA', 'PERSONA_NATURAL']
@@ -49,46 +52,87 @@ export default function AdminPage() {
   const [paginaUsuarios, setPaginaUsuarios] = useState(0)
   const [tamanoUsuarios, setTamanoUsuarios] = useState(FILAS_POR_PAGINA[0])
   const [totalUsuarios, setTotalUsuarios] = useState(0)
+  const [cargandoEmpresas, setCargandoEmpresas] = useState(true)
+  const [cargandoUsuarios, setCargandoUsuarios] = useState(true)
+  const [cargandoCalendario, setCargandoCalendario] = useState(false)
+  const [guardando, setGuardando] = useState<'empresa' | 'usuario' | 'calendario' | null>(null)
+  const [eliminando, setEliminando] = useState<number | null>(null)
+  const [confirmacion, setConfirmacion] = useState<{ tipo: 'empresa' | 'calendario'; id: number } | null>(null)
+  const [cambiandoEstado, setCambiandoEstado] = useState<number | null>(null)
 
   const [formEmpresa, setFormEmpresa] = useState({ nit: '', razonSocial: '', email: '', ciudad: '', regimen: 'ORDINARIO', tipoDocumento: 'NIT' })
   const [formUsuario, setFormUsuario] = useState({ username: '', password: '', email: '', nombre: '', empresaId: '', roles: 'ROLE_CONTADOR' })
   const [formCalendario, setFormCalendario] = useState({ anioPresentacion: 2026, tipoReporte: 'PERSONA_JURIDICA', rangoNitIni: '', rangoNitFin: '', fechaLimite: '' })
 
-  const cargarEmpresas = () => api
-    .get<Pagina<EmpresaAdmin>>('/admin/empresas/paginado', { params: { page: paginaEmpresas, size: tamanoEmpresas } })
-    .then(r => { setEmpresas(r.data.contenido); setTotalEmpresas(r.data.total) })
-    .catch(() => undefined)
-  const cargarUsuarios = () => api
-    .get<Pagina<UsuarioAdmin>>('/admin/usuarios/paginado', { params: { page: paginaUsuarios, size: tamanoUsuarios } })
-    .then(r => { setUsuarios(r.data.contenido); setTotalUsuarios(r.data.total) })
-    .catch(() => undefined)
-  const cargarCalendario = () => api.get<CalendarioAdmin[]>(`/admin/calendario?anioGravable=${anioCalendario}`).then(r => setCalendario(r.data)).catch(() => undefined)
+  const cargarEmpresas = () => {
+    setCargandoEmpresas(true)
+    return api
+      .get<Pagina<EmpresaAdmin>>('/admin/empresas/paginado', { params: { page: paginaEmpresas, size: tamanoEmpresas } })
+      .then(r => { setEmpresas(r.data.contenido); setTotalEmpresas(r.data.total) })
+      .catch(() => setError('No se pudieron cargar las empresas.'))
+      .finally(() => setCargandoEmpresas(false))
+  }
+  const cargarUsuarios = () => {
+    setCargandoUsuarios(true)
+    return api
+      .get<Pagina<UsuarioAdmin>>('/admin/usuarios/paginado', { params: { page: paginaUsuarios, size: tamanoUsuarios } })
+      .then(r => { setUsuarios(r.data.contenido); setTotalUsuarios(r.data.total) })
+      .catch(() => setError('No se pudieron cargar los usuarios.'))
+      .finally(() => setCargandoUsuarios(false))
+  }
+  const cargarCalendario = () => {
+    setCargandoCalendario(true)
+    return api
+      .get<CalendarioAdmin[]>(`/admin/calendario?anioGravable=${anioCalendario}`)
+      .then(r => setCalendario(r.data))
+      .catch(() => setError('No se pudo cargar el calendario.'))
+      .finally(() => setCargandoCalendario(false))
+  }
 
   useEffect(() => { cargarEmpresas() }, [paginaEmpresas, tamanoEmpresas]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { cargarUsuarios() }, [paginaUsuarios, tamanoUsuarios]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (tab === 'calendario') cargarCalendario() }, [tab, anioCalendario]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const crearEmpresa = async () => {
+    setGuardando('empresa')
     try {
       await api.post('/admin/empresas', formEmpresa, { skipGlobalError: true })
       setDialog(null)
       cargarEmpresas()
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Error al crear empresa')
+    } finally {
+      setGuardando(null)
     }
   }
 
-  const eliminarEmpresa = async (id: number) => {
-    if (!window.confirm('¿Eliminar esta empresa?')) return
+  const solicitarEliminar = (tipo: 'empresa' | 'calendario', id: number) => {
+    setConfirmacion({ tipo, id })
+  }
+
+  const confirmarEliminar = async () => {
+    if (!confirmacion) return
+    const { tipo, id } = confirmacion
+    setEliminando(id)
     try {
-      await api.delete(`/admin/empresas/${id}`, { skipGlobalError: true })
-      cargarEmpresas()
+      if (tipo === 'empresa') {
+        await api.delete(`/admin/empresas/${id}`, { skipGlobalError: true })
+        cargarEmpresas()
+      } else {
+        await api.delete(`/admin/calendario/${id}`, { skipGlobalError: true })
+        cargarCalendario()
+      }
+      setConfirmacion(null)
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'No se pudo eliminar la empresa')
+      const porDefecto = tipo === 'empresa' ? 'No se pudo eliminar la empresa' : 'No se pudo eliminar la fecha'
+      setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? porDefecto)
+    } finally {
+      setEliminando(null)
     }
   }
 
   const crearUsuario = async () => {
+    setGuardando('usuario')
     try {
       await api.post('/admin/usuarios', {
         ...formUsuario,
@@ -100,15 +144,23 @@ export default function AdminPage() {
       cargarUsuarios()
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Error al crear usuario')
+    } finally {
+      setGuardando(null)
     }
   }
 
   const toggleEstado = async (id: number, actual: boolean) => {
-    await api.put(`/admin/usuarios/${id}/estado`, { enabled: !actual })
-    cargarUsuarios()
+    setCambiandoEstado(id)
+    try {
+      await api.put(`/admin/usuarios/${id}/estado`, { enabled: !actual })
+      cargarUsuarios()
+    } finally {
+      setCambiandoEstado(null)
+    }
   }
 
   const crearCalendario = async () => {
+    setGuardando('calendario')
     try {
       await api.post('/admin/calendario', {
         anioGravable: anioCalendario,
@@ -122,13 +174,13 @@ export default function AdminPage() {
       cargarCalendario()
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Error al crear fecha')
+    } finally {
+      setGuardando(null)
     }
   }
 
-  const eliminarCalendario = async (id: number) => {
-    if (!window.confirm('¿Eliminar esta fecha del calendario?')) return
-    await api.delete(`/admin/calendario/${id}`)
-    cargarCalendario()
+  const eliminarCalendario = (id: number) => {
+    solicitarEliminar('calendario', id)
   }
 
   return (
@@ -141,7 +193,7 @@ export default function AdminPage() {
 
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" allowScrollButtonsMobile>
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" allowScrollButtonsMobile aria-label="Secciones de administración">
         <Tab label="Empresas" value="empresas" />
         <Tab label="Usuarios" value="usuarios" />
         <Tab label="Calendario DIAN" value="calendario" />
@@ -155,9 +207,11 @@ export default function AdminPage() {
               Nueva empresa
             </Button>
           }
-          padded={empresas.length === 0}
+          padded={!cargandoEmpresas && empresas.length === 0}
         >
-          {empresas.length === 0 ? (
+          {cargandoEmpresas ? (
+            <TableSkeleton filas={6} columnas={7} label="Cargando empresas…" />
+          ) : empresas.length === 0 && !error ? (
             <EmptyState icon={<BusinessOutlinedIcon />} title="Sin empresas registradas" description="Cree la primera empresa para empezar a operar." />
           ) : (
             <TableContainer>
@@ -177,7 +231,9 @@ export default function AdminPage() {
                       <TableCell>{e.email ?? '—'}</TableCell>
                       <TableCell>{e.ciudad ?? '—'}</TableCell>
                       <TableCell align="right">
-                        <IconButton size="small" color="error" onClick={() => eliminarEmpresa(e.id)} aria-label="Eliminar"><DeleteIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" color="error" onClick={() => solicitarEliminar('empresa', e.id)} aria-label="Eliminar" disabled={eliminando === e.id}>
+                          {eliminando === e.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -209,9 +265,11 @@ export default function AdminPage() {
               Nuevo usuario
             </Button>
           }
-          padded={usuarios.length === 0}
+          padded={!cargandoUsuarios && usuarios.length === 0}
         >
-          {usuarios.length === 0 ? (
+          {cargandoUsuarios ? (
+            <TableSkeleton filas={6} columnas={7} label="Cargando usuarios…" />
+          ) : usuarios.length === 0 && !error ? (
             <EmptyState icon={<PeopleAltOutlinedIcon />} title="Sin usuarios" description="Cree usuarios y asígneles un rol y empresa." />
           ) : (
             <TableContainer>
@@ -231,7 +289,7 @@ export default function AdminPage() {
                       <TableCell>{u.roles.map(r => <Chip key={r} size="small" label={r.replace('ROLE_', '')} sx={{ mr: 0.5 }} />)}</TableCell>
                       <TableCell>
                         <Chip size="small" color={u.enabled ? 'success' : 'default'} label={u.enabled ? 'Activo' : 'Inactivo'}
-                              onClick={() => toggleEstado(u.id, u.enabled)} clickable sx={{ cursor: 'pointer' }} />
+                              onClick={() => toggleEstado(u.id, u.enabled)} clickable disabled={cambiandoEstado === u.id} sx={{ cursor: 'pointer' }} />
                       </TableCell>
                       <TableCell align="right">—</TableCell>
                     </TableRow>
@@ -267,9 +325,11 @@ export default function AdminPage() {
               </Button>
             </Stack>
           }
-          padded={calendario.length === 0}
+          padded={!cargandoCalendario && calendario.length === 0}
         >
-          {calendario.length === 0 ? (
+          {cargandoCalendario ? (
+            <TableSkeleton filas={5} columnas={5} label="Cargando calendario…" />
+          ) : calendario.length === 0 && !error ? (
             <EmptyState icon={<EventOutlinedIcon />} title="Sin fechas para este año" description="Agregue las fechas límite del calendario tributario." />
           ) : (
             <TableContainer>
@@ -287,7 +347,9 @@ export default function AdminPage() {
                       <TableCell>{c.fechaLimite}</TableCell>
                       <TableCell>{c.anioPresentacion}</TableCell>
                       <TableCell align="right">
-                        <IconButton size="small" color="error" onClick={() => eliminarCalendario(c.id)} aria-label="Eliminar"><DeleteIcon fontSize="small" /></IconButton>
+                        <IconButton size="small" color="error" onClick={() => eliminarCalendario(c.id)} aria-label="Eliminar" disabled={eliminando === c.id}>
+                          {eliminando === c.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -298,7 +360,7 @@ export default function AdminPage() {
         </SectionCard>
       )}
 
-      <Dialog open={dialog === 'empresa'} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>
+      <Dialog open={dialog === 'empresa'} onClose={() => { if (!guardando) setDialog(null) }} maxWidth="sm" fullWidth>
         <DialogTitle>Nueva empresa</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
           <TextField label="NIT" required value={formEmpresa.nit} onChange={e => setFormEmpresa(p => ({ ...p, nit: e.target.value }))} />
@@ -311,12 +373,19 @@ export default function AdminPage() {
           </TextField>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialog(null)}>Cancelar</Button>
-          <Button variant="contained" disabled={!formEmpresa.nit || !formEmpresa.razonSocial} onClick={crearEmpresa}>Crear</Button>
+          <Button onClick={() => setDialog(null)} disabled={guardando !== null}>Cancelar</Button>
+          <Button
+            variant="contained"
+            disabled={!formEmpresa.nit || !formEmpresa.razonSocial || guardando !== null}
+            loading={guardando === 'empresa'}
+            onClick={crearEmpresa}
+          >
+            Crear
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialog === 'usuario'} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>
+      <Dialog open={dialog === 'usuario'} onClose={() => { if (!guardando) setDialog(null) }} maxWidth="sm" fullWidth>
         <DialogTitle>Nuevo usuario</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
           <TextField label="Username" required value={formUsuario.username} onChange={e => setFormUsuario(p => ({ ...p, username: e.target.value }))} />
@@ -329,12 +398,19 @@ export default function AdminPage() {
           <TextField label="Empresa (ID)" type="number" value={formUsuario.empresaId} onChange={e => setFormUsuario(p => ({ ...p, empresaId: e.target.value }))} helperText="Dejar vacío si no aplica" />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialog(null)}>Cancelar</Button>
-          <Button variant="contained" disabled={!formUsuario.username || formUsuario.password.length < 6} onClick={crearUsuario}>Crear</Button>
+          <Button onClick={() => setDialog(null)} disabled={guardando !== null}>Cancelar</Button>
+          <Button
+            variant="contained"
+            disabled={!formUsuario.username || formUsuario.password.length < 6 || guardando !== null}
+            loading={guardando === 'usuario'}
+            onClick={crearUsuario}
+          >
+            Crear
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={dialog === 'calendario'} onClose={() => setDialog(null)} maxWidth="sm" fullWidth>
+      <Dialog open={dialog === 'calendario'} onClose={() => { if (!guardando) setDialog(null) }} maxWidth="sm" fullWidth>
         <DialogTitle>Nueva fecha DIAN</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
           <TextField label="Año presentación" type="number" required value={formCalendario.anioPresentacion} onChange={e => setFormCalendario(p => ({ ...p, anioPresentacion: Number(e.target.value) }))} />
@@ -348,10 +424,30 @@ export default function AdminPage() {
           <TextField label="Fecha límite" type="date" required value={formCalendario.fechaLimite} onChange={e => setFormCalendario(p => ({ ...p, fechaLimite: e.target.value }))} InputLabelProps={{ shrink: true }} />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialog(null)}>Cancelar</Button>
-          <Button variant="contained" disabled={!formCalendario.fechaLimite} onClick={crearCalendario}>Crear</Button>
+          <Button onClick={() => setDialog(null)} disabled={guardando !== null}>Cancelar</Button>
+          <Button
+            variant="contained"
+            disabled={!formCalendario.fechaLimite || guardando !== null}
+            loading={guardando === 'calendario'}
+            onClick={crearCalendario}
+          >
+            Crear
+          </Button>
         </DialogActions>
       </Dialog>
+
+      <ConfirmDialog
+        abierto={confirmacion !== null}
+        titulo={confirmacion?.tipo === 'empresa' ? 'Eliminar empresa' : 'Eliminar fecha del calendario'}
+        mensaje={
+          confirmacion?.tipo === 'empresa'
+            ? '¿Confirma que desea eliminar esta empresa? Esta acción no se puede deshacer.'
+            : '¿Confirma que desea eliminar esta fecha del calendario? Esta acción no se puede deshacer.'
+        }
+        cargando={confirmacion !== null && eliminando === confirmacion.id}
+        onConfirmar={confirmarEliminar}
+        onCancelar={() => setConfirmacion(null)}
+      />
     </Box>
   )
 }

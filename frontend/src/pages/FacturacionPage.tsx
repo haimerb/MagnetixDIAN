@@ -20,6 +20,7 @@ import EmptyState from '../components/ui/EmptyState'
 import EstadoChip from '../components/ui/EstadoChip'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
+import TableSkeleton from '../components/ui/TableSkeleton'
 import FacturaEditor from '../components/facturacion/FacturaEditor'
 
 const FILAS_POR_PAGINA = [10, 25, 50]
@@ -34,9 +35,16 @@ export default function FacturacionPage() {
   const [tamano, setTamano] = useState(FILAS_POR_PAGINA[0])
   const [recarga, setRecarga] = useState(0)
   const [editorAbierto, setEditorAbierto] = useState(false)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const cargar = useCallback(() => {
-    if (empresaId == null) return
+    if (empresaId == null) {
+      setCargando(false)
+      return
+    }
+    setCargando(true)
+    setError(null)
     api
       .get<Pagina<FacturaResumen>>(`/facturacion/${empresaId}/paginado`, {
         params: { page: pagina, size: tamano },
@@ -45,7 +53,8 @@ export default function FacturacionPage() {
         setFacturas(res.data.contenido)
         setTotal(res.data.total)
       })
-      .catch(() => undefined)
+      .catch(() => setError('No se pudieron cargar los documentos electrónicos.'))
+      .finally(() => setCargando(false))
   }, [empresaId, pagina, tamano])
 
   useEffect(() => {
@@ -94,8 +103,24 @@ export default function FacturacionPage() {
         <Alert severity="info">No hay una empresa asociada para emitir documentos.</Alert>
       )}
 
-      <SectionCard padded={false}>
-        {facturas.length === 0 ? (
+      {error && (
+        <Alert
+          severity="error"
+          action={
+            <Button color="inherit" size="small" onClick={() => setRecarga((n) => n + 1)}>
+              Reintentar
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      )}
+
+      {(cargando || (error == null && empresaId != null)) && (
+        <SectionCard padded={false}>
+          {cargando ? (
+            <TableSkeleton filas={5} columnas={6} label="Cargando documentos…" />
+          ) : facturas.length === 0 ? (
           <EmptyState
             icon={<ReceiptLongOutlinedIcon />}
             title="Sin documentos emitidos"
@@ -120,7 +145,18 @@ export default function FacturacionPage() {
                     <TableRow
                       key={f.id}
                       hover
-                      sx={{ cursor: 'pointer' }}
+                      tabIndex={0}
+                      aria-label={`Abrir documento ${f.numeroCompleto}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(`/facturacion/${f.id}`)
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
+                      }}
                       onClick={() => navigate(`/facturacion/${f.id}`)}
                     >
                       <TableCell sx={{ fontWeight: 600 }}>{f.numeroCompleto}</TableCell>
@@ -153,6 +189,7 @@ export default function FacturacionPage() {
           </>
         )}
       </SectionCard>
+      )}
 
       {empresaId != null && (
         <FacturaEditor

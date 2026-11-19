@@ -14,6 +14,7 @@ import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
@@ -21,6 +22,7 @@ import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { api, type ErrorValidacion, type FacturaRequest, type FacturaResumen, type LineaFacturaRequest, type ResultadoEmision } from '../../api/client'
+import { money, totalesLinea } from '../../features/facturacion/calculos'
 
 const TIPOS = [
   { codigo: '01', label: 'Factura de venta' },
@@ -48,17 +50,6 @@ function lineaVacia(): LineaFacturaRequest {
     incPct: 0,
     codigoUnspsc: '',
   }
-}
-
-function totalLinea(l: LineaFacturaRequest) {
-  const base = l.cantidad * l.valorUnitario - l.descuento
-  const iva = (base * l.ivaPct) / 100
-  const inc = (base * l.incPct) / 100
-  return { base, iva, inc, total: base + iva + inc }
-}
-
-function money(v: number) {
-  return v.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 }
 
 export default function FacturaEditor({
@@ -89,7 +80,9 @@ export default function FacturaEditor({
   const [errores, setErrores] = useState<ErrorValidacion[]>([])
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [validando, setValidando] = useState(false)
   const [facturas, setFacturas] = useState<FacturaResumen[]>([])
+  const [errorFacturas, setErrorFacturas] = useState<string | null>(null)
   const [referenciaId, setReferenciaId] = useState<number | ''>('')
   const [cufeReferencia, setCufeReferencia] = useState<string | null>(null)
   const [numeroReferencia, setNumeroReferencia] = useState<string | null>(null)
@@ -98,10 +91,11 @@ export default function FacturaEditor({
 
   useEffect(() => {
     if (!abierto) return
+    setErrorFacturas(null)
     api
       .get<FacturaResumen[]>(`/facturacion/${empresaId}`)
       .then((res) => setFacturas(res.data.filter((f) => f.tipoDocumento === '01')))
-      .catch(() => setFacturas([]))
+      .catch(() => setErrorFacturas('No se pudieron cargar las facturas de referencia.'))
   }, [abierto, empresaId])
 
   const seleccionarReferencia = (id: number | '') => {
@@ -122,7 +116,7 @@ export default function FacturaEditor({
     let subtotal = 0
     let impuestos = 0
     for (const l of lineas) {
-      const t = totalLinea(l)
+      const t = totalesLinea(l)
       subtotal += t.base
       impuestos += t.iva + t.inc
     }
@@ -153,6 +147,7 @@ export default function FacturaEditor({
   })
 
   const onValidar = async () => {
+    setValidando(true)
     setError(null)
     try {
       const { data } = await api.post<ErrorValidacion[]>(`/facturacion/${empresaId}/validar`, construirRequest())
@@ -160,6 +155,8 @@ export default function FacturaEditor({
       if (data.length === 0) setErrores([])
     } catch {
       setError('No se pudo validar el documento.')
+    } finally {
+      setValidando(false)
     }
   }
 
@@ -183,9 +180,12 @@ export default function FacturaEditor({
   }
 
   return (
-    <Dialog open={abierto} onClose={onCerrar} fullWidth maxWidth="lg">
+    <Dialog open={abierto} onClose={() => { if (!enviando) onCerrar() }} fullWidth maxWidth="lg">
       <DialogTitle>Nueva factura electrónica</DialogTitle>
-      <DialogContent dividers>
+      <DialogContent
+        dividers
+        sx={{ pointerEvents: enviando ? 'none' : undefined, opacity: enviando ? 0.7 : 1 }}
+      >
         <Grid container spacing={2}>
           <Grid size={{ xs: 12, md: 4 }}>
             <TextField
@@ -212,7 +212,8 @@ export default function FacturaEditor({
                 label="Documento referenciado (factura original)"
                 value={referenciaId}
                 onChange={(e) => seleccionarReferencia(e.target.value === '' ? '' : Number(e.target.value))}
-                helperText="La nota crédito/débito debe referenciar la factura que modifica"
+                error={Boolean(errorFacturas)}
+                helperText={errorFacturas ?? 'La nota crédito/débito debe referenciar la factura que modifica'}
               >
                 {facturas.length === 0 && <MenuItem value="" disabled>No hay facturas emitidas</MenuItem>}
                 {facturas.map((f) => (
@@ -297,7 +298,8 @@ export default function FacturaEditor({
                 Agregar línea
               </Button>
             </Stack>
-            <Table size="small">
+            <TableContainer>
+              <Table size="small" sx={{ minWidth: 640 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Descripción</TableCell>
@@ -360,7 +362,7 @@ export default function FacturaEditor({
                         onChange={(e) => actualizarLinea(idx, { codigoUnspsc: e.target.value })}
                       />
                     </TableCell>
-                    <TableCell align="right">{money(totalLinea(l).total)}</TableCell>
+                    <TableCell align="right">{money(totalesLinea(l).total)}</TableCell>
                     <TableCell>
                       <IconButton
                         size="small"
@@ -374,7 +376,8 @@ export default function FacturaEditor({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </TableContainer>
           </Grid>
 
           <Grid size={{ xs: 12 }}>
@@ -426,10 +429,10 @@ export default function FacturaEditor({
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCerrar}>Cancelar</Button>
-        <Button onClick={onValidar} disabled={enviando}>Validar</Button>
-        <Button variant="contained" onClick={onEmitir} disabled={enviando}>
-          {enviando ? 'Emitiendo…' : 'Emitir'}
+        <Button onClick={onCerrar} disabled={enviando}>Cancelar</Button>
+        <Button onClick={onValidar} disabled={enviando || validando} loading={validando}>Validar</Button>
+        <Button variant="contained" onClick={onEmitir} disabled={enviando || validando} loading={enviando}>
+          Emitir
         </Button>
       </DialogActions>
     </Dialog>

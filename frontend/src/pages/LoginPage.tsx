@@ -123,6 +123,8 @@ export default function LoginPage() {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              disabled={cargando}
+              autoFocus
               required
             />
             <TextField
@@ -131,15 +133,16 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              disabled={cargando}
               required
             />
             {error && <Alert severity="error">{error}</Alert>}
-            <Button type="submit" variant="contained" size="large" disabled={cargando}>
-              {cargando ? 'Ingresando…' : 'Ingresar'}
+            <Button type="submit" variant="contained" size="large" disabled={cargando} loading={cargando}>
+              Ingresar
             </Button>
           </Box>
 
-          <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
             Usuario demo: admin / admin123
           </Typography>
         </Paper>
