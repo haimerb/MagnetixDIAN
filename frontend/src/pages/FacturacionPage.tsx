@@ -12,6 +12,7 @@ import TablePagination from '@mui/material/TablePagination'
 import TableRow from '@mui/material/TableRow'
 import AddIcon from '@mui/icons-material/Add'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { api, type FacturaResumen, type Pagina, type ResultadoEmision } from '../api/client'
@@ -24,6 +25,7 @@ import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import TableSkeleton from '../components/ui/TableSkeleton'
 import FacturaEditor from '../components/facturacion/FacturaEditor'
+import ImportarFacturasDialog from '../components/facturacion/ImportarFacturasDialog'
 
 const FILAS_POR_PAGINA = [10, 25, 50]
 
@@ -37,6 +39,7 @@ export default function FacturacionPage() {
   const [tamano, setTamano] = useState(FILAS_POR_PAGINA[0])
   const [recarga, setRecarga] = useState(0)
   const [editorAbierto, setEditorAbierto] = useState(false)
+  const [importadorAbierto, setImportadorAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -106,6 +109,14 @@ export default function FacturacionPage() {
               disabled={empresaId == null || cargando}
             >
               Exportar CSV
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<UploadFileOutlinedIcon />}
+              onClick={() => setImportadorAbierto(true)}
+              disabled={empresaId == null}
+            >
+              Importar
             </Button>
             <Button
               variant="contained"
@@ -217,6 +228,19 @@ export default function FacturacionPage() {
           abierto={editorAbierto}
           onCerrar={() => setEditorAbierto(false)}
           onEmitida={onEmitida}
+        />
+      )}
+
+      {empresaId != null && (
+        <ImportarFacturasDialog
+          empresaId={empresaId}
+          abierto={importadorAbierto}
+          onCerrar={() => setImportadorAbierto(false)}
+          onImportado={() => {
+            notificar('Importación completada.', 'success')
+            setPagina(0)
+            setRecarga((n) => n + 1)
+          }}
         />
       )}
     </Box>
