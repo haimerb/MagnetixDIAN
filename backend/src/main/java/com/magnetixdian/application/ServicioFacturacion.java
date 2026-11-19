@@ -220,6 +220,36 @@ public class ServicioFacturacion {
         return PaginaDto.desde(page);
     }
 
+    @Transactional(readOnly = true)
+    public byte[] exportarCsv(Long empresaId, LocalDate desde, LocalDate hasta) {
+        List<FacturaJpa> facturas = facturaRepository.findByEmpresaIdOrderByCreatedAtDesc(empresaId);
+        StringBuilder csv = new StringBuilder("\uFEFF");
+        csv.append(CsvFacturas.fila("Tipo", "Numero", "Fecha", "Adquirente", "NIT", "Subtotal",
+                "Impuestos", "Retenciones", "Total", "Estado", "CUFE")).append("\r\n");
+        for (FacturaJpa f : facturas) {
+            LocalDate fecha = f.getFechaEmision();
+            if (desde != null && (fecha == null || fecha.isBefore(desde))) {
+                continue;
+            }
+            if (hasta != null && (fecha == null || fecha.isAfter(hasta))) {
+                continue;
+            }
+            csv.append(CsvFacturas.fila(
+                    f.getTipoDocumento(),
+                    f.getNumeroCompleto(),
+                    fecha == null ? "" : fecha.toString(),
+                    f.getAdquirenteNombre(),
+                    f.getAdquirenteNumDoc(),
+                    f.getSubtotal() == null ? "" : f.getSubtotal().toPlainString(),
+                    f.getTotalImpuestos() == null ? "" : f.getTotalImpuestos().toPlainString(),
+                    f.getTotalRetenciones() == null ? "" : f.getTotalRetenciones().toPlainString(),
+                    f.getTotal() == null ? "" : f.getTotal().toPlainString(),
+                    f.getEstado(),
+                    f.getCufe() != null ? f.getCufe() : f.getCude())).append("\r\n");
+        }
+        return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
     private FacturaResumenDto aResumen(FacturaJpa f) {
         return new FacturaResumenDto(f.getId(), f.getTipoDocumento(), f.getNumeroCompleto(),
                 f.getCufe() != null ? f.getCufe() : f.getCude(), f.getEstado(), f.getFechaEmision(),
