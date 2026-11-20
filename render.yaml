@@ -32,6 +32,14 @@ services:
         value: /tmp/uploads
       - key: NOTIFICATIONS_ENABLED
         value: "false"
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
       - key: FRONTEND_URL
         value: https://magnetixdian.hbarbetti-ing.workers.dev
       - key: AUTH_EXPOSE_TOKEN
@@ -40,3 +48,19 @@ services:
         sync: false
       - key: SENTRY_ENVIRONMENT
         value: production
+      - key: WOMPI_PUBLIC_KEY
+        sync: false
+      - key: WOMPI_INTEGRITY_SECRET
+        sync: false
+      - key: WOMPI_EVENTS_SECRET
+        sync: false
+      - key: WOMPI_CHECKOUT_URL
+        value: https://checkout.wompi.co/p/
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: MERCADOPAGO_BASE_URL
+        value: https://api.mercadopago.com
+      - key: MERCADOPAGO_BACK_URL
+        value: https://magnetixdian.hbarbetti-ing.workers.dev/app/suscripcion
+      - key: MERCADOPAGO_WEBHOOK_SECRET
+        sync: false

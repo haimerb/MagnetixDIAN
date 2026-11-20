@@ -178,7 +178,7 @@ export default function CargaPage() {
             Cargar archivo
           </Button>
           {resultado && !error && (
-            <Button variant="outlined" onClick={() => navigate(`/validacion/${resultado.medioMagneticoId}`)}>
+            <Button variant="outlined" onClick={() => navigate(`/app/validacion/${resultado.medioMagneticoId}`)}>
               Ir a validación
             </Button>
           )}

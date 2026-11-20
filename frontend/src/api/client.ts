@@ -489,6 +489,30 @@ export async function cambiarPassword(passwordActual: string, passwordNueva: str
   await api.post('/auth/change-password', { passwordActual, passwordNueva }, { skipGlobalError: true })
 }
 
+export type RegistroEmpresaRequest = {
+  nit: string
+  razonSocial: string
+  nombre: string
+  email: string
+  username: string
+  password: string
+  aceptaTerminos: boolean
+}
+
+export type RegistroEmpresaResponse = {
+  empresaId: number
+  usuarioId: number
+  username: string
+  mensaje: string
+}
+
+export async function registrarEmpresa(solicitud: RegistroEmpresaRequest) {
+  const { data } = await api.post<RegistroEmpresaResponse>('/auth/registro', solicitud, {
+    skipGlobalError: true,
+  })
+  return data
+}
+
 export type Plan = {
   id: number
   codigo: string

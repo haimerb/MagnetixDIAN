@@ -132,7 +132,7 @@ export default function ConfigFePage() {
         sx={{ alignItems: { md: 'center' }, justifyContent: 'space-between' }}
       >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/facturacion')}>
+          <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/app/facturacion')}>
             Volver
           </Button>
           <Typography variant="h5" component="h1">
