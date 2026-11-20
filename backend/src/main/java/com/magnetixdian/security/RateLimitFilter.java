@@ -26,36 +26,45 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final int LIMITE = 20;
     private static final Duration VENTANA = Duration.ofMinutes(1);
+    private static final int LIMITE_REGISTRO = 5;
+    private static final Duration VENTANA_REGISTRO = Duration.ofMinutes(10);
     private static final int MAX_IPS = 10_000;
 
     private final Map<String, Deque<Instant>> peticiones = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Instant>> registros = new ConcurrentHashMap<>();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        if (!request.getRequestURI().startsWith("/api/auth") || HttpMethod.OPTIONS.matches(request.getMethod())) {
+        String uri = request.getRequestURI();
+        if (!uri.startsWith("/api/auth") || HttpMethod.OPTIONS.matches(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        boolean registro = uri.startsWith("/api/auth/registro");
+        int limite = registro ? LIMITE_REGISTRO : LIMITE;
+        Duration ventana = registro ? VENTANA_REGISTRO : VENTANA;
+        Map<String, Deque<Instant>> contadores = registro ? registros : peticiones;
+
         String ip = ip(request);
-        Instant limite = Instant.now().minus(VENTANA);
-        Deque<Instant> marcas = peticiones.computeIfAbsent(ip, k -> new ConcurrentLinkedDeque<>());
-        while (marcas.peekFirst() != null && marcas.peekFirst().isBefore(limite)) {
+        Instant limiteTiempo = Instant.now().minus(ventana);
+        Deque<Instant> marcas = contadores.computeIfAbsent(ip, k -> new ConcurrentLinkedDeque<>());
+        while (marcas.peekFirst() != null && marcas.peekFirst().isBefore(limiteTiempo)) {
             marcas.pollFirst();
         }
-        if (marcas.size() >= LIMITE) {
+        if (marcas.size() >= limite) {
             response.setStatus(429);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write(
                     "{\"status\":429,\"error\":\"Too Many Requests\","
-                            + "\"message\":\"Demasiadas solicitudes. Intente de nuevo en un minuto.\"}");
+                            + "\"message\":\"Demasiadas solicitudes. Intente de nuevo más tarde.\"}");
             return;
         }
         marcas.addLast(Instant.now());
-        if (peticiones.size() > MAX_IPS) {
-            peticiones.clear();
+        if (contadores.size() > MAX_IPS) {
+            contadores.clear();
         }
         filterChain.doFilter(request, response);
     }

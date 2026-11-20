@@ -15,6 +15,7 @@ public record RegistroEmpresaRequest(
         @NotBlank @Size(min = 8, max = 72)
         @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d).{8,72}$", message = "La contraseña debe tener letras y números")
         String password,
-        @AssertTrue(message = "Debe aceptar los términos y condiciones") boolean aceptaTerminos
+        @AssertTrue(message = "Debe aceptar los términos y condiciones") boolean aceptaTerminos,
+        String website
 ) {
 }

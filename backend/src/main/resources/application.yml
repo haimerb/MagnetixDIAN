@@ -57,15 +57,27 @@ magnetixdian:
     expose-token: ${AUTH_EXPOSE_TOKEN:true}
   transmision:
     reintento-ms: ${REINTENTO_TRANSMISION_MS:60000}
+  pac:
+    connect-timeout-ms: ${PAC_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${PAC_READ_TIMEOUT_MS:30000}
+  dian:
+    url-habilitacion: ${DIAN_URL_HABILITACION:https://vpfe-hab.dian.gov.co/WcfDianCustomerServices.svc}
+    url-produccion: ${DIAN_URL_PRODUCCION:https://vpfe.dian.gov.co/WcfDianCustomerServices.svc}
+    connect-timeout-ms: ${DIAN_CONNECT_TIMEOUT_MS:30000}
+    request-timeout-ms: ${DIAN_REQUEST_TIMEOUT_MS:60000}
   radian:
     aceptacion-tacita: ${RADIAN_ACEPTACION_TACITA:false}
     aceptacion-tacita-cron: ${RADIAN_ACEPTACION_TACITA_CRON:0 0 6 * * *}
   pagos:
+    webhook-tolerance-seconds: ${PAGOS_WEBHOOK_TOLERANCE_SECONDS:300}
+    exigir-firma-webhook: ${PAGOS_EXIGIR_FIRMA_WEBHOOK:false}
     wompi:
       public-key: ${WOMPI_PUBLIC_KEY:}
       integrity-secret: ${WOMPI_INTEGRITY_SECRET:}
       events-secret: ${WOMPI_EVENTS_SECRET:}
       checkout-url: ${WOMPI_CHECKOUT_URL:https://checkout.wompi.co/p/}
+      api-token: ${WOMPI_API_TOKEN:}
+      api-url: ${WOMPI_API_URL:https://api.wompi.co}
     mercadopago:
       access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
       base-url: ${MERCADOPAGO_BASE_URL:https://api.mercadopago.com}

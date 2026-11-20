@@ -48,6 +48,14 @@ public class PagoController {
         return ResponseEntity.ok(servicio.obtener(empresaId, referencia));
     }
 
+    @PostMapping("/empresas/{empresaId}/pagos/{referencia}/reconciliar")
+    public ResponseEntity<PagoDto> reconciliar(@PathVariable Long empresaId,
+                                               @PathVariable String referencia,
+                                               Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicio.reconciliar(empresaId, referencia));
+    }
+
     @PostMapping("/empresas/{empresaId}/pagos/checkout")
     public ResponseEntity<PagoDto> checkout(@PathVariable Long empresaId,
                                             @RequestBody CheckoutRequest request,

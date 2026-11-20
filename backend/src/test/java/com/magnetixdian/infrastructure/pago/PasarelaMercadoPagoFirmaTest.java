@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Map;
 
@@ -18,7 +19,7 @@ class PasarelaMercadoPagoFirmaTest {
 
     @Test
     void aceptaFirmaValidaConRequestId() {
-        String ts = "1700000000";
+        String ts = tsAhora();
         String requestId = "req-123";
         String dataId = "123456";
         String firma = firmar("id:" + dataId + ";request-id:" + requestId + ";ts:" + ts + ";");
@@ -28,7 +29,7 @@ class PasarelaMercadoPagoFirmaTest {
 
     @Test
     void aceptaFirmaSinRequestId() {
-        String ts = "1700000000";
+        String ts = tsAhora();
         String dataId = "123456";
         String firma = firmar("id:" + dataId + ";ts:" + ts + ";");
 
@@ -36,10 +37,29 @@ class PasarelaMercadoPagoFirmaTest {
     }
 
     @Test
-    void rechazaFirmaAlterada() {
-        String firma = firmar("id:123456;ts:1700000000;");
+    void aceptaClavesDeFirmaEnMayusculas() {
+        String ts = tsAhora();
+        String dataId = "123456";
+        String firma = firmar("id:" + dataId + ";ts:" + ts + ";");
 
-        assertFalse(PasarelaMercadoPago.firmaValida("ts=1700000000,v1=" + firma, null, "999", SECRETO));
+        assertTrue(PasarelaMercadoPago.firmaValida("TS=" + ts + ",V1=" + firma.toUpperCase(), null, dataId, SECRETO));
+    }
+
+    @Test
+    void rechazaFirmaFueraDeVentana() {
+        String ts = String.valueOf(Instant.now().getEpochSecond() - 901);
+        String dataId = "123456";
+        String firma = firmar("id:" + dataId + ";ts:" + ts + ";");
+
+        assertFalse(PasarelaMercadoPago.firmaValida("ts=" + ts + ",v1=" + firma, null, dataId, SECRETO));
+    }
+
+    @Test
+    void rechazaFirmaAlterada() {
+        String ts = tsAhora();
+        String firma = firmar("id:123456;ts:" + ts + ";");
+
+        assertFalse(PasarelaMercadoPago.firmaValida("ts=" + ts + ",v1=" + firma, null, "999", SECRETO));
     }
 
     @Test
@@ -56,7 +76,7 @@ class PasarelaMercadoPagoFirmaTest {
 
     @Test
     void webhookConFirmaInvalidaSeIgnoraSinConsultarMercadoPago() {
-        var pasarela = new PasarelaMercadoPago("token", "http://localhost:1", "", SECRETO, new ObjectMapper());
+        var pasarela = new PasarelaMercadoPago("token", "http://localhost:1", "", SECRETO, 300, false, new ObjectMapper());
         String payload = """
                 {"type":"payment","data":{"id":"123456"}}
                 """;
@@ -67,6 +87,20 @@ class PasarelaMercadoPagoFirmaTest {
         );
 
         assertTrue(pasarela.procesarWebhook(payload, headers).isEmpty());
+    }
+
+    @Test
+    void webhookSinSecretoSeIgnoraCuandoLaFirmaEsObligatoria() {
+        var pasarela = new PasarelaMercadoPago("token", "http://localhost:1", "", "", 300, true, new ObjectMapper());
+        String payload = """
+                {"type":"payment","data":{"id":"123456"}}
+                """;
+
+        assertTrue(pasarela.procesarWebhook(payload, Map.of()).isEmpty());
+    }
+
+    private static String tsAhora() {
+        return String.valueOf(Instant.now().getEpochSecond());
     }
 
     private static String firmar(String manifiesto) {

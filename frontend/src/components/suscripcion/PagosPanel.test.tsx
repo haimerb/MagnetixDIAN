@@ -4,15 +4,15 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import theme from '../../theme/theme'
 import PagosPanel from './PagosPanel'
-import { listarPagos, obtenerPago } from '../../api/client'
+import { listarPagos, reconciliarPago } from '../../api/client'
 
 vi.mock('../../api/client', () => ({
   listarPagos: vi.fn(),
-  obtenerPago: vi.fn(),
+  reconciliarPago: vi.fn(),
 }))
 
 const mockListar = vi.mocked(listarPagos)
-const mockObtener = vi.mocked(obtenerPago)
+const mockReconciliar = vi.mocked(reconciliarPago)
 
 function renderPanel() {
   return render(
@@ -47,7 +47,7 @@ describe('PagosPanel', () => {
     mockListar.mockResolvedValue([
       { id: 1, referencia: 'WOMPI-123', proveedor: 'WOMPI', planCodigo: 'PRO', monto: 99000, moneda: 'COP', estado: 'PENDIENTE', url: null },
     ])
-    mockObtener.mockResolvedValue({
+    mockReconciliar.mockResolvedValue({
       id: 1, referencia: 'WOMPI-123', proveedor: 'WOMPI', planCodigo: 'PRO', monto: 99000, moneda: 'COP', estado: 'APROBADO', url: null,
     })
     renderPanel()
@@ -56,7 +56,7 @@ describe('PagosPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Actualizar estado de WOMPI-123' }))
 
     expect(await screen.findByText('Aprobado')).toBeInTheDocument()
-    expect(mockObtener).toHaveBeenCalledWith(1, 'WOMPI-123')
+    expect(mockReconciliar).toHaveBeenCalledWith(1, 'WOMPI-123')
   })
 
   it('muestra un error cuando falla la carga', async () => {

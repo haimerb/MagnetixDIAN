@@ -9,11 +9,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.UUID;
 
 /**
@@ -24,12 +28,15 @@ public class ServicioConfigFe {
 
     private final EmpresaRepository empresaRepository;
     private final EmpresaFeConfigRepository configRepository;
+    private final AuditoriaService auditoria;
     private final String uploadDir;
 
     public ServicioConfigFe(EmpresaRepository empresaRepository, EmpresaFeConfigRepository configRepository,
+                            AuditoriaService auditoria,
                             @Value("${magnetixdian.upload.dir:./uploads}") String uploadDir) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
+        this.auditoria = auditoria;
         this.uploadDir = uploadDir;
     }
 
@@ -80,7 +87,10 @@ public class ServicioConfigFe {
             c.setNotificarAdquirente(dto.notificarAdquirente());
         }
         c.setUpdatedAt(java.time.OffsetDateTime.now());
-        return aDto(configRepository.save(c));
+        EmpresaFeConfigJpa guardada = configRepository.save(c);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "CONFIG_FE_ACTUALIZADA", "empresa", empresaId,
+                "canal=" + guardada.getCanal() + ", ambiente=" + guardada.getAmbiente());
+        return aDto(guardada);
     }
 
     @Transactional
@@ -90,7 +100,20 @@ public class ServicioConfigFe {
         }
         String nombre = nombreArchivo == null ? "certificado.p12" : nombreArchivo;
         String ext = nombre.toLowerCase().endsWith(".pfx") ? ".pfx" : ".p12";
+        char[] clave = password == null || password.isBlank() ? new char[0] : password.toCharArray();
         try {
+            KeyStore almacen = KeyStore.getInstance("PKCS12");
+            almacen.load(new ByteArrayInputStream(contenido), clave);
+            boolean tieneClave = false;
+            for (String alias : Collections.list(almacen.aliases())) {
+                if (almacen.isKeyEntry(alias)) {
+                    tieneClave = true;
+                    break;
+                }
+            }
+            if (!tieneClave) {
+                throw new IllegalArgumentException("El certificado no contiene una clave privada.");
+            }
             Path dir = Paths.get(uploadDir, "certificados");
             Files.createDirectories(dir);
             Path destino = dir.resolve("empresa-" + empresaId + "-" + UUID.randomUUID() + ext);
@@ -102,8 +125,11 @@ public class ServicioConfigFe {
                 c.setCertificadoPassword(password);
             }
             c.setUpdatedAt(OffsetDateTime.now());
-            return aDto(configRepository.save(c));
-        } catch (IOException e) {
+            EmpresaFeConfigJpa guardada = configRepository.save(c);
+            auditoria.registrar(AuditoriaService.usuarioActual(), "CERTIFICADO_FE_ACTUALIZADO", "empresa", empresaId,
+                    nombre);
+            return aDto(guardada);
+        } catch (IOException | GeneralSecurityException e) {
             throw new IllegalStateException("No se pudo guardar el certificado: " + e.getMessage(), e);
         }
     }

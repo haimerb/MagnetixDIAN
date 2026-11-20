@@ -1,5 +1,6 @@
 package com.magnetixdian.application;
 
+import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.PasarelaPago;
 import org.springframework.stereotype.Component;
 
@@ -34,5 +35,13 @@ public class PasarelasPago {
 
     public boolean existe(String proveedor) {
         return porProveedor.containsKey(proveedor == null ? "" : proveedor.trim().toUpperCase(Locale.ROOT));
+    }
+
+    public ConsultorPagoRemoto consultor(String proveedor) {
+        PasarelaPago pasarela = obtener(proveedor);
+        if (pasarela instanceof ConsultorPagoRemoto consultor) {
+            return consultor;
+        }
+        throw new IllegalArgumentException("La pasarela " + pasarela.proveedor() + " no permite consultar pagos.");
     }
 }
