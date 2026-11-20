@@ -1,9 +1,10 @@
 # MagnetixDIAN
 
-Plataforma de cumplimiento tributario DIAN con **dos módulos**:
+Plataforma de cumplimiento tributario DIAN con **tres módulos**:
 
 1. **Información exógena (medios magnéticos)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Carga un Excel, valida contra las reglas DIAN (dígito de verificación del NIT, conceptos del catálogo, topes en UVT), genera el reporte y descarga el **XML listo para presentar en MUISCA**.
 2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con **CUFE/CUDE** (SHA-384), **UBL 2.1**, firma **XAdES-EPES**, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
+3. **Integraciones y pagos** — sincronización con ERP/contabilidad/e-commerce mediante webhooks firmados y checkout de suscripciones (simulado / Wompi / MercadoPago).
 
 ## Stack
 
@@ -54,7 +55,46 @@ cd backend && MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn spring-boot:run
 cd frontend && pnpm install && pnpm run dev
 ```
 
-Checks previos a commit: backend `mvn clean package`; frontend `pnpm run lint` (0 errores), `pnpm run test` y `pnpm run build`.
+Checks previos a commit (JDK 17 obligatorio; frontend con **pnpm**, no npm):
+
+```bash
+export JAVA_HOME="C:/Users/hbarb/AppData/Local/jdk17"
+export PATH="$JAVA_HOME/bin:$PATH"
+cd backend && MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn clean package
+
+cd ../frontend
+pnpm run lint        # 0 errores, 0 warnings
+pnpm run build       # tsc -b + vite build
+pnpm run test        # Vitest
+pnpm run test:e2e    # Playwright (backend + preview)
+```
+
+## Integraciones y pagos
+
+Catálogo de proveedores (configuración por empresa en Administración → Integraciones):
+
+| Proveedor | Slug | Credenciales (plantillas vacías) |
+|---|---|---|
+| SIIGO | `siigo` | `username=` `accessKey=` `url=` |
+| ALEGRA | `alegra` | `email=` `apiToken=` |
+| ODOO | `odoo` | `url=` `db=` `username=` `password=` `webhookSecret=` |
+| WORLD_OFFICE | `world-office` | `apiToken=` `username=` `password=` `webhookSecret=` |
+| HELISA | `helisa` | `usuario=` `clave=` `url=` `sign=` `empresa=` `webhookSecret=` |
+| SHOPIFY | `shopify` | `shop=` `accessToken=` `webhookSecret=` |
+| WOOCOMMERCE | `woocommerce` | `url=` `consumerKey=` `consumerSecret=` `webhookSecret=` |
+| SAP_BUSINESS_ONE | `sap-business-one` | `url=` `companyDB=` `username=` `password=` |
+| DYNAMICS_365 | `dynamics-365` | `url=` `tenantId=` `clientId=` `clientSecret=` |
+| NETSUITE | `netsuite` | `accountId=` `consumerKey=` `consumerSecret=` `tokenId=` `tokenSecret=` |
+
+Las credenciales se guardan cifradas por empresa (no son variables de entorno). El webhook
+`POST /api/integraciones/webhook/{proveedor}/{token}` exige `X-Integracion-Firma` y
+`X-Integracion-Timestamp` (HMAC-SHA-256 sobre `timestamp + "." + body`); sin `webhookSecret`
+se rechaza en Render (`INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK=true`). Eventos idempotentes con
+reintentos 1→5→15→60→240 min (máx. 5).
+
+Métodos de pago vía Wompi: `CARD`, `NEQUI`, `PSE` y `BREB_QR` (QR dinámico del PSP, no conexión
+directa DICE/MOL); `DAVIPLATA` próximamente. En Render, `PAGOS_EXIGIR_FIRMA_WEBHOOK=true`.
+El keep-alive externo del plan free se documenta en `docs/DEPLOY-FREE.md` (mitigación, no SLA).
 
 ## Documentación
 
@@ -86,5 +126,7 @@ Checks previos a commit: backend `mvn clean package`; frontend `pnpm run lint` (
 - [x] PAC REST configurable y transmisión DIAN directa con firma WS-Security X.509.
 - [x] Webhooks con verificación de firma, frescura y reconciliación de pagos.
 - [x] Configuración FE validada con certificados PKCS#12 y auditoría de cambios.
+- [x] Integraciones con ERP/contabilidad/e-commerce (10 proveedores), webhooks firmados y reintentos.
+- [x] Métodos de pago Wompi: tarjeta, Nequi, PSE y QR dinámico Bre-B.
 
 Ver issues del repo para el backlog detallado.

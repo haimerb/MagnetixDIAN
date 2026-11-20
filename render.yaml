@@ -5,6 +5,8 @@
 #   base datos→ Supabase PostgreSQL
 # Uso: en Render, New → Blueprint → sube este repo (o pega este archivo).
 # Reemplaza DB_URL, CORS_ORIGINS y genera los secretos en el dashboard de Render.
+# Credenciales de integraciones NO van aquí: se guardan cifradas por empresa en BD.
+# Webhooks: PAGOS_EXIGIR_FIRMA_WEBHOOK e INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK = true (fail-closed).
 
 services:
   - type: web
@@ -68,6 +70,14 @@ services:
         value: "300"
       - key: PAGOS_EXIGIR_FIRMA_WEBHOOK
         value: "true"
+      - key: INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK
+        value: "true"
+      - key: INTEGRACIONES_CONNECT_TIMEOUT_MS
+        value: "5000"
+      - key: INTEGRACIONES_READ_TIMEOUT_MS
+        value: "15000"
+      - key: INTEGRACIONES_REINTENTOS_MS
+        value: "60000"
       - key: WOMPI_API_TOKEN
         sync: false
       - key: WOMPI_API_URL

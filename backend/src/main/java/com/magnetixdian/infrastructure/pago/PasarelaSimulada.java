@@ -4,6 +4,8 @@ import com.magnetixdian.domain.pago.CheckoutPago;
 import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -16,6 +18,7 @@ import java.util.Optional;
 @Component
 public class PasarelaSimulada implements PasarelaPago {
 
+    private static final Logger log = LoggerFactory.getLogger(PasarelaSimulada.class);
     public static final String NOMBRE = "SIMULADO";
 
     @Override
@@ -30,6 +33,7 @@ public class PasarelaSimulada implements PasarelaPago {
 
     @Override
     public CheckoutPago crearCheckout(SolicitudPago solicitud) {
+        log.info("Pago simulado aprobado: referencia={} metodo={}", solicitud.referencia(), solicitud.metodo());
         return CheckoutPago.inmediato();
     }
 

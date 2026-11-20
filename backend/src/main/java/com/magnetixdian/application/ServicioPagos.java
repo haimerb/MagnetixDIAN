@@ -3,6 +3,7 @@ package com.magnetixdian.application;
 import com.magnetixdian.domain.pago.CheckoutPago;
 import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.EventoPago;
+import com.magnetixdian.domain.pago.MetodoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
 import com.magnetixdian.infrastructure.persistence.EmpresaRepository;
@@ -10,6 +11,7 @@ import com.magnetixdian.infrastructure.persistence.PagoJpa;
 import com.magnetixdian.infrastructure.persistence.PagoRepository;
 import com.magnetixdian.infrastructure.persistence.PlanJpa;
 import com.magnetixdian.infrastructure.persistence.PlanRepository;
+import com.magnetixdian.interfaces.dto.CheckoutRequest;
 import com.magnetixdian.interfaces.dto.PagoDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -99,11 +101,17 @@ public class ServicioPagos {
 
     @Transactional
     public PagoDto iniciar(Long empresaId, String planCodigo, String proveedor) {
+        return iniciar(empresaId, new CheckoutRequest(planCodigo, proveedor));
+    }
+
+    @Transactional
+    public PagoDto iniciar(Long empresaId, CheckoutRequest request) {
+        String planCodigo = request.planCodigo();
         var empresa = empresaRepo.findById(empresaId)
                 .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada."));
         PlanJpa plan = planRepo.findByCodigoIgnoreCase(planCodigo)
                 .orElseThrow(() -> new IllegalArgumentException("Plan no encontrado: " + planCodigo));
-        PasarelaPago pasarela = pasarelas.obtener(proveedor);
+        PasarelaPago pasarela = pasarelas.obtener(request.proveedor());
         if (!pasarela.configurada()) {
             throw new IllegalStateException("La pasarela " + pasarela.proveedor() + " no está configurada.");
         }
@@ -112,6 +120,8 @@ public class ServicioPagos {
         pago.setEmpresa(empresa);
         pago.setPlanCodigo(plan.getCodigo());
         pago.setProveedor(pasarela.proveedor());
+        MetodoPago metodo = request.metodo() == null ? MetodoPago.CARD : request.metodo();
+        pago.setMetodo(metodo.name());
         pago.setReferencia(pasarela.proveedor() + "-" + UUID.randomUUID());
         pago.setMonto(plan.getPrecioMensual());
         pago.setMoneda(plan.getMoneda());
@@ -120,7 +130,10 @@ public class ServicioPagos {
 
         SolicitudPago solicitud = new SolicitudPago(empresaId, pago.getId(), pago.getReferencia(),
                 plan.getCodigo(), plan.getPrecioMensual(), plan.getMoneda(),
-                "Plan " + plan.getNombre(), frontendUrl + "/suscripcion");
+                "Plan " + plan.getNombre(), frontendUrl + "/suscripcion", metodo, request.celular(),
+                request.financialInstitutionId(), request.paymentType(), request.documentType(),
+                request.documentNumber(), request.payerName(), request.payerEmail(), request.payerPhone(),
+                request.descripcion());
         CheckoutPago checkout = pasarela.crearCheckout(solicitud);
         pago.setUrlCheckout(checkout.url());
         if (checkout.confirmadoInmediato()) {

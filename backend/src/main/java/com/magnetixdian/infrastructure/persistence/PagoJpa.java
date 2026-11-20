@@ -31,6 +31,9 @@ public class PagoJpa {
     @Column(nullable = false, length = 20)
     private String proveedor;
 
+    @Column(nullable = false, length = 20)
+    private String metodo = "CARD";
+
     @Column(nullable = false, unique = true, length = 120)
     private String referencia;
 
@@ -78,6 +81,14 @@ public class PagoJpa {
 
     public void setProveedor(String proveedor) {
         this.proveedor = proveedor;
+    }
+
+    public String getMetodo() {
+        return metodo;
+    }
+
+    public void setMetodo(String metodo) {
+        this.metodo = metodo;
     }
 
     public String getReferencia() {

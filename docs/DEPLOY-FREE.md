@@ -30,7 +30,7 @@ Navegador
 2. En el proyecto, botón **Connect → pestaña "Session pooler"** (necesaria para IPv4, requerida por Render):
    - Host: `aws-0-<REGION>.pooler.supabase.com` · Puerto `5432`
    - User: `postgres.<project-ref>`
-3. No hay que crear tablas: **Flyway migra automáticamente (V1+V2+V3)** al primer arranque del backend.
+3. No hay que crear tablas: **Flyway migra automáticamente (V1+V16)** al primer arranque del backend.
    - La conexión directa (`db.<ref>.supabase.co`) es **solo IPv6** → no funciona desde Render.
    - El schema `public` viene ocupado → la app usa **baseline-on-migrate** (`application.yml`).
 
@@ -59,6 +59,22 @@ Para que Render acepte el repo, primero súbelo a GitHub.
    ```
 
 > Sube primero el backend; es lo que crea las tablas vía Flyway.
+
+### Keep-alive externo (mitigación, no SLA)
+
+El plan free de Render suspende el servicio tras ~15 min sin tráfico. Para reducir la latencia
+del primer request, configura un monitor externo que haga ping a:
+
+```
+https://magnetixdian-backend.onrender.com/actuator/health
+```
+
+Frecuencia recomendada: **cada 5–15 min**. Opciones: **UptimeRobot** (HTTP(s) monitor) o
+**cron-job.org** (job HTTP con schedule); no hace falta código ni secretos, el endpoint es público.
+
+> Esto es solo una **mitigación**: no reemplaza un plan de pago, no garantiza disponibilidad
+> ni constituye un SLA. Render puede seguir durmiendo o reiniciando el contenedor; el disco
+> sigue siendo efímero.
 
 ---
 
@@ -116,11 +132,34 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `MERCADOPAGO_BASE_URL` | Render (env) | default `https://api.mercadopago.com` |
 | `MERCADOPAGO_BACK_URL` | Render (env) | retorno al frontend, default `/app/suscripcion` |
 | `PAGOS_WEBHOOK_TOLERANCE_SECONDS` | Render (env) | ventana de frescura de firmas (default `300`) |
-| `PAGOS_EXIGIR_FIRMA_WEBHOOK` | Render (env) | rechaza webhooks sin secreto cuando la pasarela está configurada (`true` en prod) |
+| `PAGOS_EXIGIR_FIRMA_WEBHOOK` | Render (env) | **`true` en Render**: sin `webhookSecret` de la pasarela, el webhook se rechaza (fail-closed) |
+| `INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK` | Render (env) | **`true` en Render**: sin `webhookSecret` en la configuración del proveedor, el webhook se rechaza (fail-closed) |
+| `INTEGRACIONES_CONNECT_TIMEOUT_MS` / `INTEGRACIONES_READ_TIMEOUT_MS` | Render (env) | timeouts de los adaptadores de integraciones (default `5000` / `15000`) |
+| `INTEGRACIONES_REINTENTOS_MS` | Render (env) | intervalo del programador de reintentos de eventos (default `60000`) |
 | `PAC_CONNECT_TIMEOUT_MS` / `PAC_READ_TIMEOUT_MS` | Render (env) | timeouts del adaptador PAC REST (default `5000` / `30000`) |
 | `DIAN_URL_HABILITACION` / `DIAN_URL_PRODUCCION` | Render (env) | endpoints SOAP DIAN; por defecto los oficiales de habilitación y producción |
 | `DIAN_CONNECT_TIMEOUT_MS` / `DIAN_REQUEST_TIMEOUT_MS` | Render (env) | timeouts de transmisión DIAN directa (default `30000` / `60000`) |
 | `SENTRY_DSN` | Render / Cloudflare | opcional; activa observabilidad (backend `SENTRY_DSN`, frontend `VITE_SENTRY_DSN`) |
+
+### Integraciones y pagos en el deploy
+
+- **Credenciales por proveedor** (SIIGO, ALEGRA, ODOO, WORLD_OFFICE, HELISA, SHOPIFY,
+  WOOCOMMERCE, SAP_BUSINESS_ONE, DYNAMICS_365, NETSUITE) **no son variables de entorno**:
+  se cargan por empresa en Administración → Integraciones y se guardan cifradas en
+  `integracion_config` (clave `CRYPTO_KEY`). Plantillas de claves vacías en `.env.example`
+  y en el manual técnico.
+- **Webhook de integraciones:** `POST /api/integraciones/webhook/{proveedor}/{token}` es público.
+  Envía `X-Integracion-Firma` y `X-Integracion-Timestamp`; la firma es HMAC-SHA-256 en hex sobre
+  `timestamp + "." + body`, con el `webhookSecret` de esa configuración. El `timestamp` acepta
+  epoch segundos o ISO-8601 con tolerancia de 300 s. Sin `webhookSecret`, se rechaza (fail-closed).
+- El `{token}` es de un solo uso por configuración: se genera al guardar, se muestra **una sola vez**
+  y se persiste solo como hash SHA-256; rotarlo implica guardar la configuración de nuevo.
+  La idempotencia usa proveedor + empresa + payload; los eventos fallidos se reintentan con backoff
+  **1→5→15→60→240 min (máx. 5)** y un barrido cada `INTEGRACIONES_REINTENTOS_MS`.
+- **Métodos de pago:** `CARD`, `NEQUI`, `PSE` y `BREB_QR` vía Wompi. Bre-B es un **QR dinámico
+  generado por el PSP**, no una conexión directa a DICE/MOL. `DAVIPLATA`: próximamente.
+- Webhooks de pago: `POST /api/pagos/webhook/{proveedor}`; con `PAGOS_EXIGIR_FIRMA_WEBHOOK=true`,
+  una pasarela configurada sin secreto de firma rechaza el evento.
 
 El archivo `.env.example` de la raíz lista todas las variables de backend y frontend.
 La landing y el registro son públicos: `/`, `/registro`, `/terminos`, `/privacidad` y `GET /api/planes`
@@ -155,6 +194,8 @@ cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos c
 - **Rutas frontend**: `/` ahora es la landing; el flujo autenticado se sirve en `/app` y derivados.
   Los favoritos antiguos a `/facturacion`, `/admin`, etc. deben actualizarse.
 - **Registro self-service**: `POST /api/auth/registro`, `GET /api/planes` público y migración V14.
+- **Integraciones y pagos**: migraciones V15/V16, adaptadores por proveedor, webhook firmado y
+  métodos de pago Wompi (`CARD`/`NEQUI`/`PSE`/`BREB_QR`); ver manual técnico.
 
 El flujo local (docker-compose, Vite dev, CI) sigue igual; el cambio de rutas solo afecta bookmarks.
 
