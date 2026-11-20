@@ -60,17 +60,17 @@ Para que Render acepte el repo, primero súbelo a GitHub.
 
 > Sube primero el backend; es lo que crea las tablas vía Flyway.
 
-### Keep-alive externo (mitigación, no SLA)
+### Keep-alive automático (mitigación, no SLA)
 
-El plan free de Render suspende el servicio tras ~15 min sin tráfico. Para reducir la latencia
-del primer request, configura un monitor externo que haga ping a:
+El plan free de Render suspende el servicio tras ~15 min sin tráfico. El repo incluye
+`.github/workflows/keep-alive.yml`, que consulta cada **10 minutos**:
 
 ```
 https://magnetixdian-backend.onrender.com/actuator/health
 ```
 
-Frecuencia recomendada: **cada 5–15 min**. Opciones: **UptimeRobot** (HTTP(s) monitor) o
-**cron-job.org** (job HTTP con schedule); no hace falta código ni secretos, el endpoint es público.
+El workflow también se puede ejecutar manualmente con `workflow_dispatch` y no requiere secretos.
+El endpoint es público. Si se prefiere un monitor externo, UptimeRobot o cron-job.org son alternativas válidas.
 
 > Esto es solo una **mitigación**: no reemplaza un plan de pago, no garantiza disponibilidad
 > ni constituye un SLA. Render puede seguir durmiendo o reiniciando el contenedor; el disco
