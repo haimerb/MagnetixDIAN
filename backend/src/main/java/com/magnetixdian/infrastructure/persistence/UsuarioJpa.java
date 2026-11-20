@@ -51,6 +51,9 @@ public class UsuarioJpa {
     @Column(name = "invitacion_pendiente", nullable = false)
     private Boolean invitacionPendiente = Boolean.FALSE;
 
+    @Column(name = "terminos_aceptados_en")
+    private OffsetDateTime terminosAceptadosEn;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "usuario_role",
             joinColumns = @JoinColumn(name = "usuario_id"),
@@ -126,6 +129,14 @@ public class UsuarioJpa {
 
     public void setInvitacionPendiente(Boolean invitacionPendiente) {
         this.invitacionPendiente = invitacionPendiente;
+    }
+
+    public OffsetDateTime getTerminosAceptadosEn() {
+        return terminosAceptadosEn;
+    }
+
+    public void setTerminosAceptadosEn(OffsetDateTime terminosAceptadosEn) {
+        this.terminosAceptadosEn = terminosAceptadosEn;
     }
 
     public boolean estaBloqueado() {

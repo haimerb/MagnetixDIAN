@@ -28,14 +28,14 @@ import { useAuth } from '../../features/auth/useAuth'
 import { useThemeMode } from '../../theme/useThemeMode'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Panel' },
-  { to: '/carga', label: 'Carga de datos' },
-  { to: '/validacion', label: 'Validación' },
-  { to: '/reporte', label: 'Reportes' },
-  { to: '/facturacion', label: 'Facturación' },
-  { to: '/suscripcion', label: 'Suscripción' },
-  { to: '/guia', label: 'Guía MUISCA' },
-  { to: '/admin', label: 'Administración', admin: true as const },
+  { to: '/app', label: 'Panel' },
+  { to: '/app/carga', label: 'Carga de datos' },
+  { to: '/app/validacion', label: 'Validación' },
+  { to: '/app/reporte', label: 'Reportes' },
+  { to: '/app/facturacion', label: 'Facturación' },
+  { to: '/app/suscripcion', label: 'Suscripción' },
+  { to: '/app/guia', label: 'Guía MUISCA' },
+  { to: '/app/admin', label: 'Administración', admin: true as const },
 ]
 
 const ROL_LABEL: Record<string, string> = {
@@ -54,7 +54,7 @@ export default function AppLayout() {
 
   const items = NAV_ITEMS.filter((item) => !item.admin || sesion?.roles?.includes('ROLE_ADMIN'))
   const isActive = (to: string) =>
-    to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+    to === '/app' ? location.pathname === '/app' : location.pathname.startsWith(to)
 
   const iniciales = (sesion?.username ?? '?').slice(0, 2).toUpperCase()
   const roles = (sesion?.roles ?? []).map((r) => ROL_LABEL[r] ?? r).join(' · ')
@@ -103,11 +103,11 @@ export default function AppLayout() {
               role="button"
               tabIndex={0}
               aria-label="Ir al panel"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/app')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  navigate('/')
+                  navigate('/app')
                 }
               }}
               sx={{
@@ -217,7 +217,7 @@ export default function AppLayout() {
           </Typography>
         </Box>
         <Divider />
-        <MenuItem onClick={() => { setMenuAnchor(null); navigate('/cuenta') }}>
+        <MenuItem onClick={() => { setMenuAnchor(null); navigate('/app/cuenta') }}>
           <LockResetIcon fontSize="small" sx={{ mr: 1 }} />
           Cambiar contraseña
         </MenuItem>
@@ -262,7 +262,7 @@ export default function AppLayout() {
           <Button
             color="inherit"
             startIcon={<LockResetIcon />}
-            onClick={() => { setDrawerOpen(false); navigate('/cuenta') }}
+            onClick={() => { setDrawerOpen(false); navigate('/app/cuenta') }}
             sx={{ justifyContent: 'flex-start' }}
           >
             Cambiar contraseña
@@ -281,9 +281,19 @@ export default function AppLayout() {
 
       <Box component="footer" sx={{ borderTop: '1px solid', borderColor: (t) => t.palette.divider, py: 3 }}>
         <Container maxWidth="lg">
-          <Typography variant="caption" color="text.secondary">
-            MagnetixDIAN · Información exógena DIAN · Resolución Única 000227 de 2025
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              MagnetixDIAN · Información exógena DIAN · Resolución Única 000227 de 2025
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Typography component="a" href="/terminos" variant="caption" color="text.secondary">
+                Términos
+              </Typography>
+              <Typography component="a" href="/privacidad" variant="caption" color="text.secondary">
+                Privacidad
+              </Typography>
+            </Box>
+          </Box>
         </Container>
       </Box>
     </Box>

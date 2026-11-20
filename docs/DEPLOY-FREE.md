@@ -104,9 +104,22 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `DB_USER` / `DB_PASSWORD` | Render (env) | `postgres.<ref>` / password de Supabase |
 | `JWT_SECRET` | Render (env) | base64 de 64 bytes (`openssl rand -base64 64`) |
 | `CRYPTO_KEY` | Render (env) | secreto para cifrar credenciales DIAN en BD (`openssl rand -base64 32`) |
-| `FRONTEND_URL` | Render (env) | URL pública usada en enlaces de recuperación e invitación |
+| `FRONTEND_URL` | Render (env) | URL pública usada en enlaces de recuperación, invitación y retorno de pagos |
 | `AUTH_EXPOSE_TOKEN` | Render (env) | `false` en producción (no devolver enlaces cuando SMTP falla) |
+| `NOTIFICATIONS_ENABLED` | Render (env) | `true` para habilitar correos; `false` en el default |
+| `MAIL_HOST` / `MAIL_PORT` | Render (env) | servidor SMTP (default `smtp.gmail.com:587`) |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Render (env) | credenciales SMTP; `MAIL_USERNAME` también se usa como `From` |
+| `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | Render (env) | credenciales Wompi (vacías → pasarela inerte) |
+| `WOMPI_CHECKOUT_URL` | Render (env) | default `https://checkout.wompi.co/p/` |
+| `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_WEBHOOK_SECRET` | Render (env) | credenciales MercadoPago (vacías → pasarela inerte) |
+| `MERCADOPAGO_BASE_URL` | Render (env) | default `https://api.mercadopago.com` |
+| `MERCADOPAGO_BACK_URL` | Render (env) | retorno al frontend, default `/app/suscripcion` |
 | `SENTRY_DSN` | Render / Cloudflare | opcional; activa observabilidad (backend `SENTRY_DSN`, frontend `VITE_SENTRY_DSN`) |
+
+El archivo `.env.example` de la raíz lista todas las variables de backend y frontend.
+La landing y el registro son públicos: `/`, `/registro`, `/terminos`, `/privacidad` y `GET /api/planes`
+no requieren JWT. El área de trabajo quedó bajo `/app`; el alta self-service crea empresa, usuario
+`ROLE_CLIENTE` y suscripción `FREE`, y guarda la aceptación de términos (migración V14).
 
 Seguridad: PostgreSQL de Supabase **no se expone** (solo via pooler con SSL); Render es el único
 cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos con HTTPS gratis.
@@ -115,15 +128,16 @@ cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos c
 
 ## 5. Pruebas end-to-end
 
-1. Abrir `https://magnetixdian.<cuenta>.workers.dev` → login `admin` / `admin123`.
-2. Descargar plantilla 1001 y subir un Excel con datos (regenerarlo si hace falta:
+1. Abrir `https://magnetixdian.<cuenta>.workers.dev` → landing → **Crear cuenta gratis** → registrar empresa.
+2. Hacer login con el usuario creado (o `admin` / `admin123` solo en entornos no productivos) → `/app`.
+3. Descargar plantilla 1001 y subir un Excel con datos (regenerarlo si hace falta:
    `backend/tools/GenXlsx.java` — ver AGENTS.md).
-3. Ejecutar validación → errores/DV → corregir → generar XML → marcar presentado.
-4. `/actuator/health` del backend debe seguir `UP` (migraciones aplicadas).
+4. Ejecutar validación → errores/DV → corregir → generar XML → marcar presentado.
+5. `/actuator/health` del backend debe seguir `UP` (migraciones aplicadas).
 
 ---
 
-## 6. Cambios de código incluidos (retrocompatibles)
+## 6. Cambios de código incluidos
 
 - **CORS configurable**: `SecurityConfig.java` + `application.yml` leen `CORS_ORIGINS`
   (default `localhost:5173,4173` → el flujo local **no cambia**).
@@ -132,8 +146,11 @@ cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos c
 - **Flyway baseline**: `baseline-on-migrate + baseline-version 0` para schema `public` preexistente.
 - `backend/Dockerfile.render` (JVM `-Xmx256m`), `render.yaml` (blueprint), `worker.js` + `wrangler.toml`
   (frontend) — solo los usan Render y Cloudflare.
+- **Rutas frontend**: `/` ahora es la landing; el flujo autenticado se sirve en `/app` y derivados.
+  Los favoritos antiguos a `/facturacion`, `/admin`, etc. deben actualizarse.
+- **Registro self-service**: `POST /api/auth/registro`, `GET /api/planes` público y migración V14.
 
-Nada del flujo actual (docker-compose, ZIP a GoDaddy, CI) se ve afectado.
+El flujo local (docker-compose, Vite dev, CI) sigue igual; el cambio de rutas solo afecta bookmarks.
 
 ---
 

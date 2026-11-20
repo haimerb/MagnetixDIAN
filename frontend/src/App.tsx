@@ -6,7 +6,11 @@ import AppLayout from './components/layout/AppLayout'
 import GlobalProgress from './components/layout/GlobalProgress'
 import LoadingState from './components/ui/LoadingState'
 
+const LandingPage = lazy(() => import('./pages/LandingPage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegistroPage = lazy(() => import('./pages/RegistroPage'))
+const TerminosPage = lazy(() => import('./pages/TerminosPage'))
+const PrivacidadPage = lazy(() => import('./pages/PrivacidadPage'))
 const RecuperarPasswordPage = lazy(() => import('./pages/RecuperarPasswordPage'))
 const ActivarCuentaPage = lazy(() => import('./pages/ActivarCuentaPage'))
 const CambiarPasswordPage = lazy(() => import('./pages/CambiarPasswordPage'))
@@ -34,12 +38,16 @@ export default function App() {
         <GlobalProgress />
         <Suspense fallback={<LoadingState label="Cargando página…" minHeight="60vh" />}>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/registro" element={<RegistroPage />} />
+            <Route path="/terminos" element={<TerminosPage />} />
+            <Route path="/privacidad" element={<PrivacidadPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/recuperar" element={<RecuperarPasswordPage />} />
             <Route path="/restablecer" element={<RecuperarPasswordPage />} />
             <Route path="/activar" element={<ActivarCuentaPage />} />
             <Route
-              path="/"
+              path="/app"
               element={
                 <RequiereAuth>
                   <AppLayout />

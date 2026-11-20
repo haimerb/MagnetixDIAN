@@ -21,6 +21,9 @@ public class NotificadorEmail {
     private final JavaMailSender mailSender;
     private final boolean enabled;
 
+    @Value("${spring.mail.username:}")
+    private String mailFrom;
+
     public NotificadorEmail(JavaMailSender mailSender,
                             @Value("${magnetixdian.notifications.enabled:false}") boolean enabled) {
         this.mailSender = mailSender;
@@ -40,6 +43,9 @@ public class NotificadorEmail {
             return false;
         }
         SimpleMailMessage message = new SimpleMailMessage();
+        if (mailFrom != null && !mailFrom.isBlank()) {
+            message.setFrom(mailFrom);
+        }
         message.setTo(destinatario);
         message.setSubject(asunto);
         message.setText(cuerpo);
@@ -65,6 +71,9 @@ public class NotificadorEmail {
         }
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        if (mailFrom != null && !mailFrom.isBlank()) {
+            helper.setFrom(mailFrom);
+        }
         helper.setTo(destinatario);
         helper.setSubject(asunto);
         helper.setText(cuerpo, false);
