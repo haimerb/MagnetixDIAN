@@ -61,7 +61,7 @@ public class PagoController {
                                             @RequestBody CheckoutRequest request,
                                             Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
-        return ResponseEntity.ok(servicio.iniciar(empresaId, request.planCodigo(), request.proveedor()));
+        return ResponseEntity.ok(servicio.iniciar(empresaId, request));
     }
 
     @PostMapping("/pagos/webhook/{proveedor}")

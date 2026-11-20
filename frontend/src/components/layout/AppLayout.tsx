@@ -34,6 +34,7 @@ const NAV_ITEMS = [
   { to: '/app/reporte', label: 'Reportes' },
   { to: '/app/facturacion', label: 'Facturación' },
   { to: '/app/suscripcion', label: 'Suscripción' },
+  { to: '/app/integraciones', label: 'Integraciones' },
   { to: '/app/guia', label: 'Guía MUISCA' },
   { to: '/app/admin', label: 'Administración', admin: true as const },
 ]

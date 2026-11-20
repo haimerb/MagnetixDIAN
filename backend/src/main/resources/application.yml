@@ -96,6 +96,13 @@ magnetixdian:
     reminder: ${REMINDER_CRON:0 0 9 * * *}
     generador: ${GENERATOR_CRON:0 0 2 1 1 *}
 
+integraciones:
+  exigir-firma-webhook: ${INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK:false}
+  connect-timeout-ms: ${INTEGRACIONES_CONNECT_TIMEOUT_MS:5000}
+  read-timeout-ms: ${INTEGRACIONES_READ_TIMEOUT_MS:15000}
+  reintentos:
+    intervalo-ms: ${INTEGRACIONES_REINTENTOS_MS:60000}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

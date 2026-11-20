@@ -22,7 +22,7 @@ test.describe('Pagos con pasarela simulada', () => {
     }
 
     expect(cambioRealizado).toBe(true)
-    await expect(page.getByRole('alert')).toContainText('Pago aprobado. Plan')
+    await expect(page.getByRole('alert').filter({ hasText: 'Pago aprobado. Plan' })).toContainText('Pago aprobado. Plan')
     await expect(page.getByText('Proveedor: SIMULADO')).toBeVisible()
   })
 })
