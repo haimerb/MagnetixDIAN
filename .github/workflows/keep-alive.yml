@@ -1,0 +1,30 @@
+name: Keep-alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping backend health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BACKEND_URL: https://magnetixdian-backend.onrender.com
+    steps:
+      - name: Request /actuator/health
+        run: |
+          for intento in 1 2 3; do
+            if curl -fsS --max-time 60 "$BACKEND_URL/actuator/health"; then
+              echo "Backend saludable (intento $intento)"
+              exit 0
+            fi
+            echo "Intento $intento sin respuesta; reintentando..."
+            sleep 5
+          done
+          echo "::warning::El backend no respondió al keep-alive; Render puede estar reiniciando."

@@ -372,9 +372,8 @@ Guía completa en `docs/DEPLOY-FREE.md`:
 - **BD:** Supabase free vía **Session pooler (IPv4)**; Flyway con `baseline-on-migrate`.
 
 El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merge a `main` (ver §11).
-En Render se recomienda un keep-alive externo (UptimeRobot o cron-job.org) que consulte
-`/actuator/health` cada 5–15 min; es una mitigación del sleep del plan free, **no un SLA**
-(detalles en `docs/DEPLOY-FREE.md`).
+El workflow `.github/workflows/keep-alive.yml` consulta `/actuator/health` cada 10 minutos para mitigar
+el sleep del plan free; es una **mitigación, no un SLA** (detalles en `docs/DEPLOY-FREE.md`).
 
 ## 10. Variables de entorno
 

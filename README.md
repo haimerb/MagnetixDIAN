@@ -94,7 +94,7 @@ reintentos 1→5→15→60→240 min (máx. 5).
 
 Métodos de pago vía Wompi: `CARD`, `NEQUI`, `PSE` y `BREB_QR` (QR dinámico del PSP, no conexión
 directa DICE/MOL); `DAVIPLATA` próximamente. En Render, `PAGOS_EXIGIR_FIRMA_WEBHOOK=true`.
-El keep-alive externo del plan free se documenta en `docs/DEPLOY-FREE.md` (mitigación, no SLA).
+El keep-alive del plan free ya está automatizado en `.github/workflows/keep-alive.yml` (cada 10 min; mitigación, no SLA).
 
 ## Documentación
 
