@@ -634,10 +634,147 @@ export async function reconciliarPago(empresaId: number, referencia: string) {
   return data
 }
 
-export async function iniciarCheckout(empresaId: number, planCodigo: string, proveedor: string) {
+export type MetodoPago = 'CARD' | 'NEQUI' | 'PSE' | 'BREB_QR' | 'DAVIPLATA'
+
+export async function iniciarCheckout(
+  empresaId: number,
+  planCodigo: string,
+  proveedor: string,
+  metodo: MetodoPago = 'CARD',
+) {
   const { data } = await api.post<Pago>(
     `/empresas/${empresaId}/pagos/checkout`,
-    { planCodigo, proveedor },
+    { planCodigo, proveedor, metodo },
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export type ProveedorIntegracion =
+  | 'SIIGO'
+  | 'ALEGRA'
+  | 'ODOO'
+  | 'WORLD_OFFICE'
+  | 'HELISA'
+  | 'SHOPIFY'
+  | 'WOOCOMMERCE'
+  | 'SAP_BUSINESS_ONE'
+  | 'DYNAMICS_365'
+  | 'NETSUITE'
+
+export const PROVEEDORES_INTEGRACION: readonly ProveedorIntegracion[] = [
+  'SIIGO',
+  'ALEGRA',
+  'ODOO',
+  'WORLD_OFFICE',
+  'HELISA',
+  'SHOPIFY',
+  'WOOCOMMERCE',
+  'SAP_BUSINESS_ONE',
+  'DYNAMICS_365',
+  'NETSUITE',
+]
+
+export type CapacidadIntegracion =
+  | 'SYNC_CLIENTES'
+  | 'SYNC_PRODUCTOS'
+  | 'EMITIR_FACTURA'
+  | 'CONSULTAR_ESTADO'
+  | 'REGISTRAR_PAGO'
+  | 'RECIBIR_WEBHOOK'
+
+export type EstadoIntegracion = 'CONECTADO' | 'DESCONFIGURADO' | 'ERROR' | 'SINCRONIZANDO'
+
+export type IntegracionConfig = {
+  id: number | null
+  proveedor: ProveedorIntegracion
+  slug: string
+  activo: boolean
+  estado: EstadoIntegracion
+  configurada: boolean
+  capacidades: CapacidadIntegracion[]
+  ultimoError: string | null
+  ultimaSincronizacion: string | null
+  webhookToken: string | null
+}
+
+export type IntegracionConfigRequest = {
+  activo: boolean
+  credenciales: Record<string, string>
+  configuracion: Record<string, string>
+}
+
+export type IntegracionEvento = {
+  id: number
+  proveedor: string
+  tipo: string
+  estado: string
+  intentos: number
+  proximoIntento: string | null
+  ultimoError: string | null
+  creadoEn: string
+}
+
+export type ResultadoIntegracion = {
+  exitoso: boolean
+  mensaje: string
+  idExterno: string | null
+  estado: string
+  detalles: Record<string, string>
+}
+
+export type TipoSincronizacionIntegracion = 'CLIENTE' | 'PRODUCTO' | 'FACTURA'
+
+export async function listarIntegraciones(empresaId: number) {
+  const { data } = await api.get<IntegracionConfig[]>(`/empresas/${empresaId}/integraciones`)
+  return data
+}
+
+export async function guardarIntegracion(
+  empresaId: number,
+  proveedor: ProveedorIntegracion,
+  solicitud: IntegracionConfigRequest,
+) {
+  const { data } = await api.put<IntegracionConfig>(
+    `/empresas/${empresaId}/integraciones/${proveedor}`,
+    solicitud,
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function probarIntegracion(empresaId: number, proveedor: ProveedorIntegracion) {
+  const { data } = await api.post<ResultadoIntegracion>(
+    `/empresas/${empresaId}/integraciones/${proveedor}/probar`,
+    undefined,
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function sincronizarIntegracion(
+  empresaId: number,
+  proveedor: ProveedorIntegracion,
+  tipo: TipoSincronizacionIntegracion,
+  datos: Record<string, unknown> = {},
+) {
+  const { data } = await api.post<ResultadoIntegracion>(
+    `/empresas/${empresaId}/integraciones/${proveedor}/sincronizar`,
+    { tipo, datos },
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function listarEventosIntegracion(empresaId: number) {
+  const { data } = await api.get<IntegracionEvento[]>(`/empresas/${empresaId}/integraciones/eventos`)
+  return data
+}
+
+export async function reintentarEventoIntegracion(empresaId: number, eventoId: number) {
+  const { data } = await api.post<IntegracionEvento>(
+    `/empresas/${empresaId}/integraciones/eventos/${eventoId}/reintentar`,
+    undefined,
     { skipGlobalError: true },
   )
   return data

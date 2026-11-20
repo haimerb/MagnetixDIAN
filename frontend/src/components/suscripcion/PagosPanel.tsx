@@ -12,7 +12,17 @@ import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined'
 import SectionCard from '../ui/SectionCard'
 import EmptyState from '../ui/EmptyState'
 import EstadoChip from '../ui/EstadoChip'
-import { listarPagos, reconciliarPago, type Pago } from '../../api/client'
+import MedioPagoSelector, { type CamposMetodoPago } from '../integraciones/MedioPagoSelector'
+import { listarPagos, reconciliarPago, type MetodoPago, type Pago } from '../../api/client'
+
+const CAMPOS_VACIOS: CamposMetodoPago = {
+  celular: '',
+  financialInstitutionId: '',
+  paymentType: '',
+  documentType: '',
+  documentNumber: '',
+  payerName: '',
+}
 
 function formatearMonto(pago: Pago) {
   return new Intl.NumberFormat('es-CO', {
@@ -26,6 +36,8 @@ export default function PagosPanel({ empresaId }: { empresaId: number }) {
   const [pagos, setPagos] = useState<Pago[]>([])
   const [error, setError] = useState<string | null>(null)
   const [actualizando, setActualizando] = useState<string | null>(null)
+  const [metodo, setMetodo] = useState<MetodoPago>('CARD')
+  const [campos, setCampos] = useState<CamposMetodoPago>(CAMPOS_VACIOS)
 
   const actualizar = async (referencia: string) => {
     setActualizando(referencia)
@@ -52,55 +64,70 @@ export default function PagosPanel({ empresaId }: { empresaId: number }) {
   }, [cargar])
 
   return (
-    <SectionCard title="Historial de pagos" subtitle="Intentos de pago de su suscripción." padded={false}>
-      <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
-        {error && <Alert severity="error">{error}</Alert>}
-        {pagos.length === 0 ? (
-          <EmptyState title="Sin pagos" description="Aún no se han registrado pagos de suscripción." />
-        ) : (
-          <List disablePadding>
-            {pagos.map((pago) => (
-              <ListItem
-                key={pago.id}
-                divider
-                secondaryAction={
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Tooltip title="Actualizar estado">
-                      <span>
-                        <IconButton
-                          size="small"
-                          aria-label={`Actualizar estado de ${pago.referencia}`}
-                          disabled={actualizando === pago.referencia}
-                          onClick={() => void actualizar(pago.referencia)}
-                        >
-                          <RefreshOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <EstadoChip estado={pago.estado} />
-                  </Stack>
-                }
-              >
-                <ListItemText
-                  primary={
+    <Stack spacing={2}>
+      <SectionCard
+        title="Método de pago"
+        subtitle="Elija cómo desea pagar su suscripción; los campos adicionales dependen del método."
+      >
+        <MedioPagoSelector
+          metodo={metodo}
+          onMetodoChange={setMetodo}
+          campos={campos}
+          onCamposChange={setCampos}
+          titulo="Método de pago"
+        />
+      </SectionCard>
+
+      <SectionCard title="Historial de pagos" subtitle="Intentos de pago de su suscripción." padded={false}>
+        <Box sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          {pagos.length === 0 ? (
+            <EmptyState title="Sin pagos" description="Aún no se han registrado pagos de suscripción." />
+          ) : (
+            <List disablePadding>
+              {pagos.map((pago) => (
+                <ListItem
+                  key={pago.id}
+                  divider
+                  secondaryAction={
                     <Stack direction="row" spacing={1} alignItems="center">
-                      <Typography variant="subtitle2">Plan {pago.planCodigo}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {formatearMonto(pago)}
-                      </Typography>
+                      <Tooltip title="Actualizar estado">
+                        <span>
+                          <IconButton
+                            size="small"
+                            aria-label={`Actualizar estado de ${pago.referencia}`}
+                            disabled={actualizando === pago.referencia}
+                            onClick={() => void actualizar(pago.referencia)}
+                          >
+                            <RefreshOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <EstadoChip estado={pago.estado} />
                     </Stack>
                   }
-                  secondary={
-                    <Typography component="span" variant="body2" color="text.secondary">
-                      {pago.proveedor} · {pago.referencia}
-                    </Typography>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        )}
-      </Box>
-    </SectionCard>
+                >
+                  <ListItemText
+                    primary={
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="subtitle2">Plan {pago.planCodigo}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {formatearMonto(pago)}
+                        </Typography>
+                      </Stack>
+                    }
+                    secondary={
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        {pago.proveedor} · {pago.referencia}
+                      </Typography>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </Box>
+      </SectionCard>
+    </Stack>
   )
 }

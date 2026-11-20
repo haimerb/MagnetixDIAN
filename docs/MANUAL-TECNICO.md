@@ -1,9 +1,10 @@
 # MagnetixDIAN — Manual Técnico
 
-Sistema con **dos módulos**:
+Sistema con **tres módulos**:
 
 1. **Medios magnéticos (información exógena DIAN)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Flujo: carga de Excel → validación → reporte → XML → marcar presentado + normalización de terceros.
 2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con CUFE/CUDE (SHA-384), UBL 2.1, firma XAdES-EPES, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
+3. **Integraciones y pagos** — sincronización con ERP/contabilidad/e-commerce, webhooks firmados y checkout de suscripciones (simulado / Wompi / MercadoPago).
 
 ## 1. Stack
 
@@ -39,6 +40,7 @@ backend/src/main/java/com/magnetixdian/
   interfaces/rest/      Controllers REST (AuthController, MedioMagneticoController,
                         FacturaController, ConfiguracionFeController, AdminController,
                         PlanController, ApiKeyController, PagoController,
+                        IntegracionController, IntegracionWebhookController,
                         GlobalExceptionHandler)
   interfaces/dto/       Records de respuesta (NUNCA entidades JPA — open-in-view=false)
                         incluido PaginaDto<T> para listados paginados
@@ -47,6 +49,7 @@ backend/src/main/java/com/magnetixdian/
                         ServicioNumeracion, ServicioFirma, ServicioTransmision,
                         ServicioConfigFe, ServicioGeneracionAutomatica, ServicioRecuperacion,
                         ServicioSuscripciones, ServicioApiKeys, ServicioPagos, PasarelasPago,
+                        ServicioIntegraciones, RegistroIntegraciones,
                         AuditoriaService, ProgramadorReintentos, ProgramadorAceptacionTacita)
   domain/
     rule/               ReglaValidacion (interfaz), RuleEngine, reglas 1001/1002, CatalogoConceptos
@@ -57,17 +60,21 @@ backend/src/main/java/com/magnetixdian/
     transmision/        CanalTransmision (interfaz), ResultadoTransmision
     suscripcion/        LimiteUso (regla pura de límites)
     apikey/             ClaveApi (generación/hash SHA-256 de claves de API)
-    pago/               PasarelaPago (interfaz), SolicitudPago, CheckoutPago, EventoPago
-    uvt/                UvtManager
-    model/              OperacionDatos, ResultadoRegla, Severidad
-  infrastructure/
-    excel/              ImportadorExcel (POI), PlantillaExcelGenerator
-    xml/                GeneradorXml1001/1002, GeneradorUblFactura, GeneradorAttachedDocument,
-                        GeneradorApplicationResponse
-    pdf/                GeneradorPdfFactura (OpenPDF)
-    transmision/        CanalSimulado, pac/ClientePac, dian/ClienteDianSoap
-    pago/               PasarelaSimulada, PasarelaWompi, PasarelaMercadoPago
-    notification/       NotificadorEmail, ServicioNotificaciones, SchedulerJobs
+    integracion/        ProveedorIntegracion, AdaptadorIntegracion (firma HMAC y reintentos),
+                        DatosConexionIntegracion, EventoIntegracion, ResultadoIntegracion
+     pago/               PasarelaPago (interfaz), MetodoPago, SolicitudPago, CheckoutPago, EventoPago
+     uvt/                UvtManager
+     model/              OperacionDatos, ResultadoRegla, Severidad
+   infrastructure/
+     excel/              ImportadorExcel (POI), PlantillaExcelGenerator
+     xml/                GeneradorXml1001/1002, GeneradorUblFactura, GeneradorAttachedDocument,
+                         GeneradorApplicationResponse
+     pdf/                GeneradorPdfFactura (OpenPDF)
+     transmision/        CanalSimulado, pac/ClientePac, dian/ClienteDianSoap
+     pago/               PasarelaSimulada, PasarelaWompi, PasarelaMercadoPago
+     integracion/        Adaptadores por proveedor (siigo, alegra, odoo, worldoffice, helisa,
+                         shopify, woocommerce, sap, dynamics, netsuite)
+     notification/       NotificadorEmail, ServicioNotificaciones, SchedulerJobs
     persistence/        Repositorios y entidades JPA
   security/             JwtAuthFilter, ApiKeyAuthFilter, RateLimitFilter,
                         CustomUserDetailsService, AutorizacionEmpresa
@@ -81,7 +88,7 @@ backend/src/main/java/com/magnetixdian/
 - **DTOs en el contrato API:** las respuestas serializan records, no entidades (evita proxys LAZY con `open-in-view: false`).
 - **Java 17 estricto:** no usar features de Java 21 (ej. pattern matching en `switch`).
 - **Autorización por empresa:** `AutorizacionEmpresa` verifica que el usuario autenticado (no-ADMIN) solo acceda a los recursos de su empresa; `ROLE_ADMIN` accede a todo. Se aplica en los controllers de facturación, medios, configuración, planes, claves de API y pagos.
-- **Puertos + adaptadores:** las integraciones externas se definen como interfaz (`CanalTransmision`, `PasarelaPago`, `FirmadorXml`) con adaptadores intercambiables; sin credenciales quedan inertes (`CanalSimulado`, `PasarelaSimulada`, `FirmadorNoOp`).
+- **Puertos + adaptadores:** las integraciones externas se definen como interfaz (`CanalTransmision`, `PasarelaPago`, `FirmadorXml`, `AdaptadorIntegracion`) con adaptadores intercambiables; sin credenciales quedan inertes (`CanalSimulado`, `PasarelaSimulada`, `FirmadorNoOp`). `RegistroIntegraciones` descubre los adaptadores Spring y `ServicioIntegraciones` centraliza firmas, idempotencia y reintentos.
 - **Sin `WebConfig`:** CORS y seguridad se centralizan en `SecurityConfig`.
 
 ## 3. Modelo de datos
@@ -103,6 +110,9 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 | `V11__planes_suscripciones.sql` | `plan` + `suscripcion` (seed FREE/PRO/ENTERPRISE y suscripción demo) |
 | `V12__api_keys.sql` | `api_key` (claves de API por empresa, hash SHA-256) |
 | `V13__pagos.sql` | `pago` (intención de pago por pasarela) |
+| `V14__registro_self_service.sql` | registro público, aceptación de términos y suscripción FREE |
+| `V15__integraciones.sql` | `integracion_config` (credenciales cifradas, hash del token de webhook) e `integracion_evento` (idempotencia/reintentos) |
+| `V16__pagos_metodo.sql` | columna `pago.metodo` (`MetodoPago`) |
 
 **Tablas de medios magnéticos:** `empresa`, `tercero`, `medio_magnetico`, `operacion`, `uvt_vigencia`, `regla`, `validacion` / `detalle_error`, `calendario_dian`, `notificacion`, `role` / `usuario` / `usuario_role`.
 
@@ -122,7 +132,9 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 | `evento_auditoria` | Bitácora de login, cambios de clave, CRUD admin y emisión/rechazo |
 | `plan` / `suscripcion` | Planes (FREE/PRO/ENTERPRISE) y suscripción activa por empresa |
 | `api_key` | Claves de API por empresa (prefijo + hash SHA-256, propietario, último uso) |
-| `pago` | Intención de pago por pasarela (referencia única, monto, estado, URL de checkout) |
+| `pago` | Intención de pago por pasarela (referencia única, monto, estado, URL de checkout y `metodo`) |
+| `integracion_config` | Configuración por empresa/proveedor (credenciales cifradas, estado, hash y prefijo del token de webhook) |
+| `integracion_evento` | Eventos de sincronización/webhook con `external_id` único, intentos y próximo intento |
 
 **Estados de `medio_magnetico`:** `BORRADOR` → `CARGADO` → `VALIDADO` | `VALIDADO_CON_ERRORES` → `XML_GENERADO` → `PRESENTADO`. Solo se permite `PRESENTADO` desde `VALIDADO`/`VALIDADO_CON_ERRORES`/`XML_GENERADO`.
 
@@ -269,6 +281,18 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | POST | `/api/empresas/{empresaId}/pagos/{referencia}/reconciliar` | Consulta la pasarela y aplica el estado real del pago |
 | POST | `/api/pagos/webhook/{proveedor}` | Webhook público de la pasarela (`SIMULADO`/`WOMPI`/`MERCADOPAGO`) |
 
+### Integraciones
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/empresas/{empresaId}/integraciones` | Catálogo de proveedores + estado/configuración de la empresa |
+| PUT | `/api/empresas/{empresaId}/integraciones/{proveedor}` | Guarda `{activo, credenciales, configuracion}`; devuelve el token de webhook **una sola vez** |
+| POST | `/api/empresas/{empresaId}/integraciones/{proveedor}/probar` | Prueba de conexión del adaptador |
+| POST | `/api/empresas/{empresaId}/integraciones/{proveedor}/sincronizar` | Sincroniza `{tipo: CLIENTE\|PRODUCTO\|FACTURA, datos}` |
+| GET | `/api/empresas/{empresaId}/integraciones/eventos` | Últimos 50 eventos (estado, intentos, próximo intento, error) |
+| POST | `/api/empresas/{empresaId}/integraciones/eventos/{eventoId}/reintentar` | Fuerza el despacho de un evento |
+| POST | `/api/integraciones/webhook/{proveedor}/{token}` | Webhook público; cabeceras `X-Integracion-Firma` y `X-Integracion-Timestamp` (ver §13) |
+
 ### Administración (rol ADMIN)
 
 | Método | Ruta | Descripción |
@@ -286,7 +310,7 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | GET/POST/DELETE | `/api/admin/calendario` | Calendario DIAN |
 | GET | `/actuator/health` · `/actuator/health/liveness` · `/actuator/health/readiness` | Health checks (sin auth) |
 
-**Seguridad:** salvo `/api/auth/**`, `/api/pagos/webhook/**`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>` (o `X-API-Key`). `/api/admin/**` exige además `ROLE_ADMIN`. Los recursos por empresa se filtran con `AutorizacionEmpresa` (403 si no corresponde). CORS configurable con `CORS_ORIGINS` (default `localhost:5173`, `localhost:4173`).
+**Seguridad:** salvo `/api/auth/**`, `/api/pagos/webhook/**`, `/api/integraciones/webhook/**`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>` (o `X-API-Key`). `/api/admin/**` exige además `ROLE_ADMIN`. Los recursos por empresa se filtran con `AutorizacionEmpresa` (403 si no corresponde). CORS configurable con `CORS_ORIGINS` (default `localhost:5173`, `localhost:4173`).
 
 **Respuestas de error** (`GlobalExceptionHandler`): `400` argumentos inválidos, `403` acceso denegado, `409` estado inconsistente, `404` no encontrado, JSON limpio.
 
@@ -307,9 +331,10 @@ MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn clean package
 
 # Frontend (pnpm — NO usar npm)
 cd frontend
-pnpm run lint    # ESLint (0 warnings)
-pnpm run test    # Vitest
-pnpm run build   # tsc -b + vite build
+pnpm run lint       # ESLint (0 errores, 0 warnings)
+pnpm run test       # Vitest
+pnpm run build      # tsc -b + vite build
+pnpm run test:e2e   # Playwright (requiere backend + preview)
 
 # Regenerar los Excel de prueba (desde backend/)
 mvn -q dependency:copy-dependencies -DincludeScope=runtime
@@ -347,6 +372,9 @@ Guía completa en `docs/DEPLOY-FREE.md`:
 - **BD:** Supabase free vía **Session pooler (IPv4)**; Flyway con `baseline-on-migrate`.
 
 El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merge a `main` (ver §11).
+En Render se recomienda un keep-alive externo (UptimeRobot o cron-job.org) que consulte
+`/actuator/health` cada 5–15 min; es una mitigación del sleep del plan free, **no un SLA**
+(detalles en `docs/DEPLOY-FREE.md`).
 
 ## 10. Variables de entorno
 
@@ -376,7 +404,10 @@ El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merg
 | `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_BASE_URL` / `MERCADOPAGO_BACK_URL` | — / `https://api.mercadopago.com` / — | pasarela MercadoPago (inactiva sin credenciales) |
 | `MERCADOPAGO_WEBHOOK_SECRET` | — | secreto de firmas `x-signature` (si se define, se valida `id/request-id/ts` con HMAC-SHA256 y frescura) |
 | `PAGOS_WEBHOOK_TOLERANCE_SECONDS` | `300` | ventana máxima de antigüedad aceptada en webhooks |
-| `PAGOS_EXIGIR_FIRMA_WEBHOOK` | `false` | si `true`, rechaza webhooks sin secreto cuando la pasarela está configurada |
+| `PAGOS_EXIGIR_FIRMA_WEBHOOK` | `false` | si `true`, rechaza webhooks sin secreto cuando la pasarela está configurada (**`true` en Render**, fail-closed) |
+| `INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK` | `false` | si `true`, exige `webhookSecret` y firma HMAC válida en cada proveedor (**`true` en Render**) |
+| `INTEGRACIONES_CONNECT_TIMEOUT_MS` / `INTEGRACIONES_READ_TIMEOUT_MS` | `5000` / `15000` | timeouts de conexión/lectura de los adaptadores de integraciones |
+| `INTEGRACIONES_REINTENTOS_MS` | `60000` | intervalo del barrido de eventos `PENDIENTES` |
 | `WOMPI_API_TOKEN` / `WOMPI_API_URL` | — / `https://api.wompi.co` | consulta y reconciliación de pagos Wompi |
 | `PAC_CONNECT_TIMEOUT_MS` / `PAC_READ_TIMEOUT_MS` | `5000` / `30000` | timeouts del adaptador PAC REST |
 | `DIAN_URL_HABILITACION` / `DIAN_URL_PRODUCCION` | endpoints oficiales DIAN | SOAP `SendBillSync` |
@@ -414,8 +445,8 @@ export JAVA_HOME="C:/Users/hbarb/AppData/Local/jdk17"
 export PATH="$JAVA_HOME/bin:$PATH"
 cd backend && MAVEN_OPTS="-Dfile.encoding=UTF-8" mvn clean package
 
-# Frontend con tests
-cd frontend && pnpm run lint && pnpm run test && pnpm run build
+# Frontend con tests (pnpm)
+cd frontend && pnpm run lint && pnpm run test && pnpm run build && pnpm run test:e2e
 ```
 
 ### Smoke test manual
@@ -463,3 +494,63 @@ curl -s http://localhost:8080/actuator/health
 Para el flujo 1002 end-to-end: crear una empresa nueva por admin, luego cargar + validar + generar XML; el generador XML 1002 valida contra `medio-magnetico-1002.xsd`.
 
 Ejemplos de XML de referencia (golden): `docs/ejemplos/medio-magnetico-1001-golden.xml`, `medio-magnetico-1002-golden.xml`, `medio-magnetico-1001-ejemplo.xml` (con errores).
+
+## 13. Integraciones y pagos
+
+### 13.1 Catálogo de integraciones
+
+Los proveedores se identifican por `ProveedorIntegracion` (slug = nombre en minúsculas con `_` → `-`).
+Las credenciales se cargan **por empresa** en `/api/empresas/{empresaId}/integraciones` y se cifran en
+`integracion_config` con `CRYPTO_KEY`. **No son variables de entorno** y nunca van en `render.yaml`.
+Plantilla con valores vacíos:
+
+| Proveedor | Slug | Claves de credenciales (placeholders vacíos) | Referencia |
+|---|---|---|---|
+| SIIGO | `siigo` | `username=` `accessKey=` `url=` | — |
+| ALEGRA | `alegra` | `email=` `apiToken=` | — |
+| ODOO | `odoo` | `url=` `db=` `username=` `password=` `webhookSecret=` | — |
+| WORLD_OFFICE | `world-office` | `apiToken=` `username=` `password=` `webhookSecret=` | <https://developer.worldoffice.cloud/> |
+| HELISA | `helisa` | `usuario=` `clave=` `url=` `sign=` `empresa=` `webhookSecret=` | <https://helisa.com/api/> |
+| SHOPIFY | `shopify` | `shop=` `accessToken=` `webhookSecret=` | — |
+| WOOCOMMERCE | `woocommerce` | `url=` `consumerKey=` `consumerSecret=` `webhookSecret=` | — |
+| SAP_BUSINESS_ONE | `sap-business-one` | `url=` `companyDB=` `username=` `password=` | — |
+| DYNAMICS_365 | `dynamics-365` | `url=` `tenantId=` `clientId=` `clientSecret=` | — |
+| NETSUITE | `netsuite` | `accountId=` `consumerKey=` `consumerSecret=` `tokenId=` `tokenSecret=` | — |
+
+Cada adaptador declara sus capacidades (`SYNC_CLIENTES`, `SYNC_PRODUCTOS`, `EMITIR_FACTURA`,
+`CONSULTAR_ESTADO`, `REGISTRAR_PAGO`, `RECIBIR_WEBHOOK`); el panel muestra solo las soportadas.
+`RegistroIntegraciones` las descubre automáticamente como beans Spring.
+
+### 13.2 Webhook de integraciones
+
+`POST /api/integraciones/webhook/{proveedor}/{token}` (público; `MediaType.ALL_VALUE`).
+
+- `{token}` es de un solo uso por configuración: se genera al guardar (32 bytes aleatorios en
+  Base64URL), se entrega **una sola vez** en la respuesta y se persiste solo como hash SHA-256 +
+  prefijo de 8 caracteres. No hay recuperación: guárdalo o guarda la configuración de nuevo para
+  rotarlo. Los reenvíos del mismo evento se absorben por idempotencia, no por reutilizar el token.
+- Cabeceras obligatorias: `X-Integracion-Firma` y `X-Integracion-Timestamp`.
+- Firma: `HMAC-SHA256(webhookSecret, timestamp + "." + body)` en hexadecimal minúsculo. El
+  `timestamp` acepta epoch segundos o `Instant` ISO-8601 con tolerancia de **300 s**.
+- Con `INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK=true`, sin `webhookSecret` o con firma inválida el evento
+  se rechaza con `401` (**fail-closed**). En Render debe quedar en `true`.
+- Idempotencia: `sha256(proveedor + "|" + empresaId + "|" + payload)` más la restricción única
+  `(empresa_id, proveedor, external_id, tipo)`; un reenvío devuelve el evento ya registrado.
+- Despacho: `ServicioIntegraciones.procesarPendientes()` corre cada `INTEGRACIONES_REINTENTOS_MS`
+  (default 60 s) y reintento con backoff **1→5→15→60→240 min (máx. 5 intentos)**. El panel permite
+  reintentar manualmente; tras el quinto fallo el evento queda en `ERROR`.
+
+### 13.3 Métodos de pago
+
+| Método | Pasarela | Observaciones |
+|---|---|---|
+| `CARD` | Wompi | Web Checkout; los datos de tarjeta los captura la pasarela |
+| `NEQUI` | Wompi | Requiere celular de 10 dígitos |
+| `PSE` | Wompi | Requiere entidad, tipo de persona, documento y datos del pagador |
+| `BREB_QR` | Wompi | **QR dinámico generado por el PSP**; no es conexión directa DICE/MOL |
+| `DAVIPLATA` | — | Próximamente (`IllegalStateException` en la pasarela) |
+
+`SIMULADO` aprueba al instante y `MERCADOPAGO` mantiene su flujo propio; el selector de la UI
+ofrece `CARD`/`NEQUI`/`PSE`/`BREB_QR`. Los webhooks de pago usan
+`POST /api/pagos/webhook/{proveedor}` y, con `PAGOS_EXIGIR_FIRMA_WEBHOOK=true`, una pasarela
+configurada sin secreto de firma rechaza el evento (fail-closed).
