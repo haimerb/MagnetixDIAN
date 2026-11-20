@@ -1,6 +1,7 @@
 package com.magnetixdian.application;
 
 import com.magnetixdian.domain.pago.CheckoutPago;
+import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
@@ -57,10 +58,43 @@ public class ServicioPagos {
 
     @Transactional(readOnly = true)
     public PagoDto obtener(Long empresaId, String referencia) {
-        PagoJpa pago = pagoRepo.findByReferencia(referencia)
+        return aDto(buscar(empresaId, referencia));
+    }
+
+    @Transactional
+    public PagoDto reconciliar(Long empresaId, String referencia) {
+        PagoJpa pago = buscar(empresaId, referencia);
+        if (!"PENDIENTE".equalsIgnoreCase(pago.getEstado())) {
+            return aDto(pago);
+        }
+        ConsultorPagoRemoto consultor = pasarelas.consultor(pago.getProveedor());
+        if (!consultor.configurado()) {
+            throw new IllegalStateException("La pasarela " + pago.getProveedor()
+                    + " no está configurada para consultar pagos.");
+        }
+        EventoPago evento = consultor.consultar(referencia)
+                .orElseThrow(() -> new IllegalStateException("La pasarela aún no registra este pago."));
+        if (evento.monto() == null || evento.monto().compareTo(pago.getMonto()) != 0) {
+            throw new IllegalStateException("El monto reportado por la pasarela no coincide con el pago.");
+        }
+        if (evento.aprobado()) {
+            aplicarPlan(pago);
+        } else if ("RECHAZADO".equalsIgnoreCase(evento.estado())) {
+            pago.setEstado("RECHAZADO");
+        } else {
+            return aDto(pago);
+        }
+        pago.setUpdatedAt(OffsetDateTime.now());
+        pagoRepo.save(pago);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "PAGO_RECONCILIADO", "pago", pago.getId(),
+                pago.getProveedor() + " " + evento.estado());
+        return aDto(pago);
+    }
+
+    private PagoJpa buscar(Long empresaId, String referencia) {
+        return pagoRepo.findByReferencia(referencia)
                 .filter(p -> p.getEmpresa().getId().equals(empresaId))
                 .orElseThrow(() -> new IllegalArgumentException("Pago no encontrado"));
-        return aDto(pago);
     }
 
     @Transactional
@@ -111,6 +145,11 @@ public class ServicioPagos {
         if (pago == null) {
             return;
         }
+        if (evento.monto() == null || evento.monto().compareTo(pago.getMonto()) != 0) {
+            auditoria.registrar(AuditoriaService.usuarioActual(), "PAGO_RECHAZADO_MONTO", "pago", pago.getId(),
+                    evento.monto() + " != " + pago.getMonto());
+            return;
+        }
         if (evento.aprobado() && !"APROBADO".equals(pago.getEstado())) {
             aplicarPlan(pago);
         } else if ("RECHAZADO".equals(evento.estado())) {
@@ -118,6 +157,8 @@ public class ServicioPagos {
         }
         pago.setUpdatedAt(OffsetDateTime.now());
         pagoRepo.save(pago);
+        auditoria.registrar(AuditoriaService.usuarioActual(), "PAGO_WEBHOOK", "pago", pago.getId(),
+                proveedor + " " + evento.estado());
     }
 
     private void aplicarPlan(PagoJpa pago) {
