@@ -64,3 +64,23 @@ services:
         value: https://magnetixdian.hbarbetti-ing.workers.dev/app/suscripcion
       - key: MERCADOPAGO_WEBHOOK_SECRET
         sync: false
+      - key: PAGOS_WEBHOOK_TOLERANCE_SECONDS
+        value: "300"
+      - key: PAGOS_EXIGIR_FIRMA_WEBHOOK
+        value: "true"
+      - key: WOMPI_API_TOKEN
+        sync: false
+      - key: WOMPI_API_URL
+        value: https://api.wompi.co
+      - key: PAC_CONNECT_TIMEOUT_MS
+        value: "5000"
+      - key: PAC_READ_TIMEOUT_MS
+        value: "30000"
+      - key: DIAN_URL_HABILITACION
+        value: https://vpfe-hab.dian.gov.co/WcfDianCustomerServices.svc
+      - key: DIAN_URL_PRODUCCION
+        value: https://vpfe.dian.gov.co/WcfDianCustomerServices.svc
+      - key: DIAN_CONNECT_TIMEOUT_MS
+        value: "30000"
+      - key: DIAN_REQUEST_TIMEOUT_MS
+        value: "60000"

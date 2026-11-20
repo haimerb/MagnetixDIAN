@@ -121,8 +121,17 @@ class ServicioRegistroTest {
         verify(empresaRepo, never()).save(any());
     }
 
+    @Test
+    void registroRechazaHoneypot() {
+        RegistroEmpresaRequest request = new RegistroEmpresaRequest("90012345678", "Empresa Prueba SAS",
+                "Cliente Uno", "cliente1@ejemplo.com", "Cliente1", "clave1234", true, "https://spam.example");
+
+        assertThrows(IllegalArgumentException.class, () -> servicio.registrar(request));
+        verify(empresaRepo, never()).save(any());
+    }
+
     private static RegistroEmpresaRequest solicitud(String nit, boolean aceptaTerminos) {
         return new RegistroEmpresaRequest(nit, "Empresa Prueba SAS", "Cliente Uno",
-                "cliente1@ejemplo.com", "Cliente1", "clave1234", aceptaTerminos);
+                "cliente1@ejemplo.com", "Cliente1", "clave1234", aceptaTerminos, "");
     }
 }

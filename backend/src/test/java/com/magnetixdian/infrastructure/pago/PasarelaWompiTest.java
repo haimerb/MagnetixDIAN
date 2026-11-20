@@ -7,6 +7,10 @@ import com.magnetixdian.domain.pago.SolicitudPago;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,12 +24,13 @@ class PasarelaWompiTest {
 
     private PasarelaWompi pasarela(String eventsSecret) {
         return new PasarelaWompi("pub_test", "integrity_test", eventsSecret,
-                "https://checkout.wompi.co/p/", mapper);
+                "https://checkout.wompi.co/p/", "", "https://api.wompi.co", 300, false, mapper);
     }
 
     @Test
     void sinCredencialesNoEstaConfigurada() {
-        PasarelaWompi sinClaves = new PasarelaWompi("", "", "", "https://checkout.wompi.co/p/", mapper);
+        PasarelaWompi sinClaves = new PasarelaWompi("", "", "", "https://checkout.wompi.co/p/",
+                "", "https://api.wompi.co", 300, false, mapper);
         assertFalse(sinClaves.configurada());
         assertTrue(pasarela("").configurada());
     }
@@ -68,5 +73,42 @@ class PasarelaWompiTest {
                 }
                 """;
         assertTrue(pasarela("events_secret").procesarWebhook(payload, Map.of()).isEmpty());
+    }
+
+    @Test
+    void webhookConChecksumValidoSeNormaliza() {
+        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        String checksum = sha256("WOMPI-123APPROVED" + timestamp + "events_secret");
+        String payload = """
+                {
+                  "data": { "transaction": { "reference": "WOMPI-123", "status": "APPROVED", "amount_in_cents": 9900000 } },
+                  "timestamp": %s,
+                  "signature": { "properties": ["transaction.reference", "transaction.status"], "checksum": "%s" }
+                }
+                """.formatted(timestamp, checksum);
+
+        Optional<EventoPago> evento = pasarela("events_secret").procesarWebhook(payload, Map.of());
+        assertTrue(evento.isPresent());
+        assertEquals("APROBADO", evento.get().estado());
+    }
+
+    @Test
+    void webhookSinSecretoSeIgnoraCuandoLaFirmaEsObligatoria() {
+        var pasarela = new PasarelaWompi("pub_test", "integrity_test", "", "https://checkout.wompi.co/p/",
+                "", "https://api.wompi.co", 300, true, mapper);
+        String payload = """
+                {"data":{"transaction":{"reference":"WOMPI-123","status":"APPROVED","amount_in_cents":100}}}
+                """;
+
+        assertTrue(pasarela.procesarWebhook(payload, Map.of()).isEmpty());
+    }
+
+    private static String sha256(String valor) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(valor.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

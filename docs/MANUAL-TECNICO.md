@@ -191,7 +191,8 @@ Límite de reporte: 3 UVT × 49.799 (2025) = **149.397 COP**.
 - **CUFE/CUDE:** `CufeCalculator` (SHA-384) sobre la cadena DIAN; `QrUrlGenerator` arma la URL del QR.
 - **UBL 2.1:** `GeneradorUblFactura` + `GeneradorAttachedDocument` + `GeneradorApplicationResponse`.
 - **Firma:** `ServicioFirma` elige `FirmadorXades` si la empresa tiene certificado, o `FirmadorNoOp` en caso contrario. XAdES-EPES enveloped con PKCS#12 (SHA-256, política de firma DIAN v2).
-- **Transmisión:** `ServicioTransmision` usa el canal configurado (`domain/transmision/CanalTransmision`): `CanalSimulado` (default), PAC REST (`ClientePac`) o DIAN SOAP (`SendBillSync`, `ClienteDianSoap`).
+- **Transmisión:** `ServicioTransmision` usa el canal configurado (`domain/transmision/CanalTransmision`): `CanalSimulado` (default), PAC REST (`ClientePac`, JSON con Bearer token, `Idempotency-Key` y timeouts configurables) o DIAN SOAP (`SendBillSync`, `ClienteDianSoap`, firma WS-Security X.509 con Santuario y timeouts configurables).
+- **Configuración FE:** `PUT /api/facturacion/config/{empresaId}` valida y audita los cambios; la carga de certificados acepta solo PKCS#12 `.p12`/`.pfx` de hasta 1 MB, verifica la clave privada y registra `CERTIFICADO_FE_ACTUALIZADO`.
 - **PDF:** `GeneradorPdfFactura` (OpenPDF), descargable con el XML.
 - **Notas crédito/débito:** los tipos 91/92 referencian el documento original mediante `cufe_referencia` / `numero_referencia`, reflejados en el UBL.
 - **Eventos DIAN (RADIAN):** los eventos 030-034 (acuse, recibo, reclamo, aceptación) se registran sobre la factura y se persisten en `factura_evento`. El evento `ApplicationResponse` calcula su propio **CUDE** (SHA-384 sobre `Num_DE + Fec_Emi + Hor_Emi + NitFE + DocAdq + ResponseCode + ID + DocumentTypeCode + Software-PIN`, §11.5 del anexo FEV v1.9) y se genera vía `GeneradorApplicationResponse`.
@@ -265,6 +266,7 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | GET | `/api/empresas/{empresaId}/pagos` | Historial de pagos de suscripción |
 | GET | `/api/empresas/{empresaId}/pagos/{referencia}` | Estado actual de un pago (útil tras volver del checkout) |
 | POST | `/api/empresas/{empresaId}/pagos/checkout` | Inicia el pago `{planCodigo, proveedor}` → `{url, ...}` |
+| POST | `/api/empresas/{empresaId}/pagos/{referencia}/reconciliar` | Consulta la pasarela y aplica el estado real del pago |
 | POST | `/api/pagos/webhook/{proveedor}` | Webhook público de la pasarela (`SIMULADO`/`WOMPI`/`MERCADOPAGO`) |
 
 ### Administración (rol ADMIN)
@@ -372,7 +374,13 @@ El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merg
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | — | pasarela Wompi (inactiva sin credenciales) |
 | `WOMPI_CHECKOUT_URL` | `https://checkout.wompi.co/p/` | endpoint de checkout de Wompi |
 | `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_BASE_URL` / `MERCADOPAGO_BACK_URL` | — / `https://api.mercadopago.com` / — | pasarela MercadoPago (inactiva sin credenciales) |
-| `MERCADOPAGO_WEBHOOK_SECRET` | — | secreto de firmas `x-signature` (si se define, se valida `id/request-id/ts` con HMAC-SHA256) |
+| `MERCADOPAGO_WEBHOOK_SECRET` | — | secreto de firmas `x-signature` (si se define, se valida `id/request-id/ts` con HMAC-SHA256 y frescura) |
+| `PAGOS_WEBHOOK_TOLERANCE_SECONDS` | `300` | ventana máxima de antigüedad aceptada en webhooks |
+| `PAGOS_EXIGIR_FIRMA_WEBHOOK` | `false` | si `true`, rechaza webhooks sin secreto cuando la pasarela está configurada |
+| `WOMPI_API_TOKEN` / `WOMPI_API_URL` | — / `https://api.wompi.co` | consulta y reconciliación de pagos Wompi |
+| `PAC_CONNECT_TIMEOUT_MS` / `PAC_READ_TIMEOUT_MS` | `5000` / `30000` | timeouts del adaptador PAC REST |
+| `DIAN_URL_HABILITACION` / `DIAN_URL_PRODUCCION` | endpoints oficiales DIAN | SOAP `SendBillSync` |
+| `DIAN_CONNECT_TIMEOUT_MS` / `DIAN_REQUEST_TIMEOUT_MS` | `30000` / `60000` | timeouts de transmisión DIAN directa |
 | `VITE_API_BASE_URL` / `VITE_SENTRY_DSN` | — | frontend (build-time) |
 
 ## 11. Notificaciones, jobs y CI/CD

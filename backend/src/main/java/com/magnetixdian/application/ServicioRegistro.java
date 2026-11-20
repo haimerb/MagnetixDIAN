@@ -40,6 +40,9 @@ public class ServicioRegistro {
 
     @Transactional
     public RegistroEmpresaResponse registrar(RegistroEmpresaRequest request) {
+        if (request.website() != null && !request.website().isBlank()) {
+            throw new IllegalArgumentException("No se pudo completar el registro.");
+        }
         if (!request.aceptaTerminos()) {
             throw new IllegalArgumentException("Debe aceptar los términos y condiciones.");
         }

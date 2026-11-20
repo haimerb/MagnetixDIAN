@@ -12,7 +12,7 @@ import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined'
 import SectionCard from '../ui/SectionCard'
 import EmptyState from '../ui/EmptyState'
 import EstadoChip from '../ui/EstadoChip'
-import { listarPagos, obtenerPago, type Pago } from '../../api/client'
+import { listarPagos, reconciliarPago, type Pago } from '../../api/client'
 
 function formatearMonto(pago: Pago) {
   return new Intl.NumberFormat('es-CO', {
@@ -30,7 +30,7 @@ export default function PagosPanel({ empresaId }: { empresaId: number }) {
   const actualizar = async (referencia: string) => {
     setActualizando(referencia)
     try {
-      const actualizado = await obtenerPago(empresaId, referencia)
+      const actualizado = await reconciliarPago(empresaId, referencia)
       setPagos((previos) => previos.map((pago) => (pago.id === actualizado.id ? actualizado : pago)))
     } catch {
       setError('No se pudo actualizar el estado del pago.')

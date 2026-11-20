@@ -21,6 +21,7 @@ export default function RegistroPage() {
     email: '',
     username: '',
     password: '',
+    website: '',
   })
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -127,6 +128,15 @@ export default function RegistroPage() {
             helperText="Mínimo 8 caracteres, con letras y números."
             required
             fullWidth
+          />
+          <TextField
+            label="Sitio web"
+            value={form.website}
+            onChange={actualizar('website')}
+            autoComplete="off"
+            tabIndex={-1}
+            aria-hidden
+            sx={{ display: 'none' }}
           />
           <FormControlLabel
             control={

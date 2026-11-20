@@ -82,5 +82,9 @@ Checks previos a commit: backend `mvn clean package`; frontend `pnpm run lint` (
 - [x] Planes y suscripciones con límites de uso.
 - [x] Claves de API por empresa (`X-API-Key`).
 - [x] Pasarelas de pago (simulada / Wompi / MercadoPago) con webhooks y checkout.
+- [x] Landing pública, registro self-service y onboarding al plan gratuito.
+- [x] PAC REST configurable y transmisión DIAN directa con firma WS-Security X.509.
+- [x] Webhooks con verificación de firma, frescura y reconciliación de pagos.
+- [x] Configuración FE validada con certificados PKCS#12 y auditoría de cambios.
 
 Ver issues del repo para el backlog detallado.

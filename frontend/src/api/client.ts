@@ -497,6 +497,7 @@ export type RegistroEmpresaRequest = {
   username: string
   password: string
   aceptaTerminos: boolean
+  website?: string
 }
 
 export type RegistroEmpresaResponse = {
@@ -621,6 +622,15 @@ export async function listarPagos(empresaId: number) {
 
 export async function obtenerPago(empresaId: number, referencia: string) {
   const { data } = await api.get<Pago>(`/empresas/${empresaId}/pagos/${encodeURIComponent(referencia)}`)
+  return data
+}
+
+export async function reconciliarPago(empresaId: number, referencia: string) {
+  const { data } = await api.post<Pago>(
+    `/empresas/${empresaId}/pagos/${encodeURIComponent(referencia)}/reconciliar`,
+    undefined,
+    { skipGlobalError: true },
+  )
   return data
 }
 

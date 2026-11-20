@@ -111,9 +111,15 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | Render (env) | credenciales SMTP; `MAIL_USERNAME` también se usa como `From` |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | Render (env) | credenciales Wompi (vacías → pasarela inerte) |
 | `WOMPI_CHECKOUT_URL` | Render (env) | default `https://checkout.wompi.co/p/` |
+| `WOMPI_API_TOKEN` / `WOMPI_API_URL` | Render (env) | token privado para consultar/reconciliar pagos; default API `https://api.wompi.co` |
 | `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_WEBHOOK_SECRET` | Render (env) | credenciales MercadoPago (vacías → pasarela inerte) |
 | `MERCADOPAGO_BASE_URL` | Render (env) | default `https://api.mercadopago.com` |
 | `MERCADOPAGO_BACK_URL` | Render (env) | retorno al frontend, default `/app/suscripcion` |
+| `PAGOS_WEBHOOK_TOLERANCE_SECONDS` | Render (env) | ventana de frescura de firmas (default `300`) |
+| `PAGOS_EXIGIR_FIRMA_WEBHOOK` | Render (env) | rechaza webhooks sin secreto cuando la pasarela está configurada (`true` en prod) |
+| `PAC_CONNECT_TIMEOUT_MS` / `PAC_READ_TIMEOUT_MS` | Render (env) | timeouts del adaptador PAC REST (default `5000` / `30000`) |
+| `DIAN_URL_HABILITACION` / `DIAN_URL_PRODUCCION` | Render (env) | endpoints SOAP DIAN; por defecto los oficiales de habilitación y producción |
+| `DIAN_CONNECT_TIMEOUT_MS` / `DIAN_REQUEST_TIMEOUT_MS` | Render (env) | timeouts de transmisión DIAN directa (default `30000` / `60000`) |
 | `SENTRY_DSN` | Render / Cloudflare | opcional; activa observabilidad (backend `SENTRY_DSN`, frontend `VITE_SENTRY_DSN`) |
 
 El archivo `.env.example` de la raíz lista todas las variables de backend y frontend.

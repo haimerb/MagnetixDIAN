@@ -44,7 +44,8 @@ class ServicioPagosTest {
         AuditoriaService auditoria = mock(AuditoriaService.class);
 
         PasarelaPago simulada = new PasarelaSimulada();
-        PasarelaPago wompi = new PasarelaWompi("", "", "", "https://checkout.wompi.co/p/", new ObjectMapper());
+        PasarelaPago wompi = new PasarelaWompi("", "", "", "https://checkout.wompi.co/p/",
+                "", "https://api.wompi.co", 300, false, new ObjectMapper());
         PasarelasPago pasarelas = new PasarelasPago(List.of(simulada, wompi));
 
         servicio = new ServicioPagos(pagoRepo, planRepo, empresaRepo, pasarelas, suscripciones, auditoria,
@@ -129,6 +130,22 @@ class ServicioPagosTest {
     @Test
     void webhookDeSimuladaNoHaceNada() {
         servicio.procesarWebhook("SIMULADO", "{}", java.util.Map.of());
+        verify(pagoRepo, never()).save(any());
+    }
+
+    @Test
+    void webhookConMontoDistintoNoApruebaElPago() {
+        PagoJpa pago = mock(PagoJpa.class);
+        when(pago.getId()).thenReturn(5L);
+        when(pago.getMonto()).thenReturn(new BigDecimal("99000"));
+        when(pagoRepo.findByReferencia("WOMPI-123")).thenReturn(Optional.of(pago));
+        String payload = """
+                {"data":{"transaction":{"reference":"WOMPI-123","status":"APPROVED","amount_in_cents":1000}}}
+                """;
+
+        servicio.procesarWebhook("WOMPI", payload, java.util.Map.of());
+
+        verify(suscripciones, never()).cambiarPlan(any(), any(), any());
         verify(pagoRepo, never()).save(any());
     }
 }

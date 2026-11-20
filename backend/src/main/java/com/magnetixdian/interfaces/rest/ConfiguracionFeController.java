@@ -25,6 +25,8 @@ import java.io.IOException;
 @RequestMapping("/api/facturacion/config")
 public class ConfiguracionFeController {
 
+    private static final long TAMANO_MAXIMO_CERTIFICADO = 1024L * 1024L;
+
     private final ServicioConfigFe servicio;
     private final AutorizacionEmpresa autorizacion;
 
@@ -48,14 +50,23 @@ public class ConfiguracionFeController {
 
     @PostMapping(value = "/{empresaId}/certificado", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ConfigFeDto> subirCertificado(@PathVariable Long empresaId,
-                                                        @RequestParam("archivo") MultipartFile archivo,
-                                                        @RequestParam(value = "password", required = false) String password,
-                                                        Authentication authentication) throws IOException {
+                                                         @RequestParam("archivo") MultipartFile archivo,
+                                                         @RequestParam(value = "password", required = false) String password,
+                                                         Authentication authentication) throws IOException {
         autorizacion.verificar(empresaId, authentication);
         String nombre = archivo.getOriginalFilename();
         if (nombre == null || !(nombre.toLowerCase().endsWith(".p12") || nombre.toLowerCase().endsWith(".pfx"))) {
             throw new IllegalArgumentException("El certificado debe ser un archivo .p12 o .pfx");
         }
-        return ResponseEntity.ok(servicio.guardarCertificado(empresaId, nombre, archivo.getBytes(), password));
+        if (archivo.isEmpty() || archivo.getSize() > TAMANO_MAXIMO_CERTIFICADO) {
+            throw new IllegalArgumentException("El certificado debe tener entre 1 byte y 1 MB.");
+        }
+        String nombreSeguro = nombre.replace('\\', '/');
+        nombreSeguro = nombreSeguro.substring(nombreSeguro.lastIndexOf('/') + 1);
+        if (nombreSeguro.isBlank()) {
+            throw new IllegalArgumentException("El nombre del certificado no es válido.");
+        }
+        return ResponseEntity.ok(servicio.guardarCertificado(empresaId, nombreSeguro, archivo.getBytes(), password));
+
     }
 }

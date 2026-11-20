@@ -60,6 +60,7 @@ describe('RegistroPage', () => {
         username: 'cliente1',
         password: 'clave1234',
         aceptaTerminos: true,
+        website: '',
       }),
     )
   })

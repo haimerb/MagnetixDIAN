@@ -3,6 +3,7 @@ package com.magnetixdian.infrastructure.pago;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.magnetixdian.domain.pago.CheckoutPago;
+import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
@@ -16,11 +17,14 @@ import org.springframework.web.client.RestClient;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,7 +33,7 @@ import java.util.Optional;
  * Crea una preferencia y, ante una notificación, consulta el pago asociado.
  */
 @Component
-public class PasarelaMercadoPago implements PasarelaPago {
+public class PasarelaMercadoPago implements PasarelaPago, ConsultorPagoRemoto {
 
     private static final Logger log = LoggerFactory.getLogger(PasarelaMercadoPago.class);
     public static final String NOMBRE = "MERCADOPAGO";
@@ -38,6 +42,8 @@ public class PasarelaMercadoPago implements PasarelaPago {
     private final String webhookSecret;
     private final String baseUrl;
     private final String backUrl;
+    private final long webhookToleranceSeconds;
+    private final boolean exigirFirmaWebhook;
     private final ObjectMapper mapper;
     private final RestClient http;
 
@@ -45,11 +51,15 @@ public class PasarelaMercadoPago implements PasarelaPago {
                                @Value("${magnetixdian.pagos.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
                                @Value("${magnetixdian.pagos.mercadopago.back-url:}") String backUrl,
                                @Value("${magnetixdian.pagos.mercadopago.webhook-secret:}") String webhookSecret,
+                               @Value("${magnetixdian.pagos.webhook-tolerance-seconds:300}") long webhookToleranceSeconds,
+                               @Value("${magnetixdian.pagos.exigir-firma-webhook:false}") boolean exigirFirmaWebhook,
                                ObjectMapper mapper) {
         this.accessToken = accessToken;
         this.webhookSecret = webhookSecret;
         this.baseUrl = baseUrl;
         this.backUrl = backUrl;
+        this.webhookToleranceSeconds = webhookToleranceSeconds;
+        this.exigirFirmaWebhook = exigirFirmaWebhook;
         this.mapper = mapper;
         this.http = RestClient.builder().baseUrl(baseUrl).build();
     }
@@ -101,21 +111,21 @@ public class PasarelaMercadoPago implements PasarelaPago {
     public Optional<EventoPago> procesarWebhook(String payload, Map<String, String> headers) {
         try {
             JsonNode raiz = mapper.readTree(payload);
-            String dataId = cabecera(headers, "data.id");
-            if (dataId == null) {
-                dataId = raiz.path("data").path("id").asText(null);
+            String pagoId = raiz.path("data").path("id").asText(null);
+            if (pagoId == null || pagoId.isBlank()) {
+                return Optional.empty();
+            }
+            if (configurada() && exigirFirmaWebhook && (webhookSecret == null || webhookSecret.isBlank())) {
+                log.warn("Notificación de MercadoPago sin secreto de firma; se ignora.");
+                return Optional.empty();
             }
             if (!firmaValida(cabecera(headers, "x-signature"), cabecera(headers, "x-request-id"),
-                    dataId, webhookSecret)) {
+                    pagoId, webhookSecret, webhookToleranceSeconds)) {
                 log.warn("Notificación de MercadoPago con firma inválida; se ignora.");
                 return Optional.empty();
             }
             String tipo = raiz.path("type").asText(raiz.path("topic").asText(""));
             if (!"payment".equals(tipo)) {
-                return Optional.empty();
-            }
-            String pagoId = raiz.path("data").path("id").asText(null);
-            if (pagoId == null) {
                 return Optional.empty();
             }
             JsonNode pago = http.get()
@@ -139,6 +149,41 @@ public class PasarelaMercadoPago implements PasarelaPago {
         }
     }
 
+    @Override
+    public boolean configurado() {
+        return configurada();
+    }
+
+    @Override
+    public Optional<EventoPago> consultar(String referencia) {
+        if (!configurada() || referencia == null || referencia.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            String referenciaCodificada = URLEncoder.encode(referencia, StandardCharsets.UTF_8);
+            JsonNode respuesta = http.get()
+                    .uri("/v1/payments/search?external_reference=" + referenciaCodificada
+                            + "&sort=date_created&criteria=desc")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+            if (respuesta == null) {
+                return Optional.empty();
+            }
+            JsonNode resultados = respuesta.path("results");
+            if (!resultados.isArray() || resultados.isEmpty()) {
+                return Optional.empty();
+            }
+            JsonNode pago = resultados.get(0);
+            String estado = mapearEstado(pago.path("status").asText(""));
+            BigDecimal monto = pago.path("transaction_amount").decimalValue();
+            return Optional.of(new EventoPago(referencia, estado, monto));
+        } catch (Exception e) {
+            log.warn("No se pudo consultar el pago {} en MercadoPago: {}", referencia, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
     private static String cabecera(Map<String, String> headers, String nombre) {
         if (headers == null) {
             return null;
@@ -155,6 +200,11 @@ public class PasarelaMercadoPago implements PasarelaPago {
     }
 
     static boolean firmaValida(String xSignature, String xRequestId, String dataId, String secret) {
+        return firmaValida(xSignature, xRequestId, dataId, secret, 300);
+    }
+
+    static boolean firmaValida(String xSignature, String xRequestId, String dataId, String secret,
+                               long toleranciaSegundos) {
         if (secret == null || secret.isBlank()) {
             return true;
         }
@@ -169,28 +219,37 @@ public class PasarelaMercadoPago implements PasarelaPago {
                 continue;
             }
             String clave = par[0].trim();
-            if ("ts".equals(clave)) {
+            if (clave.equalsIgnoreCase("ts")) {
                 ts = par[1].trim();
-            } else if ("v1".equals(clave)) {
+            } else if (clave.equalsIgnoreCase("v1")) {
                 v1 = par[1].trim();
             }
         }
-        if (v1 == null || v1.isBlank()) {
+        if (ts == null || ts.isBlank() || v1 == null || v1.isBlank()) {
+            return false;
+        }
+        long marca;
+        try {
+            marca = Long.parseLong(ts);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        if (Math.abs(Instant.now().getEpochSecond() - marca) > Math.max(0, toleranciaSegundos)) {
             return false;
         }
         StringBuilder manifiesto = new StringBuilder("id:").append(dataId).append(';');
         if (xRequestId != null && !xRequestId.isBlank()) {
             manifiesto.append("request-id:").append(xRequestId).append(';');
         }
-        if (ts != null && !ts.isBlank()) {
-            manifiesto.append("ts:").append(ts).append(';');
-        }
+        manifiesto.append("ts:").append(ts).append(';');
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            String esperado = HexFormat.of().formatHex(mac.doFinal(manifiesto.toString().getBytes(StandardCharsets.UTF_8)));
-            return MessageDigest.isEqual(esperado.getBytes(StandardCharsets.UTF_8),
-                    v1.getBytes(StandardCharsets.UTF_8));
+            byte[] esperado = HexFormat.of().formatHex(
+                    mac.doFinal(manifiesto.toString().getBytes(StandardCharsets.UTF_8)))
+                    .getBytes(StandardCharsets.UTF_8);
+            byte[] recibido = v1.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
+            return MessageDigest.isEqual(esperado, recibido);
         } catch (Exception e) {
             return false;
         }
