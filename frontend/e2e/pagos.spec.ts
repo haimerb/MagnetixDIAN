@@ -6,7 +6,10 @@ test.describe('Pagos con pasarela simulada', () => {
     await loginAdmin(page)
     await page.goto('/app/suscripcion')
 
+    await expect(page.getByText('Planes disponibles')).toBeVisible()
+
     const botones = page.getByRole('button', { name: 'Cambiar a este plan' })
+    await botones.first().waitFor({ state: 'visible' })
     const total = await botones.count()
     let cambioRealizado = false
     for (let i = 0; i < total; i += 1) {
