@@ -25,3 +25,4 @@ frontend/e2e/.cache/
 # Entorno
 .env
 .env.*
+!.env.example

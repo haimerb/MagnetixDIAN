@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -19,8 +19,10 @@ const BENEFICIOS = [
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
-  const [username, setUsername] = useState('')
+  const estado = location.state as { registro?: boolean; username?: string } | null
+  const [username, setUsername] = useState(estado?.username ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -31,7 +33,7 @@ export default function LoginPage() {
     setCargando(true)
     try {
       await login(username, password)
-      navigate('/')
+      navigate('/app')
     } catch {
       setError('Credenciales inválidas. Verifique usuario y contraseña.')
     } finally {
@@ -118,6 +120,12 @@ export default function LoginPage() {
             Use sus credenciales habilitadas.
           </Typography>
 
+          {estado?.registro && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Cuenta creada correctamente. Ingrese para continuar.
+            </Alert>
+          )}
+
           <Box component="form" noValidate onSubmit={onSubmit} sx={{ display: 'grid', gap: 2 }}>
             <TextField
               label="Usuario"
@@ -146,9 +154,26 @@ export default function LoginPage() {
             </Link>
           </Box>
 
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
-            Usuario demo: admin / admin123
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 3, textAlign: 'center' }}>
+            ¿No tiene cuenta?{' '}
+            <Link component={RouterLink} to="/registro">
+              Crear cuenta gratis
+            </Link>
           </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
+            <Link component={RouterLink} to="/terminos">
+              Términos
+            </Link>{' '}
+            ·{' '}
+            <Link component={RouterLink} to="/privacidad">
+              Privacidad
+            </Link>
+          </Typography>
+          {import.meta.env.DEV && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, textAlign: 'center' }}>
+              Usuario demo: admin / admin123
+            </Typography>
+          )}
         </Paper>
       </Box>
     </Box>

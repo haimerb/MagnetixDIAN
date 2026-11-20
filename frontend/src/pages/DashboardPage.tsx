@@ -56,7 +56,7 @@ export default function DashboardPage() {
         title="Panel de reportes"
         subtitle="Resumen de los medios magnéticos cargados para la empresa activa."
         actions={
-          <Button variant="contained" onClick={() => navigate('/carga')}>
+          <Button variant="contained" onClick={() => navigate('/app/carga')}>
             Cargar datos
           </Button>
         }
@@ -145,7 +145,7 @@ export default function DashboardPage() {
             title="Sin reportes cargados"
             description="Aún no hay medios magnéticos para esta empresa. Cargue un archivo Excel para comenzar."
             action={
-              <Button variant="contained" onClick={() => navigate('/carga')}>
+              <Button variant="contained" onClick={() => navigate('/app/carga')}>
                 Cargar datos
               </Button>
             }
@@ -184,10 +184,10 @@ export default function DashboardPage() {
                 </Box>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <EstadoChip estado={m.estado} />
-                  <Button size="small" onClick={() => navigate(`/validacion/${m.id}`)}>
+                  <Button size="small" onClick={() => navigate(`/app/validacion/${m.id}`)}>
                     Validar
                   </Button>
-                  <Button size="small" onClick={() => navigate(`/reporte/${m.id}`)}>
+                  <Button size="small" onClick={() => navigate(`/app/reporte/${m.id}`)}>
                     Reporte
                   </Button>
                 </Stack>

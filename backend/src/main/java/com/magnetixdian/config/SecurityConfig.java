@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/me", "/api/auth/change-password").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/planes").permitAll()
                         .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/pagos/webhook/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()

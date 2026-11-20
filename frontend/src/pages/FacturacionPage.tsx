@@ -136,7 +136,7 @@ export default function FacturacionPage() {
             <Button
               variant="outlined"
               startIcon={<SettingsIcon />}
-              onClick={() => navigate('/facturacion/config')}
+              onClick={() => navigate('/app/facturacion/config')}
               disabled={cargandoEmpresa}
             >
               Configuración DIAN
@@ -221,14 +221,14 @@ export default function FacturacionPage() {
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault()
-                          navigate(`/facturacion/${f.id}`)
+                          navigate(`/app/facturacion/${f.id}`)
                         }
                       }}
                       sx={{
                         cursor: 'pointer',
                         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
                       }}
-                      onClick={() => navigate(`/facturacion/${f.id}`)}
+                      onClick={() => navigate(`/app/facturacion/${f.id}`)}
                     >
                       <TableCell sx={{ fontWeight: 600 }}>{f.numeroCompleto}</TableCell>
                       <TableCell>{f.tipoDocumento}</TableCell>
