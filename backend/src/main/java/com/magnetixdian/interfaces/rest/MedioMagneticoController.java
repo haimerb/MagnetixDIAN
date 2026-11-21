@@ -2,6 +2,8 @@ package com.magnetixdian.interfaces.rest;
 
 import com.magnetixdian.application.ServicioMedioMagnetico;
 import com.magnetixdian.application.ServicioMedioMagnetico.CargaResultado;
+import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
+import com.magnetixdian.interfaces.dto.FormatoExogenaDto;
 import com.magnetixdian.interfaces.dto.MedioMagneticoDto;
 import com.magnetixdian.interfaces.dto.TercerosResumenDto;
 import com.magnetixdian.interfaces.dto.ValidacionProcesoDto;
@@ -30,18 +32,29 @@ public class MedioMagneticoController {
 
     private final ServicioMedioMagnetico servicio;
     private final AutorizacionEmpresa autorizacion;
+    private final FormatoExogenaRegistry formatos;
 
-    public MedioMagneticoController(ServicioMedioMagnetico servicio, AutorizacionEmpresa autorizacion) {
+    public MedioMagneticoController(ServicioMedioMagnetico servicio, AutorizacionEmpresa autorizacion,
+                                    FormatoExogenaRegistry formatos) {
         this.servicio = servicio;
         this.autorizacion = autorizacion;
+        this.formatos = formatos;
     }
 
     private void verificarPorMedio(Long medioMagneticoId, Authentication authentication) {
         autorizacion.verificar(servicio.empresaDe(medioMagneticoId), authentication);
     }
 
+    @GetMapping("/formatos")
+    public List<FormatoExogenaDto> formatos() {
+        return formatos.todos().stream()
+                .map(f -> new FormatoExogenaDto(f.codigo(), f.descripcion(), f.estado(), f.activo(), f.encabezados()))
+                .toList();
+    }
+
     @GetMapping("/plantilla")
     public ResponseEntity<byte[]> plantilla(@RequestParam(defaultValue = "1001") String formato) throws java.io.IOException {
+        formatos.validarActivo(formato);
         byte[] contenido = servicio.generarPlantilla(formato);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=plantilla-" + formato + ".xlsx")
@@ -56,6 +69,7 @@ public class MedioMagneticoController {
                                                  @RequestParam MultipartFile archivo,
                                                  Authentication authentication) throws java.io.IOException {
         autorizacion.verificar(empresaId, authentication);
+        formatos.validarActivo(formato);
         return ResponseEntity.ok(servicio.cargarDesdeExcel(empresaId, formato, anioGravable, archivo));
     }
 

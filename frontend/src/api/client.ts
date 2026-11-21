@@ -140,6 +140,14 @@ export type CargaResultado = {
   registrosCargados: number
 }
 
+export type FormatoExogena = {
+  codigo: string
+  descripcion: string
+  estado: string
+  activo: boolean
+  encabezados: string[]
+}
+
 export type DetalleError = {
   linea: number | null
   campo: string | null
