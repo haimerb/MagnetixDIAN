@@ -23,6 +23,13 @@ describe('EstadoChip', () => {
     expect(screen.getByText('Aceptado')).toBeInTheDocument()
   })
 
+  it('muestra los estados del registro de formatos exógenos', () => {
+    renderChip('ACTIVO')
+    expect(screen.getByText('Activo')).toBeInTheDocument()
+    renderChip('PENDIENTE_XSD')
+    expect(screen.getByText('Pendiente de XSD')).toBeInTheDocument()
+  })
+
   it('usa el valor crudo cuando el estado es desconocido', () => {
     renderChip('DESCONOCIDO')
     expect(screen.getByText('DESCONOCIDO')).toBeInTheDocument()

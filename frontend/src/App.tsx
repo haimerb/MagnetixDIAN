@@ -25,6 +25,7 @@ const FacturaDetallePage = lazy(() => import('./pages/FacturaDetallePage'))
 const ConfigFePage = lazy(() => import('./pages/ConfigFePage'))
 const SuscripcionPage = lazy(() => import('./pages/SuscripcionPage'))
 const IntegracionesPage = lazy(() => import('./pages/IntegracionesPage'))
+const ImportacionAvanzadaPage = lazy(() => import('./pages/ImportacionAvanzadaPage'))
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -57,6 +58,7 @@ export default function App() {
             >
               <Route index element={<DashboardPage />} />
               <Route path="carga" element={<CargaPage />} />
+              <Route path="importacion-avanzada" element={<ImportacionAvanzadaPage />} />
               <Route path="validacion/:medioId?" element={<ValidacionPage />} />
               <Route path="reporte/:medioId?" element={<ReportePage />} />
               <Route path="guia" element={<GuiaMuiscaPage />} />
