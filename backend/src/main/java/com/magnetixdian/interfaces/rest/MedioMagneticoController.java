@@ -3,6 +3,7 @@ package com.magnetixdian.interfaces.rest;
 import com.magnetixdian.application.ServicioImportacionExogena;
 import com.magnetixdian.application.ServicioMedioMagnetico;
 import com.magnetixdian.application.ServicioMedioMagnetico.CargaResultado;
+import com.magnetixdian.application.ServicioValidacionDatosJson;
 import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
 import com.magnetixdian.interfaces.dto.FormatoExogenaDto;
 import com.magnetixdian.interfaces.dto.ImportacionMultiFormatoDto;
@@ -36,14 +37,17 @@ public class MedioMagneticoController {
     private final AutorizacionEmpresa autorizacion;
     private final FormatoExogenaRegistry formatos;
     private final ServicioImportacionExogena importacionExogena;
+    private final ServicioValidacionDatosJson validacionDatosJson;
 
     public MedioMagneticoController(ServicioMedioMagnetico servicio, AutorizacionEmpresa autorizacion,
                                     FormatoExogenaRegistry formatos,
-                                    ServicioImportacionExogena importacionExogena) {
+                                    ServicioImportacionExogena importacionExogena,
+                                    ServicioValidacionDatosJson validacionDatosJson) {
         this.servicio = servicio;
         this.autorizacion = autorizacion;
         this.formatos = formatos;
         this.importacionExogena = importacionExogena;
+        this.validacionDatosJson = validacionDatosJson;
     }
 
     private void verificarPorMedio(Long medioMagneticoId, Authentication authentication) {
@@ -95,6 +99,13 @@ public class MedioMagneticoController {
                                                         Authentication authentication) {
         verificarPorMedio(medioMagneticoId, authentication);
         return ResponseEntity.ok(servicio.validarDto(medioMagneticoId, anioGravable));
+    }
+
+    @PostMapping("/{medioMagneticoId}/validar-datos-json")
+    public ResponseEntity<ValidacionProcesoDto> validarDatosJson(@PathVariable Long medioMagneticoId,
+                                                                 Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
+        return ResponseEntity.ok(validacionDatosJson.validar(medioMagneticoId));
     }
 
     @GetMapping("/{medioMagneticoId}/reporte")

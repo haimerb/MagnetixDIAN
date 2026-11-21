@@ -17,8 +17,8 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
-import { importarMultiformato } from '../api/client'
-import type { ImportacionMultiFormato } from '../api/client'
+import { importarMultiformato, validarDatosJson } from '../api/client'
+import type { ImportacionMultiFormato, ValidacionEstructura } from '../api/client'
 import EstadoChip from '../components/ui/EstadoChip'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
@@ -31,6 +31,8 @@ export default function ImportacionAvanzadaPage() {
   const [cargando, setCargando] = useState(false)
   const [resultado, setResultado] = useState<ImportacionMultiFormato | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [validando, setValidando] = useState<number | null>(null)
+  const [validacion, setValidacion] = useState<ValidacionEstructura | null>(null)
 
   const anio = Number(anioGravable)
   const anioValido = Number.isInteger(anio) && anio >= 1900 && anio <= 2100
@@ -39,6 +41,7 @@ export default function ImportacionAvanzadaPage() {
     setArchivo(files[0] ?? null)
     setResultado(null)
     setError(null)
+    setValidacion(null)
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -58,6 +61,18 @@ export default function ImportacionAvanzadaPage() {
       setError('No se pudo analizar el workbook. Verifique que sea un Excel (.xlsx) válido.')
     } finally {
       setCargando(false)
+    }
+  }
+
+  const onValidar = async (medioId: number) => {
+    setValidando(medioId)
+    setError(null)
+    try {
+      setValidacion(await validarDatosJson(medioId))
+    } catch {
+      setError('No se pudo validar la estructura del registro persistido.')
+    } finally {
+      setValidando(null)
     }
   }
 
@@ -187,6 +202,7 @@ export default function ImportacionAvanzadaPage() {
                     <TableCell>Estado</TableCell>
                     <TableCell align="right">Filas</TableCell>
                     <TableCell align="center">Persistido</TableCell>
+                    <TableCell align="center">Estructura</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -213,12 +229,77 @@ export default function ImportacionAvanzadaPage() {
                           )}
                         </Tooltip>
                       </TableCell>
+                      <TableCell align="center">
+                        {formato.medioMagneticoId != null && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            aria-label={`Validar estructura del registro ${formato.medioMagneticoId}`}
+                            disabled={validando !== null}
+                            loading={validando === formato.medioMagneticoId}
+                            onClick={() => onValidar(formato.medioMagneticoId as number)}
+                          >
+                            Validar
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
           </SectionCard>
+
+          {validacion && (
+            <SectionCard
+              title={`Validación estructural · registro #${validacion.medioMagneticoId}`}
+              subtitle={`${validacion.registrosValidados} filas revisadas · ${validacion.erroresTotal} errores · ${validacion.advertenciasTotal} advertencias`}
+            >
+              <Alert
+                severity={
+                  validacion.erroresTotal > 0
+                    ? 'error'
+                    : validacion.advertenciasTotal > 0
+                      ? 'warning'
+                      : 'success'
+                }
+              >
+                {validacion.erroresTotal > 0
+                  ? 'La estructura del registro no pasó la validación. Revise los detalles antes de continuar.'
+                  : 'La estructura del registro es válida. Esto no genera XML ni cambia el estado del medio.'}
+              </Alert>
+
+              {validacion.errores.length > 0 && (
+                <TableContainer sx={{ mt: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Línea</TableCell>
+                        <TableCell>Campo</TableCell>
+                        <TableCell>Esperado</TableCell>
+                        <TableCell>Encontrado</TableCell>
+                        <TableCell>Detalle</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {validacion.errores.map((detalle) => (
+                        <TableRow
+                          key={`${detalle.linea ?? 0}-${detalle.campo ?? ''}-${detalle.valorEsperado ?? ''}-${detalle.mensaje}`}
+                          hover
+                        >
+                          <TableCell>{detalle.linea ?? '-'}</TableCell>
+                          <TableCell>{detalle.campo ?? '-'}</TableCell>
+                          <TableCell>{detalle.valorEsperado ?? '-'}</TableCell>
+                          <TableCell>{detalle.valorEncontrado ?? '-'}</TableCell>
+                          <TableCell>{detalle.mensaje}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </SectionCard>
+          )}
         </>
       )}
     </Box>
