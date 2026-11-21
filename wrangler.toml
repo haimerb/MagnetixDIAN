@@ -15,3 +15,6 @@ cwd = "frontend"
 [vars]
 # El worker reenvía /api/* a este backend (Render). Ajustar si cambia el servicio.
 BACKEND_ORIGIN = "https://magnetixdian-backend.onrender.com"
+
+[triggers]
+crons = ["*/5 * * * *"]

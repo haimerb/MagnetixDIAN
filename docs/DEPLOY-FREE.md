@@ -62,19 +62,23 @@ Para que Render acepte el repo, primero súbelo a GitHub.
 
 ### Keep-alive automático (mitigación, no SLA)
 
-El plan free de Render suspende el servicio tras ~15 min sin tráfico. El repo incluye
-`.github/workflows/keep-alive.yml`, que consulta cada **10 minutos**:
+El plan free de Render suspende el servicio tras ~15 min sin tráfico. El repo incluye dos
+mecanismos de ping a:
 
 ```
 https://magnetixdian-backend.onrender.com/actuator/health
 ```
 
-El workflow también se puede ejecutar manualmente con `workflow_dispatch` y no requiere secretos.
-El endpoint es público. Si se prefiere un monitor externo, UptimeRobot o cron-job.org son alternativas válidas.
+1. **Cloudflare Cron (principal):** `wrangler.toml` registra `*/5 * * * *` y el handler
+   `scheduled` de `worker.js` consulta el health con timeout de 90 s. Se despliega junto al Worker.
+2. **GitHub Actions (respaldo):** `.github/workflows/keep-alive.yml` consulta cada **10 minutos**
+   y también se puede ejecutar con `workflow_dispatch`. No requiere secretos.
+
+El endpoint es público. UptimeRobot o cron-job.org son alternativas externas válidas.
 
 > Esto es solo una **mitigación**: no reemplaza un plan de pago, no garantiza disponibilidad
 > ni constituye un SLA. Render puede seguir durmiendo o reiniciando el contenedor; el disco
-> sigue siendo efímero.
+> sigue siendo efímero. El único modo de evitar el sleep es un plan pagado de Render.
 
 ---
 
