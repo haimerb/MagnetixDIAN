@@ -152,6 +152,24 @@ export type FormatoExogena = {
   encabezados: string[]
 }
 
+export type FormatoDetectado = {
+  codigo: string
+  hoja: string
+  estado: string
+  activo: boolean
+  filas: number
+  encabezados: string[]
+  datos: Record<string, string>[]
+  medioMagneticoId: number | null
+}
+
+export type ImportacionMultiFormato = {
+  anioGravable: number | null
+  formatos: FormatoDetectado[]
+  hojasOmitidas: string[]
+  formatosPersistidos: number
+}
+
 export type DetalleError = {
   linea: number | null
   campo: string | null
@@ -460,6 +478,18 @@ export async function importarFacturas(empresaId: number, archivo: File) {
   const { data } = await api.post<ResultadoImportacion>(`/facturacion/${empresaId}/importar`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
+  return data
+}
+
+export async function importarMultiformato(empresaId: number, anioGravable: number, archivo: File) {
+  const form = new FormData()
+  form.append('anioGravable', String(anioGravable))
+  form.append('archivo', archivo)
+  const { data } = await api.post<ImportacionMultiFormato>(
+    `/mediomagnetico/${empresaId}/importar-multiformato`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
   return data
 }
 

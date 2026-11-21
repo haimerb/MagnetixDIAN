@@ -30,6 +30,7 @@ import { useThemeMode } from '../../theme/useThemeMode'
 const NAV_ITEMS = [
   { to: '/app', label: 'Panel' },
   { to: '/app/carga', label: 'Carga de datos' },
+  { to: '/app/importacion-avanzada', label: 'Importación avanzada' },
   { to: '/app/validacion', label: 'Validación' },
   { to: '/app/reporte', label: 'Reportes' },
   { to: '/app/facturacion', label: 'Facturación' },
