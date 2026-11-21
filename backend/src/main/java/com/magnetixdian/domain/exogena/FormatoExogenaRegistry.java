@@ -55,8 +55,8 @@ public class FormatoExogenaRegistry {
 
     private static Map<String, FormatoExogena> construir() {
         Map<String, FormatoExogena> formatos = new LinkedHashMap<>();
-        formatos.put("1001", activo("1001", "Pagos, abonos y retenciones"));
-        formatos.put("1002", activo("1002", "Créditos, descuentos, devoluciones y notas"));
+        formatos.put("1001", activo("1001", "Pagos, abonos y retenciones", "GeneradorXml1001"));
+        formatos.put("1002", activo("1002", "Créditos, descuentos, devoluciones y notas", "GeneradorXml1002"));
         formatos.put("1003", pendiente("1003"));
         formatos.put("1004", pendiente("1004"));
         formatos.put("1005", pendiente("1005"));
@@ -76,11 +76,31 @@ public class FormatoExogenaRegistry {
         return Collections.unmodifiableMap(formatos);
     }
 
-    private static FormatoExogena activo(String codigo, String descripcion) {
-        return new FormatoExogena(codigo, descripcion, ESTADO_ACTIVO, true, ENCABEZADOS_LEGACY);
+    private static FormatoExogena activo(String codigo, String descripcion, String generadorXml) {
+        return new FormatoExogena(
+                codigo,
+                descripcion,
+                ESTADO_ACTIVO,
+                true,
+                "10",
+                "xsd/medio-magnetico-" + codigo + ".xsd",
+                "clasica",
+                generadorXml,
+                ENCABEZADOS_LEGACY
+        );
     }
 
     private static FormatoExogena pendiente(String codigo) {
-        return new FormatoExogena(codigo, "Formato " + codigo, ESTADO_PENDIENTE_XSD, false, List.of());
+        return new FormatoExogena(
+                codigo,
+                "Formato " + codigo,
+                ESTADO_PENDIENTE_XSD,
+                false,
+                null,
+                null,
+                null,
+                null,
+                List.of()
+        );
     }
 }

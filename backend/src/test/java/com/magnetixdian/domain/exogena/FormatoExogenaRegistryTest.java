@@ -15,7 +15,12 @@ class FormatoExogenaRegistryTest {
 
     @Test
     void formatosLegacySiguenActivos() {
-        assertTrue(registry.validarActivo("1001").activo());
+        FormatoExogena formato = registry.validarActivo("1001");
+        assertTrue(formato.activo());
+        assertEquals("10", formato.version());
+        assertEquals("xsd/medio-magnetico-1001.xsd", formato.xsd());
+        assertEquals("clasica", formato.validacion());
+        assertEquals("GeneradorXml1001", formato.generadorXml());
         assertTrue(registry.validarActivo("1002").activo());
     }
 

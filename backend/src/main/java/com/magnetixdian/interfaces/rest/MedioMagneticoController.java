@@ -48,7 +48,9 @@ public class MedioMagneticoController {
     @GetMapping("/formatos")
     public List<FormatoExogenaDto> formatos() {
         return formatos.todos().stream()
-                .map(f -> new FormatoExogenaDto(f.codigo(), f.descripcion(), f.estado(), f.activo(), f.encabezados()))
+                .map(f -> new FormatoExogenaDto(
+                        f.codigo(), f.descripcion(), f.estado(), f.activo(),
+                        f.version(), f.xsd(), f.validacion(), f.generadorXml(), f.encabezados()))
                 .toList();
     }
 

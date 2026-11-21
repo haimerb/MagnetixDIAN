@@ -7,6 +7,10 @@ public record FormatoExogenaDto(
         String descripcion,
         String estado,
         boolean activo,
+        String version,
+        String xsd,
+        String validacion,
+        String generadorXml,
         List<String> encabezados
 ) {
 }

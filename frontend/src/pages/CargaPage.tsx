@@ -27,6 +27,10 @@ const FORMATOS_FALLBACK: FormatoExogena[] = [
     descripcion: 'Pagos, abonos y retenciones',
     estado: 'ACTIVO',
     activo: true,
+    version: '10',
+    xsd: 'xsd/medio-magnetico-1001.xsd',
+    validacion: 'clasica',
+    generadorXml: 'GeneradorXml1001',
     encabezados: [],
   },
   {
@@ -34,6 +38,10 @@ const FORMATOS_FALLBACK: FormatoExogena[] = [
     descripcion: 'Créditos, descuentos, devoluciones y notas',
     estado: 'ACTIVO',
     activo: true,
+    version: '10',
+    xsd: 'xsd/medio-magnetico-1002.xsd',
+    validacion: 'clasica',
+    generadorXml: 'GeneradorXml1002',
     encabezados: [],
   },
 ]

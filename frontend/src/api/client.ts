@@ -145,6 +145,10 @@ export type FormatoExogena = {
   descripcion: string
   estado: string
   activo: boolean
+  version: string | null
+  xsd: string | null
+  validacion: string | null
+  generadorXml: string | null
   encabezados: string[]
 }
 
