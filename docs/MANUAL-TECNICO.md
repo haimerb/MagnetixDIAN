@@ -387,7 +387,7 @@ el sleep del plan free; es una **mitigación, no un SLA** (detalles en `docs/DEP
 | `UPLOAD_DIR` | `./uploads` | archivos subidos (Excel, certificados) |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:4173` | orígenes permitidos |
 | `NOTIFICATIONS_ENABLED` | `false` local / `true` en Render | envío de correos y recordatorios |
-| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | `smtp-relay.brevo.com` / 587 / — | SMTP |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | `smtp-relay.brevo.com` / 2525 / — | SMTP (2525 evita el bloqueo de Render free) |
 | `MAIL_FROM` | igual a `MAIL_USERNAME` | remitente verificado de correos |
 | `REMINDER_CRON` | `0 0 9 * * *` | cron recordatorios |
 | `GENERATOR_CRON` | `0 0 2 1 1 *` | cron generador automático de XML |

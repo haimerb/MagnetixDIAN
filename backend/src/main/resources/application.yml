@@ -33,7 +33,7 @@ spring:
       max-request-size: 20MB
   mail:
     host: ${MAIL_HOST:smtp-relay.brevo.com}
-    port: ${MAIL_PORT:587}
+    port: ${MAIL_PORT:2525}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
