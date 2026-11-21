@@ -34,7 +34,7 @@ const RESULTADO = {
     {
       codigo: '1003',
       hoja: '1003',
-      estado: 'PENDIENTE_XSD',
+      estado: 'PENDIENTE_GENERADOR',
       activo: false,
       filas: 15,
       encabezados: ['NIT'],
@@ -100,7 +100,7 @@ describe('ImportacionAvanzadaPage', () => {
     expect(await screen.findByText('Formatos detectados')).toBeInTheDocument()
     expect(screen.getAllByText('1001').length).toBeGreaterThan(0)
     expect(screen.getAllByText('1003').length).toBeGreaterThan(0)
-    expect(screen.getByText('Pendiente de XSD')).toBeInTheDocument()
+    expect(screen.getByText('Pendiente de generador')).toBeInTheDocument()
     expect(screen.getByText(/Hojas sin código reconocido: Resumen/)).toBeInTheDocument()
   })
 

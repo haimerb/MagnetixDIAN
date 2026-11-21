@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="mas">
+		<xs:annotation>
+			<xs:documentation>Elemento raiz del xml de carga masiva</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Cab" type="CabType"/>
+				<xs:element ref="CertificadosCine" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="CabType">
+		<xs:sequence>
+			<xs:element name="Ano" type="xs:gYear" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Año de envío</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CodCpt" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Concepto</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Formato" fixed="2825">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Version" type="xs:positiveInteger" fixed="1"/>
+			<xs:element name="NumEnvio">
+				<xs:annotation>
+					<xs:documentation>Número de envío</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="8"/>
+						<xs:maxInclusive value="99999999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FecEnvio" type="xs:dateTime">
+				<xs:annotation>
+					<xs:documentation>Fecha de envío</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecInicial" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha inicial</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecFinal" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha Final</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ValorTotal" type="xs:double">
+				<xs:annotation>
+					<xs:documentation>Valor total</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CantReg">
+				<xs:annotation>
+					<xs:documentation>Cantidad de registros</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+						<xs:maxInclusive value="9999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="CertificadosCine">
+		<xs:annotation>
+			<xs:documentation>
+Información de los Certificados de Inversión o Donación Cinematográfica. Art. 195 Ley 1607/2012 Formato 2825 - Versión 1
+</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="DonantesInversionistas" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element ref="ProductoresCoproductores" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="numCert" use="required">
+				<xs:annotation>
+					<xs:documentation>Número certificado</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="9999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="fecCert" type="xs:date" use="required">
+				<xs:annotation>
+					<xs:documentation>Fecha certificado</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="trimestre" use="required">
+				<xs:annotation>
+					<xs:documentation>Trimestre</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="9"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="tipaporte" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo del aporte</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="9"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="fecDonInv" type="xs:date" use="required">
+				<xs:annotation>
+					<xs:documentation>Fecha donación o inversión</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="numResol" use="required">
+				<xs:annotation>
+					<xs:documentation>Número resolución</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="9999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="agnoResol" use="required">
+				<xs:annotation>
+					<xs:documentation>Año resolución</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="9999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nomProyecto" use="required">
+				<xs:annotation>
+					<xs:documentation>Nombre proyecto cinematográfico</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="estadoCert" use="required">
+				<xs:annotation>
+					<xs:documentation>Estado certificado</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="50"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="duracionProj" use="required">
+				<xs:annotation>
+					<xs:documentation>Duración del proyecto</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="9"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="DonantesInversionistas">
+		<xs:annotation>
+			<xs:documentation>
+Elemento que contienen la identificación de los donantes o inversionistas del proyecto y la entidad fiduciaria en la que se canalizan los recursos para el desarrollo del proyecto.
+</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="tipDoc" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo documento donante o inversionista</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="numID" use="required">
+				<xs:annotation>
+					<xs:documentation> Número identificación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="0"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="papellido" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer apellido</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="sapellido" use="optional">
+				<xs:annotation>
+					<xs:documentation>Segundo apellido</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="pnombre" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer nombre</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="snombre" use="optional">
+				<xs:annotation>
+					<xs:documentation>Otros nombres</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="raz" use="optional">
+				<xs:annotation>
+					<xs:documentation>Razón social</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nitFid" use="required">
+				<xs:annotation>
+					<xs:documentation>NIT entidad fiduciaria</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="999999999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="razFid" use="required">
+				<xs:annotation>
+					<xs:documentation>Razón social entidad fiduciaria</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="montoDI" use="required">
+				<xs:annotation>
+					<xs:documentation>Monto donación o inversión</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="ProductoresCoproductores">
+		<xs:annotation>
+			<xs:documentation>
+Elemento que contienen la identificación de los productores o coproductores del proyecto por cada uno de los certificados.
+</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="tipDocProd" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo documento productores o coproductores </xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="numIDProd" use="required">
+				<xs:annotation>
+					<xs:documentation>Número identificación productores o coproductores</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="0"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="papProd" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer apellido productores o coproductores</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="sapProd" use="optional">
+				<xs:annotation>
+					<xs:documentation>Segundo apellido productores o coproductores</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="pnomProd" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer nombre productores o coproductores</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="snomProd" use="optional">
+				<xs:annotation>
+					<xs:documentation>Otros nombres productores o coproductores</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="razProd" use="optional">
+				<xs:annotation>
+					<xs:documentation>Razón social productores o coproductores</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

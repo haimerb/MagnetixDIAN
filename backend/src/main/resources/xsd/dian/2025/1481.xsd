@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="mas">
+		<xs:annotation>
+			<xs:documentation>Elemento raiz del xml de carga masiva</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Cab" type="CabType"/>
+				<xs:element ref="ica" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+		<xs:unique name="icaUnico">
+			<xs:selector xpath="ica"/>
+			<xs:field xpath="@ica"/>
+		</xs:unique>
+		<!--Ejemplo de implementación de unicidad en los xmls-->
+	</xs:element>
+	<xs:complexType name="CabType">
+		<xs:sequence>
+			<xs:element name="Ano" type="xs:gYear" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Año de envio</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CodCpt" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Concepto</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Formato" fixed="1481">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger"/>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Version" type="xs:positiveInteger" fixed="10"/>
+			<xs:element name="NumEnvio">
+				<xs:annotation>
+					<xs:documentation>Numero de envio</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="8"/>
+						<xs:maxInclusive value="99999999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FecEnvio" type="xs:dateTime">
+				<xs:annotation>
+					<xs:documentation>Fecha de envio</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecInicial" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha inicial</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecFinal" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha Final</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ValorTotal" type="xs:double">
+				<xs:annotation>
+					<xs:documentation>Valor Total</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CantReg">
+				<xs:annotation>
+					<xs:documentation>Cantidad de registros</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+						<xs:maxInclusive value="9999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="ica">
+		<xs:annotation>
+			<xs:documentation>Elemento que encapsula la información del formulario 1481v10 IMPUESTO DE INDUSTRIA Y COMERCIO, AVISOS Y TABLEROS - ICA</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="tdoc" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de Documento</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{1,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nit" use="required">
+				<xs:annotation>
+					<xs:documentation>Número de Identificación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="pap" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer Apellido</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="sap" use="optional">
+				<xs:annotation>
+					<xs:documentation>Segundo Apellido</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="pno" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer Nombre</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="ono" use="optional">
+				<xs:annotation>
+					<xs:documentation>Otros Nombres</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="raz" use="optional">
+				<xs:annotation>
+					<xs:documentation>Razón Social</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="dir" use="required">
+				<xs:annotation>
+					<xs:documentation>Dirección Notificación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="200"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="dpto" use="required">
+				<xs:annotation>
+					<xs:documentation>Departamento Notificación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{1,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="mun" use="required">
+				<xs:annotation>
+					<xs:documentation>Municipio Notificación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{1,3}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="tel" use="optional">
+				<xs:annotation>
+					<xs:documentation>Teléfono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:double">
+						<xs:pattern value="[0-9]{0,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="email" use="optional">
+				<xs:annotation>
+					<xs:documentation>Correo Electrónico</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[A-Za-z0-9.!#$%&amp;'*+/=?^_`{|}~\-]+@[A-Za-z0-9]+([.-][A-Za-z0-9]+)*\.[A-Za-z]{2,3}"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="50"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="acteco" use="required">
+				<xs:annotation>
+					<xs:documentation>Actividad Económica Principal</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="5"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="actecosec" use="optional">
+				<xs:annotation>
+					<xs:documentation>Actividad Económica Secundaria</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="5"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="numest" use="required">
+				<xs:annotation>
+					<xs:documentation>Número establecimientos</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{1,5}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="ingbruto" use="required">
+				<xs:annotation>
+					<xs:documentation>Ingresos Brutos Jurisdicción</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="ingresojur" use="required">
+				<xs:annotation>
+					<xs:documentation>Ingresos Brutos Otras jurisdicciones</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="ingravjur" use="required">
+				<xs:annotation>
+					<xs:documentation>Ingresos Gravables Jurisdicción</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="impcomc" use="required">
+				<xs:annotation>
+					<xs:documentation>Impuesto Industria y Comercio a cargo</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="impcomp" use="required">
+				<xs:annotation>
+					<xs:documentation>Impuesto Industria y Comercio pagado</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="imptblc" use="required">
+				<xs:annotation>
+					<xs:documentation>Impuesto de avisos y tableros a cargo</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="imptblp" use="required">
+				<xs:annotation>
+					<xs:documentation>Impuesto de avisos y tableros a pagado</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="sobtasabc" use="required">
+				<xs:annotation>
+					<xs:documentation>Sobretasa bomberil a cargo</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="sobtasabp" use="required">
+				<xs:annotation>
+					<xs:documentation>Sobretasa bomberil pagada</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

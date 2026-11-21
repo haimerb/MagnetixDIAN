@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="deduccion">
+    <xs:annotation>
+      <xs:documentation>Elemento que encapsula la información del formulario 2280 DEDUCCION EMPLEADAS VICTIMAS VIOLENCIA</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:attribute name="tdoce" use="required">
+        <xs:annotation>
+          <xs:documentation>Tipo de documento Empleada</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:pattern value="[0-9]{0,2}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="nite" use="required">
+        <xs:annotation>
+          <xs:documentation>Número de Identificación Empleada</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+			<xs:pattern value="[a-zA-Z0-9]+"/>
+            <xs:minLength value="1"/>
+            <xs:maxLength value="20"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="pap" use="required">
+        <xs:annotation>
+          <xs:documentation>Primer Apellido</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="sap" use="optional">
+        <xs:annotation>
+          <xs:documentation>Segundo Apellido</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="pno" use="required">
+        <xs:annotation>
+          <xs:documentation>Primer Nombre</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="ono" use="optional">
+        <xs:annotation>
+          <xs:documentation>Otros Nombres</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="fecini" type="xs:date" use="required">
+        <xs:annotation>
+          <xs:documentation>Fecha Inicio Contrato</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="fecfin" type="xs:date" use="required">
+        <xs:annotation>
+          <xs:documentation>Fecha Final Contrato</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="tmedcer" use="required">
+        <xs:annotation>
+          <xs:documentation>Tipo Medida Certificación</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:pattern value="[0-9]{0,2}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="ccontrato" use="required">
+        <xs:annotation>
+          <xs:documentation>Cargo Contratado</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+            <xs:maxLength value="50"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="spaganio" use="required">
+        <xs:annotation>
+          <xs:documentation>Salario pagados durante el Periodo</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="prestemp" use="required">
+        <xs:annotation>
+          <xs:documentation>Prestaciones sociales pagadas durante el periodo </xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="edadmuj" use="required">
+        <xs:annotation>
+          <xs:documentation>Edad Mujer contratada</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="neduc" use="required">
+        <xs:annotation>
+          <xs:documentation>Nivel Educativo</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="9"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="mas">
+    <xs:annotation>
+      <xs:documentation>Elemento raiz del xml de carga masiva</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Cab" type="CabType"/>
+        <xs:element ref="deduccion" maxOccurs="5000"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="CabType">
+    <xs:sequence>
+      <xs:element name="Ano" type="xs:gYear" nillable="false">
+        <xs:annotation>
+          <xs:documentation>Año de envio</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CodCpt" nillable="false">
+        <xs:annotation>
+          <xs:documentation>Concepto</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Formato" fixed="2280">
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="4"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Version" type="xs:positiveInteger" fixed="1"/>
+      <xs:element name="NumEnvio">
+        <xs:annotation>
+          <xs:documentation>Numero de envio</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="8"/>
+            <xs:maxInclusive value="99999999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="FecEnvio" type="xs:dateTime">
+        <xs:annotation>
+          <xs:documentation>Fecha de envio</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FecInicial" type="xs:date">
+        <xs:annotation>
+          <xs:documentation>Fecha inicial</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FecFinal" type="xs:date">
+        <xs:annotation>
+          <xs:documentation>Fecha Final</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ValorTotal" type="xs:double">
+        <xs:annotation>
+          <xs:documentation>Valor Total</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CantReg">
+        <xs:annotation>
+          <xs:documentation>Cantidad de registros</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="4"/>
+            <xs:maxInclusive value="9999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
