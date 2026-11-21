@@ -1,5 +1,6 @@
 package com.magnetixdian.application;
 
+import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
 import com.magnetixdian.domain.model.OperacionDatos;
 import com.magnetixdian.domain.model.ResultadoRegla;
 import com.magnetixdian.domain.model.Severidad;
@@ -44,6 +45,7 @@ public class ServicioMedioMagnetico {
     private final ServicioValidacion servicioValidacion;
     private final GeneradorXml1001 generadorXml1001;
     private final GeneradorXml1002 generadorXml1002;
+    private final FormatoExogenaRegistry formatos;
 
     public ServicioMedioMagnetico(MedioMagneticoRepository medioRepo,
                                   OperacionRepository operacionRepo,
@@ -54,7 +56,8 @@ public class ServicioMedioMagnetico {
                                   PlantillaExcelGenerator plantillaExcel,
                                   ServicioValidacion servicioValidacion,
                                   GeneradorXml1001 generadorXml1001,
-                                  GeneradorXml1002 generadorXml1002) {
+                                  GeneradorXml1002 generadorXml1002,
+                                  FormatoExogenaRegistry formatos) {
         this.medioRepo = medioRepo;
         this.operacionRepo = operacionRepo;
         this.empresaRepo = empresaRepo;
@@ -65,12 +68,14 @@ public class ServicioMedioMagnetico {
         this.servicioValidacion = servicioValidacion;
         this.generadorXml1001 = generadorXml1001;
         this.generadorXml1002 = generadorXml1002;
+        this.formatos = formatos;
     }
 
     /**
      * Genera la plantilla Excel descargable del formato indicado.
      */
     public byte[] generarPlantilla(String formato) throws IOException {
+        formatos.validarActivo(formato);
         return plantillaExcel.generar(formato);
     }
 
@@ -80,6 +85,7 @@ public class ServicioMedioMagnetico {
      */
     @Transactional
     public MedioMagneticoJpa crearOReusar(Long empresaId, String formato, Integer anioGravable) {
+        formatos.validarActivo(formato);
         return medioRepo.findByEmpresaIdAndFormatoAndAnioGravable(empresaId, formato, anioGravable)
                 .orElseGet(() -> {
                     var empresa = empresaRepo.findById(empresaId)
@@ -235,6 +241,7 @@ public class ServicioMedioMagnetico {
         if ("BORRADOR".equals(medio.getEstado()) || "CARGADO".equals(medio.getEstado())) {
             throw new IllegalStateException("Debe validar el medio magnético antes de generar el XML.");
         }
+        formatos.validarActivo(medio.getFormato());
         List<OperacionJpa> operaciones = operacionRepo.findByMedioMagneticoId(medioMagneticoId);
         String xml = "1002".equalsIgnoreCase(medio.getFormato())
                 ? generadorXml1002.generar(medio, operaciones)

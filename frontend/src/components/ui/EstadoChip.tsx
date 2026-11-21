@@ -16,6 +16,8 @@ const ESTADOS: Record<string, { tone: Tone; label: string }> = {
   APROBADO: { tone: 'success', label: 'Aprobado' },
   EXITOSO: { tone: 'success', label: 'Enviado' },
   AGOTADO: { tone: 'error', label: 'Agotado' },
+  ACTIVO: { tone: 'success', label: 'Activo' },
+  PENDIENTE_XSD: { tone: 'warning', label: 'Pendiente de XSD' },
 }
 
 export default function EstadoChip({ estado }: { estado: string }) {

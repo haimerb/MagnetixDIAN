@@ -1,7 +1,12 @@
 package com.magnetixdian.interfaces.rest;
 
+import com.magnetixdian.application.ServicioImportacionExogena;
 import com.magnetixdian.application.ServicioMedioMagnetico;
 import com.magnetixdian.application.ServicioMedioMagnetico.CargaResultado;
+import com.magnetixdian.application.ServicioValidacionDatosJson;
+import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
+import com.magnetixdian.interfaces.dto.FormatoExogenaDto;
+import com.magnetixdian.interfaces.dto.ImportacionMultiFormatoDto;
 import com.magnetixdian.interfaces.dto.MedioMagneticoDto;
 import com.magnetixdian.interfaces.dto.TercerosResumenDto;
 import com.magnetixdian.interfaces.dto.ValidacionProcesoDto;
@@ -30,18 +35,37 @@ public class MedioMagneticoController {
 
     private final ServicioMedioMagnetico servicio;
     private final AutorizacionEmpresa autorizacion;
+    private final FormatoExogenaRegistry formatos;
+    private final ServicioImportacionExogena importacionExogena;
+    private final ServicioValidacionDatosJson validacionDatosJson;
 
-    public MedioMagneticoController(ServicioMedioMagnetico servicio, AutorizacionEmpresa autorizacion) {
+    public MedioMagneticoController(ServicioMedioMagnetico servicio, AutorizacionEmpresa autorizacion,
+                                    FormatoExogenaRegistry formatos,
+                                    ServicioImportacionExogena importacionExogena,
+                                    ServicioValidacionDatosJson validacionDatosJson) {
         this.servicio = servicio;
         this.autorizacion = autorizacion;
+        this.formatos = formatos;
+        this.importacionExogena = importacionExogena;
+        this.validacionDatosJson = validacionDatosJson;
     }
 
     private void verificarPorMedio(Long medioMagneticoId, Authentication authentication) {
         autorizacion.verificar(servicio.empresaDe(medioMagneticoId), authentication);
     }
 
+    @GetMapping("/formatos")
+    public List<FormatoExogenaDto> formatos() {
+        return formatos.todos().stream()
+                .map(f -> new FormatoExogenaDto(
+                        f.codigo(), f.descripcion(), f.estado(), f.activo(),
+                        f.version(), f.xsd(), f.validacion(), f.generadorXml(), f.encabezados()))
+                .toList();
+    }
+
     @GetMapping("/plantilla")
     public ResponseEntity<byte[]> plantilla(@RequestParam(defaultValue = "1001") String formato) throws java.io.IOException {
+        formatos.validarActivo(formato);
         byte[] contenido = servicio.generarPlantilla(formato);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=plantilla-" + formato + ".xlsx")
@@ -56,7 +80,17 @@ public class MedioMagneticoController {
                                                  @RequestParam MultipartFile archivo,
                                                  Authentication authentication) throws java.io.IOException {
         autorizacion.verificar(empresaId, authentication);
+        formatos.validarActivo(formato);
         return ResponseEntity.ok(servicio.cargarDesdeExcel(empresaId, formato, anioGravable, archivo));
+    }
+
+    @PostMapping(value = "/{empresaId}/importar-multiformato", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportacionMultiFormatoDto> importarMultiformato(@PathVariable Long empresaId,
+                                                                           @RequestParam Integer anioGravable,
+                                                                           @RequestParam MultipartFile archivo,
+                                                                           Authentication authentication) throws java.io.IOException {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(importacionExogena.importar(empresaId, anioGravable, archivo));
     }
 
     @PostMapping("/{medioMagneticoId}/validar")
@@ -65,6 +99,13 @@ public class MedioMagneticoController {
                                                         Authentication authentication) {
         verificarPorMedio(medioMagneticoId, authentication);
         return ResponseEntity.ok(servicio.validarDto(medioMagneticoId, anioGravable));
+    }
+
+    @PostMapping("/{medioMagneticoId}/validar-datos-json")
+    public ResponseEntity<ValidacionProcesoDto> validarDatosJson(@PathVariable Long medioMagneticoId,
+                                                                 Authentication authentication) {
+        verificarPorMedio(medioMagneticoId, authentication);
+        return ResponseEntity.ok(validacionDatosJson.validar(medioMagneticoId));
     }
 
     @GetMapping("/{medioMagneticoId}/reporte")

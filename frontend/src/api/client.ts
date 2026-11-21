@@ -140,6 +140,36 @@ export type CargaResultado = {
   registrosCargados: number
 }
 
+export type FormatoExogena = {
+  codigo: string
+  descripcion: string
+  estado: string
+  activo: boolean
+  version: string | null
+  xsd: string | null
+  validacion: string | null
+  generadorXml: string | null
+  encabezados: string[]
+}
+
+export type FormatoDetectado = {
+  codigo: string
+  hoja: string
+  estado: string
+  activo: boolean
+  filas: number
+  encabezados: string[]
+  datos: Record<string, string>[]
+  medioMagneticoId: number | null
+}
+
+export type ImportacionMultiFormato = {
+  anioGravable: number | null
+  formatos: FormatoDetectado[]
+  hojasOmitidas: string[]
+  formatosPersistidos: number
+}
+
 export type DetalleError = {
   linea: number | null
   campo: string | null
@@ -160,6 +190,8 @@ export type Validacion = {
   fin: string | null
   errores: DetalleError[]
 }
+
+export type ValidacionEstructura = Omit<Validacion, 'id'> & { id: number | null }
 
 export type MedioMagnetico = {
   id: number
@@ -448,6 +480,23 @@ export async function importarFacturas(empresaId: number, archivo: File) {
   const { data } = await api.post<ResultadoImportacion>(`/facturacion/${empresaId}/importar`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
+  return data
+}
+
+export async function importarMultiformato(empresaId: number, anioGravable: number, archivo: File) {
+  const form = new FormData()
+  form.append('anioGravable', String(anioGravable))
+  form.append('archivo', archivo)
+  const { data } = await api.post<ImportacionMultiFormato>(
+    `/mediomagnetico/${empresaId}/importar-multiformato`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return data
+}
+
+export async function validarDatosJson(medioId: number) {
+  const { data } = await api.post<ValidacionEstructura>(`/mediomagnetico/${medioId}/validar-datos-json`)
   return data
 }
 
