@@ -53,6 +53,8 @@ magnetixdian:
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   app:
     frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
   auth:
     expose-token: ${AUTH_EXPOSE_TOKEN:true}
   transmision:

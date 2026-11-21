@@ -4,6 +4,7 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.Test;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Properties;
 
@@ -47,5 +48,19 @@ class NotificadorEmailTest {
     void exponeEstadoDeHabilitacion() {
         assertThat(new NotificadorEmail(mock(JavaMailSender.class), true).habilitado()).isTrue();
         assertThat(new NotificadorEmail(mock(JavaMailSender.class), false).habilitado()).isFalse();
+    }
+
+    @Test
+    void usaRemitenteConfiguradoDistintoDelUsuarioSmtp() throws Exception {
+        JavaMailSender mailSender = mock(JavaMailSender.class);
+        MimeMessage mensaje = nuevoMime();
+        when(mailSender.createMimeMessage()).thenReturn(mensaje);
+        NotificadorEmail notificador = new NotificadorEmail(mailSender, true);
+        ReflectionTestUtils.setField(notificador, "mailFrom", "facturacion@magnetixdian.com");
+
+        notificador.enviarFactura("cliente@test.co", "Factura FE-1", "Cuerpo",
+                "factura-FE-1.xml", "<xml/>".getBytes(), "factura-FE-1.pdf", new byte[]{1, 2, 3});
+
+        assertThat(mensaje.getFrom()[0].toString()).isEqualTo("facturacion@magnetixdian.com");
     }
 }
