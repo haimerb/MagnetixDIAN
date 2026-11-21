@@ -191,6 +191,8 @@ export type Validacion = {
   errores: DetalleError[]
 }
 
+export type ValidacionEstructura = Omit<Validacion, 'id'> & { id: number | null }
+
 export type MedioMagnetico = {
   id: number
   empresaId: number
@@ -490,6 +492,11 @@ export async function importarMultiformato(empresaId: number, anioGravable: numb
     form,
     { headers: { 'Content-Type': 'multipart/form-data' } },
   )
+  return data
+}
+
+export async function validarDatosJson(medioId: number) {
+  const { data } = await api.post<ValidacionEstructura>(`/mediomagnetico/${medioId}/validar-datos-json`)
   return data
 }
 

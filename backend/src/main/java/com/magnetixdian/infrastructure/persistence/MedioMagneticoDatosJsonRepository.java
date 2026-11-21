@@ -14,4 +14,7 @@ public interface MedioMagneticoDatosJsonRepository extends JpaRepository<MedioMa
             WHERE id = :id
             """, nativeQuery = true)
     int actualizarDatosJson(@Param("id") Long id, @Param("datosJson") String datosJson);
+
+    @Query(value = "SELECT datos_json::text FROM medio_magnetico WHERE id = :id", nativeQuery = true)
+    String leerDatosJson(@Param("id") Long id);
 }
