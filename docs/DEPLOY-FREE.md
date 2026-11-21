@@ -123,7 +123,7 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `FRONTEND_URL` | Render (env) | URL pública usada en enlaces de recuperación, invitación y retorno de pagos |
 | `AUTH_EXPOSE_TOKEN` | Render (env) | `false` en producción (no devolver enlaces cuando SMTP falla) |
 | `NOTIFICATIONS_ENABLED` | Render (env) | `true` en el blueprint de producción; `false` en el default local |
-| `MAIL_HOST` / `MAIL_PORT` | Render (env) | servidor SMTP (default `smtp.gmail.com:587`) |
+| `MAIL_HOST` / `MAIL_PORT` | Render (env) | servidor SMTP (default `smtp-relay.brevo.com:587`) |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | Render (env) | credenciales SMTP (usuario/password o clave SMTP) |
 | `MAIL_FROM` | Render (env) | remitente verificado; por defecto usa `MAIL_USERNAME` |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | Render (env) | credenciales Wompi (vacías → pasarela inerte) |
@@ -144,10 +144,11 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 
 ### Correos de factura en producción
 
- 1. En Render → **Environment** del backend confirmar `NOTIFICATIONS_ENABLED=true` (ya viene en
-    `render.yaml`) y cargar `MAIL_USERNAME` / `MAIL_PASSWORD` sin commitearlos. Con Gmail,
-    activar verificación en dos pasos y usar un **App Password** de 16 caracteres como
-    `MAIL_PASSWORD`. El remitente se toma de `MAIL_FROM` y, si no existe, de `MAIL_USERNAME`.
+ 1. En Render → **Environment** del backend confirmar `NOTIFICATIONS_ENABLED=true`,
+    `MAIL_HOST=smtp-relay.brevo.com` y `MAIL_PORT=587` (ya vienen en `render.yaml`) y cargar
+    `MAIL_USERNAME` / `MAIL_PASSWORD` sin commitearlos. En Brevo, `MAIL_USERNAME` es el SMTP
+    login y `MAIL_PASSWORD` la SMTP key. El remitente se toma de `MAIL_FROM` —un sender
+    verificado en Brevo— y, si no existe, de `MAIL_USERNAME`.
 2. Hacer **Manual Deploy → Deploy latest commit** para que Render aplique las variables.
 3. En la app, ir a **Configuración FE** y activar **“Enviar factura al adquirente por correo”**
    para cada empresa que deba notificar. El switch guarda
