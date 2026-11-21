@@ -140,6 +140,18 @@ export type CargaResultado = {
   registrosCargados: number
 }
 
+export type FormatoExogena = {
+  codigo: string
+  descripcion: string
+  estado: string
+  activo: boolean
+  version: string | null
+  xsd: string | null
+  validacion: string | null
+  generadorXml: string | null
+  encabezados: string[]
+}
+
 export type DetalleError = {
   linea: number | null
   campo: string | null

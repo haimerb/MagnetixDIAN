@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import Alert from '@mui/material/Alert'
@@ -14,12 +14,37 @@ import Typography from '@mui/material/Typography'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import { api } from '../api/client'
-import type { CargaResultado } from '../api/client'
+import type { CargaResultado, FormatoExogena } from '../api/client'
 import { descargarArchivo } from '../api/descargas'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import { useNotificaciones } from '../features/notificaciones/contexto'
+
+const FORMATOS_FALLBACK: FormatoExogena[] = [
+  {
+    codigo: '1001',
+    descripcion: 'Pagos, abonos y retenciones',
+    estado: 'ACTIVO',
+    activo: true,
+    version: '10',
+    xsd: 'xsd/medio-magnetico-1001.xsd',
+    validacion: 'clasica',
+    generadorXml: 'GeneradorXml1001',
+    encabezados: [],
+  },
+  {
+    codigo: '1002',
+    descripcion: 'Créditos, descuentos, devoluciones y notas',
+    estado: 'ACTIVO',
+    activo: true,
+    version: '10',
+    xsd: 'xsd/medio-magnetico-1002.xsd',
+    validacion: 'clasica',
+    generadorXml: 'GeneradorXml1002',
+    encabezados: [],
+  },
+]
 
 export default function CargaPage() {
   const navigate = useNavigate()
@@ -32,6 +57,20 @@ export default function CargaPage() {
   const [descargandoPlantilla, setDescargandoPlantilla] = useState(false)
   const [resultado, setResultado] = useState<CargaResultado | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [formatos, setFormatos] = useState<FormatoExogena[]>(FORMATOS_FALLBACK)
+
+  useEffect(() => {
+    let activo = true
+    api
+      .get<FormatoExogena[]>('/mediomagnetico/formatos', { skipGlobalError: true })
+      .then(({ data }) => {
+        if (activo && data.length > 0) setFormatos(data)
+      })
+      .catch(() => {})
+    return () => {
+      activo = false
+    }
+  }, [])
 
   const onDrop = useCallback((files: File[]) => {
     setArchivo(files[0] ?? null)
@@ -156,8 +195,11 @@ export default function CargaPage() {
               value={formato}
               onChange={(e) => setFormato(e.target.value)}
             >
-              <MenuItem value="1001">1001 — Pagos/abonos y retenciones</MenuItem>
-              <MenuItem value="1002">1002 — Créditos, descuentos y notas</MenuItem>
+              {formatos.map((formato) => (
+                <MenuItem key={formato.codigo} value={formato.codigo} disabled={!formato.activo}>
+                  {formato.codigo} — {formato.descripcion}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           <TextField
