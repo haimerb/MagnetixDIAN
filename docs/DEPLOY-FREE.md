@@ -122,7 +122,7 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `CRYPTO_KEY` | Render (env) | secreto para cifrar credenciales DIAN en BD (`openssl rand -base64 32`) |
 | `FRONTEND_URL` | Render (env) | URL pública usada en enlaces de recuperación, invitación y retorno de pagos |
 | `AUTH_EXPOSE_TOKEN` | Render (env) | `false` en producción (no devolver enlaces cuando SMTP falla) |
-| `NOTIFICATIONS_ENABLED` | Render (env) | `true` para habilitar correos; `false` en el default |
+| `NOTIFICATIONS_ENABLED` | Render (env) | `true` en el blueprint de producción; `false` en el default local |
 | `MAIL_HOST` / `MAIL_PORT` | Render (env) | servidor SMTP (default `smtp.gmail.com:587`) |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | Render (env) | credenciales SMTP; `MAIL_USERNAME` también se usa como `From` |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | Render (env) | credenciales Wompi (vacías → pasarela inerte) |
@@ -140,6 +140,22 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `DIAN_URL_HABILITACION` / `DIAN_URL_PRODUCCION` | Render (env) | endpoints SOAP DIAN; por defecto los oficiales de habilitación y producción |
 | `DIAN_CONNECT_TIMEOUT_MS` / `DIAN_REQUEST_TIMEOUT_MS` | Render (env) | timeouts de transmisión DIAN directa (default `30000` / `60000`) |
 | `SENTRY_DSN` | Render / Cloudflare | opcional; activa observabilidad (backend `SENTRY_DSN`, frontend `VITE_SENTRY_DSN`) |
+
+### Correos de factura en producción
+
+1. En Render → **Environment** del backend confirmar `NOTIFICATIONS_ENABLED=true` (ya viene en
+   `render.yaml`) y cargar `MAIL_USERNAME` / `MAIL_PASSWORD` sin commitearlos. Con Gmail,
+   activar verificación en dos pasos y usar un **App Password** de 16 caracteres como
+   `MAIL_PASSWORD`; `MAIL_USERNAME` también es el `From`.
+2. Hacer **Manual Deploy → Deploy latest commit** para que Render aplique las variables.
+3. En la app, ir a **Configuración FE** y activar **“Enviar factura al adquirente por correo”**
+   para cada empresa que deba notificar. El switch guarda
+   `empresa_fe_config.notificar_adquirente`.
+4. Cada factura debe tener correo del adquirente. Al emitir, se adjuntan el XML firmado y el
+   PDF; si el correo falta o SMTP falla, se escribe un warn y la factura **no se rechaza**.
+5. Verificación: emitir una factura de prueba y revisar los logs por
+   `No se pudo enviar por correo la factura`. Para reenviar sin emitir de nuevo, usar el
+   endpoint manual `POST /api/facturacion/{empresaId}/{id}/reenviar`.
 
 ### Integraciones y pagos en el deploy
 
