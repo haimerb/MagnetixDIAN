@@ -372,8 +372,9 @@ Guía completa en `docs/DEPLOY-FREE.md`:
 - **BD:** Supabase free vía **Session pooler (IPv4)**; Flyway con `baseline-on-migrate`.
 
 El workflow `.github/workflows/deploy.yml` publica automáticamente tras un merge a `main` (ver §11).
-El workflow `.github/workflows/keep-alive.yml` consulta `/actuator/health` cada 10 minutos para mitigar
-el sleep del plan free; es una **mitigación, no un SLA** (detalles en `docs/DEPLOY-FREE.md`).
+El keep-alive principal es un Cron Trigger de Cloudflare (`wrangler.toml` + handler `scheduled` en
+`worker.js`) que consulta `/actuator/health` cada 5 minutos; `.github/workflows/keep-alive.yml` queda
+como respaldo cada 10 minutos. Es una **mitigación, no un SLA** (detalles en `docs/DEPLOY-FREE.md`).
 
 ## 10. Variables de entorno
 
