@@ -33,7 +33,7 @@ services:
       - key: UPLOAD_DIR
         value: /tmp/uploads
       - key: NOTIFICATIONS_ENABLED
-        value: "false"
+        value: "true"
       - key: MAIL_HOST
         value: smtp.gmail.com
       - key: MAIL_PORT
