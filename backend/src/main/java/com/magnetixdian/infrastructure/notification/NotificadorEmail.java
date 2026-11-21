@@ -21,7 +21,7 @@ public class NotificadorEmail {
     private final JavaMailSender mailSender;
     private final boolean enabled;
 
-    @Value("${spring.mail.username:}")
+    @Value("${magnetixdian.mail.from:${spring.mail.username:}}")
     private String mailFrom;
 
     public NotificadorEmail(JavaMailSender mailSender,

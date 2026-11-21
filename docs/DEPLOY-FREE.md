@@ -124,7 +124,8 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `AUTH_EXPOSE_TOKEN` | Render (env) | `false` en producción (no devolver enlaces cuando SMTP falla) |
 | `NOTIFICATIONS_ENABLED` | Render (env) | `true` en el blueprint de producción; `false` en el default local |
 | `MAIL_HOST` / `MAIL_PORT` | Render (env) | servidor SMTP (default `smtp.gmail.com:587`) |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | Render (env) | credenciales SMTP; `MAIL_USERNAME` también se usa como `From` |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Render (env) | credenciales SMTP (usuario/password o clave SMTP) |
+| `MAIL_FROM` | Render (env) | remitente verificado; por defecto usa `MAIL_USERNAME` |
 | `WOMPI_PUBLIC_KEY` / `WOMPI_INTEGRITY_SECRET` / `WOMPI_EVENTS_SECRET` | Render (env) | credenciales Wompi (vacías → pasarela inerte) |
 | `WOMPI_CHECKOUT_URL` | Render (env) | default `https://checkout.wompi.co/p/` |
 | `WOMPI_API_TOKEN` / `WOMPI_API_URL` | Render (env) | token privado para consultar/reconciliar pagos; default API `https://api.wompi.co` |
@@ -143,10 +144,10 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 
 ### Correos de factura en producción
 
-1. En Render → **Environment** del backend confirmar `NOTIFICATIONS_ENABLED=true` (ya viene en
-   `render.yaml`) y cargar `MAIL_USERNAME` / `MAIL_PASSWORD` sin commitearlos. Con Gmail,
-   activar verificación en dos pasos y usar un **App Password** de 16 caracteres como
-   `MAIL_PASSWORD`; `MAIL_USERNAME` también es el `From`.
+ 1. En Render → **Environment** del backend confirmar `NOTIFICATIONS_ENABLED=true` (ya viene en
+    `render.yaml`) y cargar `MAIL_USERNAME` / `MAIL_PASSWORD` sin commitearlos. Con Gmail,
+    activar verificación en dos pasos y usar un **App Password** de 16 caracteres como
+    `MAIL_PASSWORD`. El remitente se toma de `MAIL_FROM` y, si no existe, de `MAIL_USERNAME`.
 2. Hacer **Manual Deploy → Deploy latest commit** para que Render aplique las variables.
 3. En la app, ir a **Configuración FE** y activar **“Enviar factura al adquirente por correo”**
    para cada empresa que deba notificar. El switch guarda
@@ -156,6 +157,30 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 5. Verificación: emitir una factura de prueba y revisar los logs por
    `No se pudo enviar por correo la factura`. Para reenviar sin emitir de nuevo, usar el
    endpoint manual `POST /api/facturacion/{empresaId}/{id}/reenviar`.
+
+#### Brevo sin dominio propio y migración posterior
+
+Sin dominio, en Brevo podés empezar con un remitente verificado que ya controles:
+
+1. Crear cuenta en Brevo y en **Senders & IPs → Senders** agregar ese correo y confirmar el
+   código de 6 dígitos que Brevo envía.
+2. En **Settings → SMTP & API → SMTP** copiar el **SMTP login** y generar una **SMTP key**
+   (no una API key). La clave completa se muestra una sola vez.
+3. En Render configurar:
+   - `MAIL_HOST=smtp-relay.brevo.com`
+   - `MAIL_PORT=587`
+   - `MAIL_USERNAME=<SMTP login de Brevo>`
+   - `MAIL_PASSWORD=<SMTP key>`
+   - `MAIL_FROM=<remitente verificado en Brevo>`
+4. Hacer redeploy y emitir una factura de prueba.
+
+Cuando compres el dominio:
+
+1. En Brevo → **Senders & IPs → Domains** agregar el dominio y publicar los registros DNS
+   (DKIM/DMARC/SPF) que indique Brevo.
+2. Crear el sender definitivo, por ejemplo `facturacion@tu-dominio.com`, y verificarlo.
+3. En Render cambiar solo `MAIL_FROM` a ese sender y hacer redeploy. No hace falta tocar código
+   ni las credenciales SMTP.
 
 ### Integraciones y pagos en el deploy
 

@@ -42,6 +42,8 @@ services:
         sync: false
       - key: MAIL_PASSWORD
         sync: false
+      - key: MAIL_FROM
+        sync: false
       - key: FRONTEND_URL
         value: https://magnetixdian.hbarbetti-ing.workers.dev
       - key: AUTH_EXPOSE_TOKEN
