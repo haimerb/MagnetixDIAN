@@ -37,7 +37,7 @@ class ImportadorMultiFormatoTest {
         FormatoDetectadoDto formato1003 = resultado.formatos().get(1);
         assertEquals("1003", formato1003.codigo());
         assertFalse(formato1003.activo());
-        assertEquals("PENDIENTE_XSD", formato1003.estado());
+        assertEquals("PENDIENTE_GENERADOR", formato1003.estado());
         assertEquals(1, formato1003.filas());
     }
 

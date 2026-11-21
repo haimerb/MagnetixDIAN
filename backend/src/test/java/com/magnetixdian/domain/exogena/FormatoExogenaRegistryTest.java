@@ -26,9 +26,19 @@ class FormatoExogenaRegistryTest {
 
     @Test
     void formatosPendientesNoSePuedenUsar() {
-        FormatoExogena formato = registry.obtener("1003");
+        FormatoExogena formato = registry.obtener("1125");
         assertFalse(formato.activo());
         assertEquals(FormatoExogenaRegistry.ESTADO_PENDIENTE_XSD, formato.estado());
+        assertThrows(IllegalArgumentException.class, () -> registry.validarActivo("1125"));
+    }
+
+    @Test
+    void formatosConXsdOficialSiguenInactivos() {
+        FormatoExogena formato = registry.obtener("1003");
+        assertFalse(formato.activo());
+        assertEquals(FormatoExogenaRegistry.ESTADO_PENDIENTE_GENERADOR, formato.estado());
+        assertEquals("7", formato.version());
+        assertEquals("xsd/dian/2025/1003.xsd", formato.xsd());
         assertThrows(IllegalArgumentException.class, () -> registry.validarActivo("1003"));
     }
 
@@ -43,6 +53,15 @@ class FormatoExogenaRegistryTest {
         assertTrue(codigos.contains("1001"));
         assertTrue(codigos.contains("1002"));
         assertTrue(codigos.contains("1003"));
+        assertTrue(codigos.contains("1125"));
+        assertTrue(codigos.contains("2278"));
+        assertTrue(codigos.contains("5253"));
         assertEquals(2, registry.activos().size());
+        assertEquals(68, registry.todos().stream()
+                .filter(formato -> FormatoExogenaRegistry.ESTADO_PENDIENTE_GENERADOR.equals(formato.estado()))
+                .count());
+        assertEquals(3, registry.todos().stream()
+                .filter(formato -> FormatoExogenaRegistry.ESTADO_PENDIENTE_XSD.equals(formato.estado()))
+                .count());
     }
 }

@@ -26,6 +26,12 @@ Sistema con **tres módulos**:
 | Frontend | React / Vite / MUI / React Router | 18 / 5 / 6.5 / 6 |
 | Tests frontend | Vitest + Testing Library | 2.1.9 |
 
+### 1.1 XSD oficiales DIAN (vigencia 2025)
+
+Se versionan 69 XSD oficiales en `backend/src/main/resources/xsd/dian/2025/`, extraídos sin ejecutar los prevalidadores publicados por la DIAN para el año gravable 2025. `manifest.json` registra URL oficial, SHA-256, bytes, versión y encoding por archivo.
+
+Los XSD `xsd/medio-magnetico-1001.xsd` y `xsd/medio-magnetico-1002.xsd` siguen siendo propios del generador legacy y no se reemplazan: sus namespaces son incompatibles con los esquemas oficiales. La presencia de un XSD oficial no habilita generación ni cobro; los formatos siguen pendientes hasta tener parser, reglas y generador validados.
+
 **Requerimiento de JDK 17:** el Maven global del sistema usa JDK 8. Todos los builds exigen la variable de entorno:
 
 ```bash

@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="afo">
+    <xs:annotation>
+      <xs:documentation>Elemento que encapsula la información del formulario 2277 v1 Anexo Documental FONDOS DE PENSIONES OBLIGATORIAS</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:attribute name="tdoca" use="required">
+        <xs:annotation>
+          <xs:documentation>Tipo de documento del afiliado</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:pattern value="[0-9]{0,2}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="nita" use="required">
+        <xs:annotation>
+          <xs:documentation>Número de Identificación del Afiliado</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+			<xs:pattern value="[a-zA-Z0-9]+"/>
+            <xs:minLength value="1"/>
+            <xs:maxLength value="20"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="papa" use="required">
+        <xs:annotation>
+          <xs:documentation>Primer apellido del Afiliado</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="sapa" use="optional">
+        <xs:annotation>
+          <xs:documentation>Segundo apellido del afiliado</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="pnoa" use="required">
+        <xs:annotation>
+          <xs:documentation>Primer nombre del afiliado</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="onoa" use="optional">
+        <xs:annotation>
+          <xs:documentation>Otros nombres del afiliado</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="dir" use="optional">
+        <xs:annotation>
+          <xs:documentation>Dirección</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="200"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="dpto" use="optional">
+        <xs:annotation>
+          <xs:documentation>Código dpto</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="[0-9]{0,2}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="mun" use="optional">
+        <xs:annotation>
+          <xs:documentation>Código mcp</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="[0-9]{0,3}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="pais" use="required">
+        <xs:annotation>
+          <xs:documentation>Código País</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:pattern value="[0-9]{0,4}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="email" use="optional">
+        <xs:annotation>
+          <xs:documentation>Correo Electrónico</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+			<xs:pattern value="[A-Za-z0-9.!#$%&amp;'*+/=?^_`{|}~\-]+@[A-Za-z0-9]+([.-][A-Za-z0-9]+)*\.[A-Za-z]{2,3}"/>
+            <xs:minLength value="0"/>
+            <xs:maxLength value="50"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+	  <xs:attribute name="tipapo" use="required">
+        <xs:annotation>
+          <xs:documentation>Tipo de Aportante</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="9"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="tdocapo" use="required">
+        <xs:annotation>
+          <xs:documentation>Tipo de documento del aportante</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+	    <xs:attribute name="nitapo" use="required">
+        <xs:annotation>
+          <xs:documentation>Número de Identificación del aportante</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+			      <xs:pattern value="[a-zA-Z0-9]+"/>
+            <xs:minLength value="1"/>
+            <xs:maxLength value="20"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="totapo" use="required">
+        <xs:annotation>
+          <xs:documentation>Valor de los ahorros efectuados durante el Periodo</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="mas">
+    <xs:annotation>
+      <xs:documentation>Elemento raíz del xml de carga masiva</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Cab" type="CabType"/>
+        <xs:element ref="afo" maxOccurs="5000"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="CabType">
+    <xs:sequence>
+      <xs:element name="Ano" type="xs:gYear" nillable="false">
+        <xs:annotation>
+          <xs:documentation>Año de envio</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CodCpt" nillable="false">
+        <xs:annotation>
+          <xs:documentation>Concepto</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Formato" fixed="2277">
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="4"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Version" type="xs:positiveInteger" fixed="1"/>
+      <xs:element name="NumEnvio">
+        <xs:annotation>
+          <xs:documentation>Numero de envio</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="8"/>
+            <xs:maxInclusive value="99999999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="FecEnvio" type="xs:dateTime">
+        <xs:annotation>
+          <xs:documentation>Fecha de envio</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FecInicial" type="xs:date">
+        <xs:annotation>
+          <xs:documentation>Fecha inicial</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FecFinal" type="xs:date">
+        <xs:annotation>
+          <xs:documentation>Fecha Final</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ValorTotal" type="xs:double">
+        <xs:annotation>
+          <xs:documentation>Valor Total</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CantReg">
+        <xs:annotation>
+          <xs:documentation>Cantidad de registros</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="4"/>
+            <xs:maxInclusive value="9999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
