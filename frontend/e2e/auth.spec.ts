@@ -6,6 +6,7 @@ test.describe('Autenticación', () => {
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Información exógena DIAN sin fricción' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Crear cuenta gratis' }).first()).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Planes simples' })).toBeVisible()
   })
 
   test('muestra error con credenciales inválidas', async ({ page }) => {
