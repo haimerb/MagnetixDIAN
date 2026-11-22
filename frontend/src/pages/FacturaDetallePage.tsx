@@ -23,7 +23,14 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import DownloadIcon from '@mui/icons-material/Download'
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
-import { api, reenviarFactura, type FacturaDetalle } from '../api/client'
+import WhatsAppIcon from '@mui/icons-material/WhatsApp'
+import {
+  api,
+  entregarFacturaWhatsapp,
+  reenviarFactura,
+  type EntregaWhatsAppResponse,
+  type FacturaDetalle,
+} from '../api/client'
 import { descargarArchivo } from '../api/descargas'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
 import { money, totalesLinea } from '../features/facturacion/calculos'
@@ -53,6 +60,10 @@ export default function FacturaDetallePage() {
   const [destinatario, setDestinatario] = useState('')
   const [reenviando, setReenviando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  const [whatsappAbierto, setWhatsappAbierto] = useState(false)
+  const [telefono, setTelefono] = useState('')
+  const [entregando, setEntregando] = useState(false)
+  const [entrega, setEntrega] = useState<EntregaWhatsAppResponse | null>(null)
 
   const cargar = useCallback(() => {
     if (id == null || empresaId == null) {
@@ -129,6 +140,30 @@ export default function FacturaDetallePage() {
     }
   }
 
+  const abrirWhatsapp = () => {
+    setTelefono('')
+    setEntrega(null)
+    setError(null)
+    setWhatsappAbierto(true)
+  }
+
+  const onEntregarWhatsapp = async () => {
+    if (empresaId == null || !telefono.trim()) return
+    setEntregando(true)
+    setError(null)
+    try {
+      const resultado = await entregarFacturaWhatsapp(empresaId, factura.id, telefono.trim())
+      setEntrega(resultado)
+      setAviso('Enlace de WhatsApp generado.')
+      setWhatsappAbierto(false)
+    } catch (e: unknown) {
+      const detalle = (e as { response?: { data?: { message?: string } } }).response?.data?.message
+      setError(detalle ?? 'No se pudo entregar la factura por WhatsApp.')
+    } finally {
+      setEntregando(false)
+    }
+  }
+
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
       <Stack
@@ -148,6 +183,9 @@ export default function FacturaDetallePage() {
         <Stack direction="row" spacing={1}>
           <Button variant="outlined" startIcon={<EmailOutlinedIcon />} onClick={abrirReenvio}>
             Reenviar
+          </Button>
+          <Button variant="outlined" startIcon={<WhatsAppIcon />} onClick={abrirWhatsapp}>
+            WhatsApp
           </Button>
           <Button
             variant="outlined"
@@ -172,6 +210,25 @@ export default function FacturaDetallePage() {
 
       {error && <Alert severity="error">{error}</Alert>}
       {aviso && <Alert severity="success" onClose={() => setAviso(null)}>{aviso}</Alert>}
+      {entrega?.enviado && entrega.enlace && (
+        <Alert
+          severity="info"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              component="a"
+              href={entrega.enlace}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir
+            </Button>
+          }
+        >
+          {entrega.mensaje || `Enlace listo para ${entrega.numero}`}
+        </Alert>
+      )}
 
       <SectionCard title="Datos del documento">
         <Grid container spacing={3}>
@@ -231,7 +288,9 @@ export default function FacturaDetallePage() {
             </TableHead>
             <TableBody>
               {factura.lineas.map((l, idx) => (
-                <TableRow key={idx}>
+                <TableRow
+                  key={`${l.codigoProducto ?? ''}|${l.descripcion}|${l.cantidad}|${l.valorUnitario}|${l.ivaPct}|${l.incPct}`}
+                >
                   <TableCell>{idx + 1}</TableCell>
                   <TableCell>{l.descripcion}</TableCell>
                   <TableCell align="right">{l.cantidad}</TableCell>
@@ -332,6 +391,39 @@ export default function FacturaDetallePage() {
           <Button onClick={() => setReenvioAbierto(false)} disabled={reenviando}>Cancelar</Button>
           <Button variant="contained" onClick={onReenviar} disabled={!destinatario.trim()} loading={reenviando}>
             Enviar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={whatsappAbierto}
+        onClose={() => { if (!entregando) setWhatsappAbierto(false) }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Entregar factura por WhatsApp</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
+          <Typography variant="body2" color="text.secondary">
+            Se generará un enlace de WhatsApp con el número y mensaje configurados para la empresa.
+          </Typography>
+          <TextField
+            label="Número de WhatsApp"
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
+            inputProps={{ inputMode: 'tel' }}
+            fullWidth
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWhatsappAbierto(false)} disabled={entregando}>Cancelar</Button>
+          <Button
+            variant="contained"
+            startIcon={<WhatsAppIcon />}
+            onClick={onEntregarWhatsapp}
+            disabled={!telefono.trim()}
+            loading={entregando}
+          >
+            Generar enlace
           </Button>
         </DialogActions>
       </Dialog>

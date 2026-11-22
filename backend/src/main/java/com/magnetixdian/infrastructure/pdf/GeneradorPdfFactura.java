@@ -17,32 +17,62 @@ import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
 import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.domain.factura.LineaFactura;
+import com.magnetixdian.interfaces.dto.BrandingDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
-/**
- * Genera la representación gráfica (PDF) de la factura electrónica con el
- * código QR de validación DIAN.
- */
 @Component
 public class GeneradorPdfFactura {
 
+    private final String directorioUpload;
+
+    public GeneradorPdfFactura() {
+        this("./uploads");
+    }
+
+    @Autowired
+    public GeneradorPdfFactura(@Value("${magnetixdian.upload.dir:./uploads}") String directorioUpload) {
+        this.directorioUpload = directorioUpload == null || directorioUpload.isBlank() ? "./uploads" : directorioUpload;
+    }
+
     public byte[] generar(FacturaDatos f, String cufe, String qrUrl) {
+        return generar(f, cufe, qrUrl, null);
+    }
+
+    public byte[] generar(FacturaDatos f, String cufe, String qrUrl, BrandingDto branding) {
         Document doc = new Document(PageSize.A4, 36, 36, 36, 36);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            Font titulo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
-            Font normal = FontFactory.getFont(FontFactory.HELVETICA, 9);
-            Font bold = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9);
+            String nombreFuente = fuente(branding);
+            Font titulo = FontFactory.getFont(nombreFuente, 14);
+            Font normal = FontFactory.getFont(nombreFuente, 9);
+            Font bold = FontFactory.getFont(nombreFuente, Font.BOLD, 9);
+            Color primario = color(branding == null ? null : branding.primaryColor());
+            Color acento = color(branding == null ? null : branding.accentColor());
+            if (primario != null) {
+                titulo.setColor(primario);
+            }
 
-            doc.add(new Paragraph(f.emisor().razonSocial(), titulo));
+            Image logo = cargarLogo(branding);
+            if (logo != null) {
+                logo.scaleToFit(90, 50);
+                doc.add(logo);
+            }
+            String nombreComercial = texto(branding == null ? null : branding.displayName());
+            doc.add(new Paragraph(nombreComercial == null ? f.emisor().razonSocial() : nombreComercial, titulo));
             doc.add(new Paragraph("NIT " + f.emisor().numeroIdentificacion()
                     + (f.emisor().direccion() != null ? " · " + f.emisor().direccion() : ""), normal));
             doc.add(new Paragraph(f.tipo().getProfileId(), normal));
@@ -61,7 +91,7 @@ public class GeneradorPdfFactura {
 
             PdfPTable tabla = new PdfPTable(new float[]{1, 4, 1.2f, 1.6f, 1.4f, 1.6f});
             tabla.setWidthPercentage(100);
-            encabezado(tabla, bold, "#", "Descripción", "Cant.", "V. Unit.", "IVA", "Total");
+            encabezado(tabla, bold, acento, "#", "Descripción", "Cant.", "V. Unit.", "IVA", "Total");
             int n = 1;
             for (LineaFactura l : f.lineas()) {
                 tabla.addCell(celda(String.valueOf(n++), normal));
@@ -92,6 +122,11 @@ public class GeneradorPdfFactura {
             }
             doc.add(new Paragraph("URL validación: " + qrUrl, normal));
 
+            String pie = texto(branding == null ? null : branding.invoiceFooter());
+            if (pie != null) {
+                doc.add(new Paragraph(pie, normal));
+            }
+
             doc.close();
             return out.toByteArray();
         } catch (Exception e) {
@@ -101,6 +136,57 @@ public class GeneradorPdfFactura {
                 doc.close();
             }
         }
+    }
+
+    private Image cargarLogo(BrandingDto branding) {
+        try {
+            String ruta = texto(branding == null ? null : branding.logoUrl());
+            if (ruta == null) {
+                return null;
+            }
+            Path archivo = Paths.get(ruta).getFileName();
+            if (archivo == null) {
+                return null;
+            }
+            Path completo = Paths.get(directorioUpload, archivo.toString());
+            if (!Files.isRegularFile(completo)) {
+                return null;
+            }
+            return Image.getInstance(completo.toAbsolutePath().toString());
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private String fuente(BrandingDto branding) {
+        String familia = texto(branding == null ? null : branding.fontFamily());
+        if (familia == null) {
+            return FontFactory.HELVETICA;
+        }
+        String minusculas = familia.toLowerCase(java.util.Locale.ROOT);
+        if (minusculas.contains("courier") || minusculas.contains("mono")) {
+            return FontFactory.COURIER;
+        }
+        if (minusculas.contains("times") || minusculas.contains("serif")) {
+            return FontFactory.TIMES;
+        }
+        return FontFactory.HELVETICA;
+    }
+
+    private Color color(String valor) {
+        try {
+            if (valor == null || !valor.matches("#?[0-9a-fA-F]{6}")) {
+                return null;
+            }
+            String hex = valor.startsWith("#") ? valor.substring(1) : valor;
+            return new Color(Integer.parseInt(hex, 16));
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private String texto(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
     private byte[] qrPng(String contenido, int size) {
@@ -116,10 +202,15 @@ public class GeneradorPdfFactura {
         }
     }
 
-    private void encabezado(PdfPTable t, Font font, String... cols) {
+    private void encabezado(PdfPTable t, Font font, Color color, String... cols) {
         for (String c : cols) {
             PdfPCell cell = new PdfPCell(new Phrase(c, font));
-            cell.setGrayFill(0.9f);
+            if (color != null) {
+                cell.setBackgroundColor(color);
+                cell.setGrayFill(0f);
+            } else {
+                cell.setGrayFill(0.9f);
+            }
             t.addCell(cell);
         }
     }

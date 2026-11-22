@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { api, clearTokens, saveTokens, session } from '../../api/client'
+import { api, clearTokens, EVENTO_SESION, saveTokens, session } from '../../api/client'
 import type { LoginResponse, PerfilUsuario } from '../../api/client'
 import { AuthContext } from './AuthContext'
 import type { Sesion } from './AuthContext'
 
 function perfilSesion(p: PerfilUsuario): Sesion {
-  return { username: p.username, roles: p.roles, empresaId: p.empresaId }
+  return {
+    username: p.username,
+    roles: p.roles,
+    empresaId: p.empresaId,
+    empresaRazonSocial: p.empresaRazonSocial,
+    empresaNit: p.empresaNit,
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -27,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await api.post<LoginResponse>('/auth/login', { username, password })
       saveTokens(data.accessToken, data.refreshToken)
       setSesion({ username: data.username, roles: data.roles, empresaId: null })
+      window.dispatchEvent(new CustomEvent(EVENTO_SESION))
       obtenerPerfil().then(setSesion).catch(() => undefined)
     },
     [obtenerPerfil],
@@ -39,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     clearTokens()
     setSesion(null)
+    window.dispatchEvent(new CustomEvent(EVENTO_SESION))
   }, [])
 
   return <AuthContext.Provider value={{ sesion, login, logout }}>{children}</AuthContext.Provider>

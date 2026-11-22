@@ -34,9 +34,16 @@ public class AuditoriaService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrar(String usuario, String accion, String entidad, Object entidadId, String detalle) {
+        registrarEnEmpresa(null, usuario, accion, entidad, entidadId, detalle);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarEnEmpresa(Long empresaId, String usuario, String accion, String entidad,
+                                   Object entidadId, String detalle) {
         try {
             String id = entidadId == null ? null : String.valueOf(entidadId);
-            repository.save(new EventoAuditoriaJpa(usuario, accion, entidad, id, recortar(detalle, 1000), ipActual()));
+            repository.save(new EventoAuditoriaJpa(empresaId, usuario, accion, entidad, id,
+                    recortar(detalle, 1000), ipActual()));
         } catch (RuntimeException ex) {
             log.warn("No se pudo registrar el evento de auditoría {}: {}", accion, ex.getMessage());
         }

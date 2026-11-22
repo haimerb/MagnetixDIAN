@@ -38,10 +38,12 @@ import com.magnetixdian.interfaces.dto.FacturaEventoDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.LineaFacturaRequest;
+import com.magnetixdian.interfaces.dto.BrandingDto;
 import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -90,6 +92,13 @@ public class ServicioFacturacion {
     private final AuditoriaService auditoria;
     private final ServicioEnvios envios;
     private final ServicioSuscripciones suscripciones;
+    private final ServicioBranding branding;
+    private final List<HookEntregaFactura> hooksEntrega;
+
+    @FunctionalInterface
+    public interface HookEntregaFactura {
+        void alEmitir(Long empresaId, Long facturaId, String numeroCompleto);
+    }
 
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
@@ -107,6 +116,30 @@ public class ServicioFacturacion {
                                AuditoriaService auditoria,
                                ServicioEnvios envios,
                                ServicioSuscripciones suscripciones) {
+        this(empresaRepository, configRepository, facturaRepository, eventoRepository, numeracion, validador,
+                generadorUbl, generadorAttached, generadorPdf, firma, transmision, notificador, generadorEvento,
+                auditoria, envios, suscripciones, null, List.of());
+    }
+
+    @Autowired
+    public ServicioFacturacion(EmpresaRepository empresaRepository,
+                               EmpresaFeConfigRepository configRepository,
+                               FacturaRepository facturaRepository,
+                               FacturaEventoRepository eventoRepository,
+                               ServicioNumeracion numeracion,
+                               ValidadorFactura validador,
+                               GeneradorUblFactura generadorUbl,
+                               GeneradorAttachedDocument generadorAttached,
+                               GeneradorPdfFactura generadorPdf,
+                               ServicioFirma firma,
+                               ServicioTransmision transmision,
+                               NotificadorEmail notificador,
+                               GeneradorApplicationResponse generadorEvento,
+                               AuditoriaService auditoria,
+                               ServicioEnvios envios,
+                               ServicioSuscripciones suscripciones,
+                               ServicioBranding branding,
+                               List<HookEntregaFactura> hooksEntrega) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -123,6 +156,8 @@ public class ServicioFacturacion {
         this.auditoria = auditoria;
         this.envios = envios;
         this.suscripciones = suscripciones;
+        this.branding = branding;
+        this.hooksEntrega = hooksEntrega == null ? List.of() : hooksEntrega;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -178,9 +213,20 @@ public class ServicioFacturacion {
         notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
         auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_EMITIDA", "factura", factura.getId(),
                 numeroCompleto + " · " + factura.getEstado());
+        notificarEntrega(empresaId, factura.getId(), numeroCompleto);
 
         return new ResultadoEmisionDto(true, factura.getId(), numeroCompleto, cufe, factura.getEstado(),
                 qrUrl, transmisionResultado.mensaje(), List.of());
+    }
+
+    public void notificarEntrega(Long empresaId, Long facturaId, String numeroCompleto) {
+        for (HookEntregaFactura hook : hooksEntrega) {
+            try {
+                hook.alEmitir(empresaId, facturaId, numeroCompleto);
+            } catch (RuntimeException ex) {
+                log.warn("Hook de entrega falló para la factura {}: {}", numeroCompleto, ex.getMessage());
+            }
+        }
     }
 
     private void notificarAdquirente(EmpresaJpa empresa, EmpresaFeConfigJpa config, FacturaJpa factura,
@@ -390,7 +436,18 @@ public class ServicioFacturacion {
                 f.getTotalPagar(), f.getObservaciones(), f.getCufeReferencia(), f.getNumeroReferencia(), null, null,
                 null, null, null, null, null, null, 0, 0);
         String cufe = f.getCufe() != null ? f.getCufe() : f.getCude();
-        return generadorPdf.generar(datos, cufe, f.getQrUrl());
+        BrandingDto marca = null;
+        if (branding != null) {
+            try {
+                marca = branding.obtener(empresaId);
+            } catch (RuntimeException ex) {
+                log.warn("No se pudo aplicar la marca de la empresa {} al PDF: {}", empresaId, ex.getMessage());
+            }
+        }
+        if (marca == null) {
+            return generadorPdf.generar(datos, cufe, f.getQrUrl());
+        }
+        return generadorPdf.generar(datos, cufe, f.getQrUrl(), marca);
     }
 
     private FacturaJpa persistir(EmpresaJpa empresa, Long usuarioId, EmpresaFeConfigJpa config, FacturaDatos d,

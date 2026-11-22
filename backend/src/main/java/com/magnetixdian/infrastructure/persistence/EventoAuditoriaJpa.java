@@ -20,6 +20,9 @@ public class EventoAuditoriaJpa {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "empresa_id")
+    private Long empresaId;
+
     @Column(length = 80)
     private String usuario;
 
@@ -47,7 +50,13 @@ public class EventoAuditoriaJpa {
 
     public EventoAuditoriaJpa(String usuario, String accion, String entidad, String entidadId,
                               String detalle, String ip) {
+        this(null, usuario, accion, entidad, entidadId, detalle, ip);
+    }
+
+    public EventoAuditoriaJpa(Long empresaId, String usuario, String accion, String entidad, String entidadId,
+                              String detalle, String ip) {
         this();
+        this.empresaId = empresaId;
         this.usuario = usuario;
         this.accion = accion;
         this.entidad = entidad;
@@ -58,6 +67,10 @@ public class EventoAuditoriaJpa {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getEmpresaId() {
+        return empresaId;
     }
 
     public String getUsuario() {

@@ -34,30 +34,29 @@ public class ImportadorFacturas {
     }
 
     public ResultadoImportacionDto importar(Long empresaId, Long usuarioId, byte[] contenido, String nombreArchivo) {
+        return importar(empresaId, usuarioId, contenido, nombreArchivo, null);
+    }
+
+    public ResultadoImportacionDto importar(Long empresaId, Long usuarioId, byte[] contenido, String nombreArchivo,
+                                            Map<String, Integer> mapeo) {
         List<List<String>> filas = LectorFilasImportacion.leer(contenido, nombreArchivo);
         if (filas.size() < 2) {
             return new ResultadoImportacionDto(0, 0, 0, List.of("El archivo no contiene filas de datos."));
         }
-        Map<String, Integer> columnas = columnas(filas.get(0));
-        List<String> errores = new ArrayList<>();
-        for (String requerida : List.of("grupo", "adquirente_numero_documento", "adquirente_nombre",
-                "descripcion", "cantidad", "valor_unitario")) {
-            if (!columnas.containsKey(requerida)) {
-                errores.add("Falta la columna obligatoria: " + requerida);
-            }
-        }
+        Map<String, Integer> columnas = columnas(filas.get(0), mapeo);
+        List<String> errores = validarColumnas(columnas);
         if (!errores.isEmpty()) {
             return new ResultadoImportacionDto(0, 0, 0, errores);
         }
 
         Map<String, List<Fila>> grupos = new LinkedHashMap<>();
-        int numeroLinea = 1;
-        for (List<String> fila : filas.subList(1, filas.size())) {
-            numeroLinea++;
-            if (numeroLinea - 1 > MAX_FILAS) {
+        for (int i = 1; i < filas.size(); i++) {
+            if (i > MAX_FILAS) {
                 errores.add("Se importaron solo las primeras " + MAX_FILAS + " filas.");
                 break;
             }
+            List<String> fila = filas.get(i);
+            int numeroLinea = i + 1;
             String grupo = valor(fila, columnas, "grupo");
             if (grupo.isBlank()) {
                 errores.add("Línea " + numeroLinea + ": el grupo está vacío.");
@@ -89,6 +88,47 @@ public class ImportadorFacturas {
             }
         }
         return new ResultadoImportacionDto(emitidas, rechazadas, lineas, errores);
+    }
+
+    public List<FacturaRequest> preparar(byte[] contenido, String nombreArchivo, Map<String, Integer> mapeo) {
+        List<List<String>> filas = LectorFilasImportacion.leer(contenido, nombreArchivo);
+        if (filas.size() < 2) {
+            throw new IllegalArgumentException("El archivo no contiene filas de datos.");
+        }
+        Map<String, Integer> columnas = columnas(filas.get(0), mapeo);
+        List<String> errores = validarColumnas(columnas);
+        if (!errores.isEmpty()) {
+            throw new IllegalArgumentException(String.join("; ", errores));
+        }
+        Map<String, List<Fila>> grupos = new LinkedHashMap<>();
+        for (int i = 1; i < filas.size(); i++) {
+            if (i > MAX_FILAS) {
+                break;
+            }
+            List<String> fila = filas.get(i);
+            int numeroLinea = i + 1;
+            String grupo = valor(fila, columnas, "grupo");
+            if (grupo.isBlank()) {
+                continue;
+            }
+            grupos.computeIfAbsent(grupo, k -> new ArrayList<>()).add(new Fila(numeroLinea, fila));
+        }
+        List<FacturaRequest> preparadas = new ArrayList<>();
+        for (Map.Entry<String, List<Fila>> entrada : grupos.entrySet()) {
+            preparadas.add(construir(entrada.getKey(), entrada.getValue(), columnas));
+        }
+        return preparadas;
+    }
+
+    private static List<String> validarColumnas(Map<String, Integer> columnas) {
+        List<String> errores = new ArrayList<>();
+        for (String requerida : List.of("grupo", "adquirente_numero_documento", "adquirente_nombre",
+                "descripcion", "cantidad", "valor_unitario")) {
+            if (!columnas.containsKey(requerida)) {
+                errores.add("Falta la columna obligatoria: " + requerida);
+            }
+        }
+        return errores;
     }
 
     private FacturaRequest construir(String grupo, List<Fila> filas, Map<String, Integer> columnas) {
@@ -138,6 +178,21 @@ public class ImportadorFacturas {
             if (!nombre.isBlank()) {
                 columnas.putIfAbsent(nombre, i);
             }
+        }
+        return columnas;
+    }
+
+    private static Map<String, Integer> columnas(List<String> encabezado, Map<String, Integer> mapeo) {
+        if (mapeo == null || mapeo.isEmpty()) {
+            return columnas(encabezado);
+        }
+        Map<String, Integer> columnas = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entrada : mapeo.entrySet()) {
+            if (entrada.getKey() == null || entrada.getKey().isBlank()
+                    || entrada.getValue() == null || entrada.getValue() < 0) {
+                continue;
+            }
+            columnas.put(entrada.getKey(), entrada.getValue());
         }
         return columnas;
     }

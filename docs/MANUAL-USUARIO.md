@@ -2,7 +2,7 @@
 
 ## Qué hace MagnetixDIAN
 
-MagnetixDIAN le permite **generar la información exógena de la DIAN** en los formatos **1001** (pagos/abonos y retenciones a terceros) y **1002** (créditos, descuentos y notas de ajuste) de forma ágil:
+MagnetixDIAN le permite **generar la información exógena de la DIAN** en los formatos **1001** (pagos/abonos y retenciones a terceros) y **1002** (créditos, descuentos y notas de ajuste) de forma ágil, y además **gestionar facturación electrónica, documentos RADIAN, contabilidad, migraciones, branding y PWA**:
 
 1. Descarga la plantilla Excel del formato y la diligencia (o usa su sistema de origen).
 2. Carga el archivo con las operaciones del período.
@@ -128,3 +128,40 @@ Si necesita integrar sus sistemas con MagnetixDIAN:
 - **Una vez presentado**, el reporte queda en estado `PRESENTADO`; no puede volver a editarse.
 - Revise periódicamente los avisos de **vencimiento** que el sistema envía por correo (si están habilitados en su instalación).
 - Si un error aparece solo en el prevalidador oficial de la DIAN, ajuste los datos en el Excel y repita desde la carga.
+
+## 13. Documentos RADIAN (`/app/radian`)
+
+1. Ingrese a **RADIAN** desde el menú.
+2. En **Importar**, seleccione el archivo (XML/CSV/Excel), indique la dirección (**Emitido** o **Recibido**) y pulse **Importar**. Los documentos repetidos por empresa + dirección + CUFE/CUDE se omiten.
+3. En el listado puede filtrar por dirección, tipo de documento, estado de causación y rango de fechas.
+4. Pulse **Causar** para registrar el documento; si requiere asiento, pulse **Contabilizar**. El sistema genera el asiento con el plan de cuentas de la empresa.
+
+## 14. Contabilidad (`/app/contabilidad`)
+
+1. En **Contabilidad → Asientos** consulte los asientos generados desde RADIAN o desde una migración.
+2. En **Conciliación** elija el rango de fechas y, si lo desea, la dirección y el tipo de documento.
+3. El resultado muestra las diferencias entre documentos y asientos para que pueda corregir la causación.
+
+## 15. Migración contable (`/app/migracion-contable`)
+
+1. En **Integraciones** guarde primero las credenciales del proveedor (SIIGO, ALEGRA, ODOO, etc.).
+2. Vaya a **Migración contable**, seleccione el proveedor y ejecute la migración.
+3. Abra el **reporte** para ver registros migrados y errores. Si hay fallos, pulse **Reintentar**: solo se reprocesan los registros en error.
+
+## 16. Importación universal (`/app/importacion-universal`)
+
+1. Arrastre un archivo y pulse **Vista previa**: el sistema detecta el formato y sugiere el mapeo de columnas.
+2. Revise y ajuste el mapeo; puede guardarlo para la próxima carga.
+3. Pulse **Confirmar** para importar los datos normalizados. El listado **Mapeos** muestra las plantillas guardadas por empresa.
+
+## 17. Factura rápida y entrega por WhatsApp (`/app/factura-rapida`)
+
+1. Complete el formulario de factura (adquirente, líneas, impuestos) y valide antes de emitir.
+2. Tras emitir, use **Entregar por WhatsApp**: el sistema abre un enlace `https://wa.me` con el número y la plantilla configurados.
+3. Si no hay número en la empresa, diligéncielo en **Branding** o escríbalo en el diálogo de entrega. No se requiere token de API de WhatsApp.
+
+## 18. Branding y PWA (`/app/branding`)
+
+1. En **Branding** defina nombre visible, colores primario/acento, tipografía, pie de factura, número/plantilla de WhatsApp y colores de la PWA.
+2. El slug público le permite compartir una vista de marca sin iniciar sesión.
+3. En el navegador, use **Instalar aplicación** (icono `/icon.svg` y manifiesto `/manifest.webmanifest`) para abrir MagnetixDIAN como app. El service worker funciona solo en HTTPS/localhost y nunca intercepta `/api`.
