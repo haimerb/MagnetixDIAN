@@ -158,6 +158,9 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `PAC_CONNECT_TIMEOUT_MS` / `PAC_READ_TIMEOUT_MS` | Render (env) | timeouts del adaptador PAC REST (default `5000` / `30000`) |
 | `DIAN_URL_HABILITACION` / `DIAN_URL_PRODUCCION` | Render (env) | endpoints SOAP DIAN; por defecto los oficiales de habilitación y producción |
 | `DIAN_CONNECT_TIMEOUT_MS` / `DIAN_REQUEST_TIMEOUT_MS` | Render (env) | timeouts de transmisión DIAN directa (default `30000` / `60000`) |
+| `DIAN_CATALOGO_TOKEN_URL` / `DIAN_CATALOGO_LISTADO_URL` | Render (env, `sync: false`) | requeridos para traer listados por token; el token del usuario se guarda cifrado por empresa, nunca aquí |
+| `DIAN_CATALOGO_BASE_URL` / `DIAN_CATALOGO_HOSTS_PERMITIDOS` | Render (env) | host base y allowlist del catálogo DIAN |
+| `DIAN_CATALOGO_CONNECT_TIMEOUT_MS` / `DIAN_CATALOGO_READ_TIMEOUT_MS` / `DIAN_CATALOGO_MAX_BYTES` | Render (env) | timeouts y límite de descarga del listado (default `5000` / `60000` / `52428800`) |
 | `SENTRY_DSN` | Render / Cloudflare | opcional; activa observabilidad (backend `SENTRY_DSN`, frontend `VITE_SENTRY_DSN`) |
 
 ### Correos de factura en producción
@@ -209,7 +212,8 @@ Cuando compres el dominio:
 
 - La entrega de facturas es **Click-to-Chat**: `POST /api/empresas/{empresaId}/facturacion/{facturaId}/entregar-whatsapp`
   devuelve un enlace `https://wa.me/<numero>?text=...`. **No hay token de WhatsApp Cloud API** que configurar.
-- El número y la plantilla se toman de `empresa_branding` (configurables en **Branding**). Si no hay
+- El número y la plantilla se toman de `empresa_branding` (configurables en **Empresa → Identidad visual**)
+. Si no hay
   número, el endpoint responde `400`; los placeholders `{numero}`, `{factura}`, `{total}` y `{empresa}`
   se sustituyen con los datos de la factura y el evento se auditoría.
 - `GET /api/branding/{publicSlug}` está permitido sin JWT (permitAll) para la vista pública de marca.
@@ -220,7 +224,7 @@ Cuando compres el dominio:
 
 - **Credenciales por proveedor** (SIIGO, ALEGRA, ODOO, WORLD_OFFICE, HELISA, SHOPIFY,
   WOOCOMMERCE, SAP_BUSINESS_ONE, DYNAMICS_365, NETSUITE) **no son variables de entorno**:
-  se cargan por empresa en Administración → Integraciones y se guardan cifradas en
+  se cargan por empresa en Empresa → Integraciones y se guardan cifradas en
   `integracion_config` (clave `CRYPTO_KEY`). Plantillas de claves vacías en `.env.example`
   y en el manual técnico.
 - **Webhook de integraciones:** `POST /api/integraciones/webhook/{proveedor}/{token}` es público.

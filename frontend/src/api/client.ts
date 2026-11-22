@@ -851,6 +851,56 @@ export type DocumentoRadian = {
   createdAt: string
 }
 
+export type TraerDianTokenRequest = {
+  token: string
+  direccion?: string
+  fechaDesde: string
+  fechaHasta: string
+  grupo?: string
+  nitTercero?: string
+  guardarToken?: boolean
+}
+
+export type ResultadoTraerDian = {
+  origen: 'TOKEN' | 'ARCHIVO'
+  archivo: string
+  documentos: number
+  mensaje: string
+  registros: DocumentoRadian[]
+}
+
+export async function traerDocumentosDianPorToken(empresaId: number, solicitud: TraerDianTokenRequest) {
+  const { data } = await api.post<ResultadoTraerDian>(
+    `/empresas/${empresaId}/dian/documentos/token`,
+    solicitud,
+  )
+  return data
+}
+
+export async function traerDocumentosDianPorArchivo(
+  empresaId: number,
+  archivo: File,
+  fechaDesde: string,
+  fechaHasta: string,
+  direccion?: string,
+  grupo?: string,
+  nitTercero?: string,
+) {
+  const form = new FormData()
+  form.append('archivo', archivo)
+  form.append('fechaDesde', fechaDesde)
+  form.append('fechaHasta', fechaHasta)
+  if (direccion) form.append('direccion', direccion)
+  if (grupo) form.append('grupo', grupo)
+  if (nitTercero) form.append('nitTercero', nitTercero)
+  const { data } = await api.post<ResultadoTraerDian>(
+    `/empresas/${empresaId}/dian/documentos/archivo`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return data
+}
+
 export type AsientoContableLinea = {
   id: number
   codigoCuenta: string

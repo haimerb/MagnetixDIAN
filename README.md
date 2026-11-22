@@ -1,13 +1,13 @@
 # MagnetixDIAN
 
-Plataforma de cumplimiento tributario DIAN con **seis módulos**:
+ERP contable centrado en la DIAN, organizado en **cuatro áreas**:
 
-1. **Información exógena (medios magnéticos)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Carga un Excel, valida contra las reglas DIAN (dígito de verificación del NIT, conceptos del catálogo, topes en UVT), genera el reporte y descarga el **XML listo para presentar en MUISCA**.
-2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con **CUFE/CUDE** (SHA-384), **UBL 2.1**, firma **XAdES-EPES**, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
-3. **Integraciones y pagos** — sincronización con ERP/contabilidad/e-commerce mediante webhooks firmados y checkout de suscripciones (simulado / Wompi / MercadoPago).
-4. **RADIAN y contabilidad** — importación de documentos (causación/contabilización), plan de cuentas, asientos y conciliación.
-5. **Importación universal y migración** — detección de formato, mapeo inteligente de columnas y migración contable desde proveedores con reintentos.
-6. **Facturación rápida, branding y PWA** — formulario simple de facturación, entrega por WhatsApp Click-to-Chat, identidad visual por empresa e instalación como app.
+1. **Inicio** — estado del cumplimiento, accesos a exógena, facturación y asentamiento.
+2. **Facturación** — emisión FEV v1.9 (facturas y notas), validación, reportes, factura rápida y entrega por WhatsApp Click-to-Chat.
+3. **Contabilidad** — **Asentar facturación**: traiga documentos de la DIAN por **token o archivo Excel/CSV/JSON/ZIP**, cáuselos, asíntelos y consulte asientos y conciliación. Los asientos alimentan la información exógena.
+4. **Empresa** — usuarios, identidad visual, integraciones, suscripción y administración.
+
+La información exógena (formatos **1001 v10** y **1002 v10**) se genera y presenta en MUISCA desde los datos validados y asentados.
 
 ## Stack
 
@@ -73,9 +73,20 @@ pnpm run test        # Vitest
 pnpm run test:e2e    # Playwright (backend + preview)
 ```
 
+## Asentar facturación
+
+Desde **Contabilidad → Asentar facturación** se traen documentos de la DIAN de dos formas:
+
+- `POST /api/empresas/{empresaId}/dian/documentos/token`: envía el token/enlace DIAN, rango de fechas y filtros opcionales. El token se cifra en BD y nunca se devuelve ni se registra en logs.
+- `POST /api/empresas/{empresaId}/dian/documentos/archivo`: recibe un Excel/CSV/JSON/ZIP exportado por la DIAN.
+
+Variables de configuración del catálogo DIAN: `DIAN_CATALOGO_BASE_URL`, `DIAN_CATALOGO_TOKEN_URL`, `DIAN_CATALOGO_LISTADO_URL`, `DIAN_CATALOGO_HOSTS_PERMITIDOS`, `DIAN_CATALOGO_CONNECT_TIMEOUT_MS`, `DIAN_CATALOGO_READ_TIMEOUT_MS` y `DIAN_CATALOGO_MAX_BYTES`. El token de cada empresa **no** es una variable de entorno.
+
+Los documentos traídos se causan y asientan en la misma pantalla; los asientos alimentan la conciliación y la información exógena.
+
 ## Integraciones y pagos
 
-Catálogo de proveedores (configuración por empresa en Administración → Integraciones):
+Catálogo de proveedores (configuración por empresa en **Empresa → Integraciones**). El estado mostrado es honesto: `Activo` solo cuando hay conexión configurada y exitosa; si no, `Vía importación`, `Próximamente` o `Sin conexión directa`:
 
 | Proveedor | Slug | Credenciales (plantillas vacías) |
 |---|---|---|
@@ -132,9 +143,9 @@ El keep-alive del plan free ya está automatizado en `.github/workflows/keep-ali
 - [x] Configuración FE validada con certificados PKCS#12 y auditoría de cambios.
 - [x] Integraciones con ERP/contabilidad/e-commerce (10 proveedores), webhooks firmados y reintentos.
 - [x] Métodos de pago Wompi: tarjeta, Nequi, PSE y QR dinámico Bre-B.
-- [x] RADIAN: importación de documentos, causación y contabilización.
+- [x] Asentar facturación: traer documentos de la DIAN por token o archivo, causarlos y asentarlos.
 - [x] Contabilidad: plan de cuentas, asientos y conciliación.
-- [x] Importación universal y migración contable con mapeo inteligente de columnas.
+- [x] Importación/migración con mapeo inteligente de columnas para proveedores externos.
 - [x] Entrega de facturas por WhatsApp Click-to-Chat, branding por empresa y PWA instalable.
 
 Ver issues del repo para el backlog detallado.

@@ -77,7 +77,7 @@ function BarraUso({ usado, limite, etiqueta }: { usado: number; limite: number; 
   )
 }
 
-export default function SuscripcionPage() {
+export default function SuscripcionPage({ ocultarEncabezado = false }: { ocultarEncabezado?: boolean }) {
   const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
   const [planes, setPlanes] = useState<Plan[]>([])
   const [suscripcion, setSuscripcion] = useState<Suscripcion | null>(null)
@@ -159,7 +159,7 @@ export default function SuscripcionPage() {
   if (empresaId == null) {
     return (
       <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-        <PageHeader overline="Facturación" title="Suscripción" />
+        {!ocultarEncabezado && <PageHeader overline="Empresa" title="Suscripción" />}
         <Alert severity="info">
           No hay una empresa asociada a su usuario. Contacte al administrador.
         </Alert>
@@ -169,11 +169,13 @@ export default function SuscripcionPage() {
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-      <PageHeader
-        overline="Facturación"
-        title="Suscripción y planes"
-        subtitle="Consulte su plan actual, el consumo del mes y cambie de plan cuando lo necesite."
-      />
+      {!ocultarEncabezado && (
+        <PageHeader
+          overline="Empresa"
+          title="Suscripción y planes"
+          subtitle="Consulte su plan actual, el consumo del mes y cambie de plan cuando lo necesite."
+        />
+      )}
 
       {error && <Alert severity="error">{error}</Alert>}
       {ok && <Alert severity="success">{ok}</Alert>}

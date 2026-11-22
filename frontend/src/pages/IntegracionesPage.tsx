@@ -35,7 +35,7 @@ const CAMPOS_VACIOS: CamposMetodoPago = {
   payerName: '',
 }
 
-export default function IntegracionesPage() {
+export default function IntegracionesPage({ ocultarEncabezado = false }: { ocultarEncabezado?: boolean }) {
   const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
   const [configuraciones, setConfiguraciones] = useState<IntegracionConfig[]>([])
   const [eventos, setEventos] = useState<IntegracionEvento[]>([])
@@ -156,7 +156,7 @@ export default function IntegracionesPage() {
   if (empresaId == null) {
     return (
       <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-        <PageHeader overline="Operaciones" title="Integraciones" />
+        {!ocultarEncabezado && <PageHeader overline="Empresa" title="Integraciones" />}
         <EmptyState
           title="Sin empresa activa"
           description="No hay una empresa asociada a su usuario. Contacte al administrador para continuar."
@@ -167,11 +167,13 @@ export default function IntegracionesPage() {
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-      <PageHeader
-        overline="Operaciones"
-        title="Integraciones"
-        subtitle="Conecte su contabilidad y sus canales de venta desde un solo lugar."
-      />
+      {!ocultarEncabezado && (
+        <PageHeader
+          overline="Empresa"
+          title="Integraciones"
+          subtitle="Conecte su contabilidad y sus canales de venta desde un solo lugar."
+        />
+      )}
 
       <Stack spacing={2}>
         {error && <Alert severity="error">{error}</Alert>}

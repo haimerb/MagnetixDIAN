@@ -17,9 +17,11 @@ const PROVEEDORES = [
 test.describe('Integraciones por empresa', () => {
   test('muestra los diez proveedores y el selector de métodos de pago con Bre-B', async ({ page }) => {
     await loginAdmin(page)
-    await page.goto('/app/integraciones')
+    await page.goto('/app/empresa')
+    await page.getByRole('tab', { name: 'Integraciones' }).click()
 
-    await expect(page.getByRole('heading', { name: 'Integraciones', level: 1 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Proveedores conectables' })).toBeVisible()
+    await expect(page.getByText('Colombia · Vía importación').first()).toBeVisible()
 
     for (const proveedor of PROVEEDORES) {
       await expect(page.getByRole('heading', { name: proveedor, exact: true })).toBeVisible()

@@ -30,6 +30,27 @@ const BRANDING = {
   pwaBackgroundColor: '#F1F5F4',
 }
 
+const DOCUMENTO = {
+  id: 77,
+  empresaId: 1,
+  direccion: 'RECIBIDO',
+  tipoDocumento: '01',
+  cufeCude: 'CUFE-E2E-77',
+  consecutivo: 'RC 1001',
+  nitContraparte: '900123456',
+  razonSocialContraparte: 'Proveedor E2E',
+  fecha: '2026-11-20',
+  subtotal: 100000,
+  impuestos: 19000,
+  retenciones: 0,
+  total: 119000,
+  estadoRadian: 'RECIBIDO',
+  estadoCausacion: 'PENDIENTE',
+  estadoContabilizacion: 'PENDIENTE',
+  asientoContableId: null,
+  createdAt: '2026-11-20T10:00:00Z',
+}
+
 async function stubAutenticacion(page: Page) {
   await page.route('**/api/auth/login', (route) =>
     route.fulfill({
@@ -51,42 +72,52 @@ async function stubAutenticacion(page: Page) {
   )
 }
 
-test.describe('Documentos RADIAN', () => {
+async function stubListado(page: Page) {
+  await page.route('**/api/empresas/1/radian/documentos', (route) => {
+    if (route.request().method() !== 'GET') return route.continue()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([DOCUMENTO]),
+    })
+  })
+}
+
+test.describe('Asentar facturación', () => {
   test.beforeEach(async ({ page }) => {
     await stubAutenticacion(page)
+    await stubListado(page)
+  })
+
+  test('trae documentos de la DIAN con token', async ({ page }) => {
+    await page.route('**/api/empresas/1/dian/documentos/token', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          origen: 'TOKEN',
+          archivo: '',
+          documentos: 1,
+          mensaje: '1 documento traído de la DIAN.',
+          registros: [DOCUMENTO],
+        }),
+      }),
+    )
+
+    await loginAdmin(page)
+    await page.goto('/app/contabilidad/asentar-facturacion')
+
+    await expect(page.getByRole('heading', { name: 'Asentar la facturación' })).toBeVisible()
+    await page.getByRole('button', { name: 'Traer de la DIAN' }).click()
+    await page.getByLabel('Token o enlace de la DIAN').fill('token-e2e')
+    await page.getByRole('button', { name: 'Traer documentos' }).click()
+
+    await expect(page.getByText('1 documento(s) traídos de la DIAN.')).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'RC 1001' })).toBeVisible()
   })
 
   test('causa un documento desde la bandeja', async ({ page }) => {
     let causado = false
-    await page.route('**/api/empresas/1/radian/documentos', (route) => {
-      if (route.request().method() !== 'GET') return route.continue()
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([
-          {
-            id: 77,
-            empresaId: 1,
-            direccion: 'RECIBIDO',
-            tipoDocumento: '01',
-            cufeCude: 'CUFE-E2E-77',
-            consecutivo: 'RC 1001',
-            nitContraparte: '900123456',
-            razonSocialContraparte: 'Proveedor E2E',
-            fecha: '2026-11-20',
-            subtotal: 100000,
-            impuestos: 19000,
-            retenciones: 0,
-            total: 119000,
-            estadoRadian: 'RECIBIDO',
-            estadoCausacion: 'PENDIENTE',
-            estadoContabilizacion: 'PENDIENTE',
-            asientoContableId: null,
-            createdAt: '2026-11-20T10:00:00Z',
-          },
-        ]),
-      })
-    })
     await page.route('**/api/empresas/1/radian/documentos/77/causar', (route) => {
       causado = true
       return route.fulfill({
@@ -104,9 +135,9 @@ test.describe('Documentos RADIAN', () => {
     })
 
     await loginAdmin(page)
-    await page.goto('/app/radian')
+    await page.goto('/app/contabilidad/asentar-facturacion')
 
-    await expect(page.getByRole('heading', { name: 'Documentos RADIAN' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Asentar la facturación' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'RC 1001' })).toBeVisible()
     await page.getByRole('button', { name: 'Causar' }).click()
     await page.getByRole('button', { name: 'Confirmar' }).click()
