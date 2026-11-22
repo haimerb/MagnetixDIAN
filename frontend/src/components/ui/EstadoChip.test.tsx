@@ -28,6 +28,8 @@ describe('EstadoChip', () => {
     expect(screen.getByText('Activo')).toBeInTheDocument()
     renderChip('PENDIENTE_XSD')
     expect(screen.getByText('Pendiente de XSD')).toBeInTheDocument()
+    renderChip('PENDIENTE_GENERADOR')
+    expect(screen.getByText('Pendiente de generador')).toBeInTheDocument()
   })
 
   it('usa el valor crudo cuando el estado es desconocido', () => {

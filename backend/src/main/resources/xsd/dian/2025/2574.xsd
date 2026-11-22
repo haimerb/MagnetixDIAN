@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:complexType name="CabType">
+		<xs:sequence>
+			<xs:element name="Ano" type="xs:gYear" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Año de envio</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CodCpt" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Concepto</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Formato" fixed="2574">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger"/>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Version" type="xs:positiveInteger" fixed="2"/>
+			<xs:element name="NumEnvio">
+				<xs:annotation>
+					<xs:documentation>Número de envío</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="8"/>
+						<xs:maxInclusive value="99999999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FecEnvio" type="xs:dateTime">
+				<xs:annotation>
+					<xs:documentation>Fecha de envío</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecInicial" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha inicial</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecFinal" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha Final</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ValorTotal" type="xs:double">
+				<xs:annotation>
+					<xs:documentation>Valor Total</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CantReg">
+				<xs:annotation>
+					<xs:documentation>Cantidad de registros</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+						<xs:maxInclusive value="9999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="mas">
+		<xs:annotation>
+			<xs:documentation>Elemento raiz del xml de carga masiva</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Cab" type="CabType"/>
+				<xs:element ref="impcarbono" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+		<xs:unique name="impcarbonoUnico">
+			<xs:selector xpath="impcarbono"/>
+			<xs:field xpath="@impcarbono"/>
+		</xs:unique>
+	</xs:element>
+	<xs:element name="impcarbono">
+		<xs:annotation>
+			<xs:documentation>Información de no causación del impuesto al carbono por certificación de carbono neutro - Formato 2574 versión 2</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="tdoc" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de Documento del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nid" use="required">
+				<xs:annotation>
+					<xs:documentation>Número de Identificación del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	
+			<xs:attribute name="apl1" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer Apellido del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="apl2" use="optional">
+				<xs:annotation>
+					<xs:documentation>Segundo Apellido del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nom1" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer Nombre del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nom2" use="optional">
+				<xs:annotation>
+					<xs:documentation>Otros Nombres del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	  
+			<xs:attribute name="raz" use="optional">
+				<xs:annotation>
+					<xs:documentation>Razón Social del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="dir" use="optional">
+				<xs:annotation>
+					<xs:documentation>Dirección</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="200"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="dpto" use="optional">
+				<xs:annotation>
+					<xs:documentation>Código Departamento</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{0,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="mun" use="optional">
+				<xs:annotation>
+					<xs:documentation>Código Municipio</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{0,3}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="pais" use="required">
+				<xs:annotation>
+					<xs:documentation>País de Residencia o domicilio </xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{0,4}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="cantimpc" use="required">
+				<xs:annotation>
+					<xs:documentation>Cantidad de combustible fósil sobre la que se hace efectiva la no causación del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="cantcom" use="required">
+				<xs:annotation>
+					<xs:documentation>Unidad de medida en la que se expresa la cantidad de combustible sobre la que se hace efectiva la no causación del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,1}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="tonco2" use="required">
+				<xs:annotation>
+					<xs:documentation>Equivalencia en TON CO2 del combustible sobre el que se hace efectiva la no causación del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nomgei" use="required">
+				<xs:annotation>
+					<xs:documentation>Nombre de la iniciativa de mitigación de GEI</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	  
+			<xs:attribute name="tdocim" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de documento del titular de la iniciativa de mitigación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nidim" use="required">
+				<xs:annotation>
+					<xs:documentation>Número de identificación del titular de la iniciativa de mitigación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	
+			<xs:attribute name="canttonco2" use="required">
+				<xs:annotation>
+					<xs:documentation>Cantidad de reducciones de emisiones o remociones de GEI canceladas expresadas en TON CO2</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:long">
+						<xs:pattern value="[0-9]{1,18}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="aniogei" use="required">
+				<xs:annotation>
+					<xs:documentation>Año dentro del cual se generaron las reducciones de emisiones o remociones de GEI canceladas</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,4}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="seiniecan" use="required">
+				<xs:annotation>
+					<xs:documentation>Serial inicial emisiones canceladas</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="50"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="sefinecan" use="required">
+				<xs:annotation>
+					<xs:documentation>Serial final emisiones canceladas</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="50"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	  
+			<xs:attribute name="tdocov" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de documento del organismo verificador</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nidov" use="required">
+				<xs:annotation>
+					<xs:documentation>Número de identificación del organismo verificador</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	
+			<xs:attribute name="apl1ov" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer apellido del organismo verificador</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="apl2ov" use="optional">
+				<xs:annotation>
+					<xs:documentation>Segundo apellido del organismo verificador</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nom1ov" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer nombre del organismo verificador</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nom2ov" use="optional">
+				<xs:annotation>
+					<xs:documentation>Otros Nombres del sujeto pasivo del Impuesto al Carbono</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	  
+			<xs:attribute name="razov" use="optional">
+				<xs:annotation>
+					<xs:documentation>Razón social del organismo verificador</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	  
+		</xs:complexType>	  
+	</xs:element>
+</xs:schema>

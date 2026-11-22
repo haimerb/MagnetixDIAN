@@ -12,6 +12,7 @@ public class FormatoExogenaRegistry {
 
     public static final String ESTADO_ACTIVO = "ACTIVO";
     public static final String ESTADO_PENDIENTE_XSD = "PENDIENTE_XSD";
+    public static final String ESTADO_PENDIENTE_GENERADOR = "PENDIENTE_GENERADOR";
 
     private static final List<String> ENCABEZADOS_LEGACY = List.of(
             "TIPO", "NIT", "DV", "CONCEPTO", "VALOR_PAGO", "RET_RENTA",
@@ -57,22 +58,11 @@ public class FormatoExogenaRegistry {
         Map<String, FormatoExogena> formatos = new LinkedHashMap<>();
         formatos.put("1001", activo("1001", "Pagos, abonos y retenciones", "GeneradorXml1001"));
         formatos.put("1002", activo("1002", "Créditos, descuentos, devoluciones y notas", "GeneradorXml1002"));
-        formatos.put("1003", pendiente("1003"));
-        formatos.put("1004", pendiente("1004"));
-        formatos.put("1005", pendiente("1005"));
-        formatos.put("1006", pendiente("1006"));
-        formatos.put("1007", pendiente("1007"));
-        formatos.put("1008", pendiente("1008"));
-        formatos.put("1009", pendiente("1009"));
-        formatos.put("1010", pendiente("1010"));
-        formatos.put("1011", pendiente("1011"));
-        formatos.put("1012", pendiente("1012"));
-        formatos.put("1125", pendiente("1125"));
-        formatos.put("1647", pendiente("1647"));
-        formatos.put("2276", pendiente("2276"));
-        formatos.put("2278", pendiente("2278"));
-        formatos.put("5253", pendiente("5253"));
-        formatos.put("1035", pendiente("1035"));
+        CatalogoXsdOficialesDian2025.versiones().forEach((codigo, version) ->
+                formatos.putIfAbsent(codigo, conXsdOficial(codigo, version)));
+        formatos.putIfAbsent("1125", pendiente("1125"));
+        formatos.putIfAbsent("2278", pendiente("2278"));
+        formatos.putIfAbsent("5253", pendiente("5253"));
         return Collections.unmodifiableMap(formatos);
     }
 
@@ -87,6 +77,20 @@ public class FormatoExogenaRegistry {
                 "clasica",
                 generadorXml,
                 ENCABEZADOS_LEGACY
+        );
+    }
+
+    private static FormatoExogena conXsdOficial(String codigo, String version) {
+        return new FormatoExogena(
+                codigo,
+                "Formato DIAN " + codigo + (version == null ? "" : " v" + version),
+                ESTADO_PENDIENTE_GENERADOR,
+                false,
+                version,
+                "xsd/dian/2025/" + codigo + ".xsd",
+                null,
+                null,
+                List.of()
         );
     }
 

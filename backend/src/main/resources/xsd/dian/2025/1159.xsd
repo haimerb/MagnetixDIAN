@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:complexType name="CabType">
+    <xs:sequence>
+      <xs:element name="Ano" type="xs:gYear" nillable="false">
+        <xs:annotation>
+          <xs:documentation>Año de envio</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CodCpt" nillable="false">
+        <xs:annotation>
+          <xs:documentation>Concepto</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Formato" fixed="1159">
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="4"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="Version" type="xs:positiveInteger" fixed="10"/>
+      <xs:element name="NumEnvio">
+        <xs:annotation>
+          <xs:documentation>Numero de envio</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="8"/>
+            <xs:maxInclusive value="99999999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="FecEnvio" type="xs:dateTime">
+        <xs:annotation>
+          <xs:documentation>Fecha de envio</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FecInicial" type="xs:date">
+        <xs:annotation>
+          <xs:documentation>Fecha inicial</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="FecFinal" type="xs:date">
+        <xs:annotation>
+          <xs:documentation>Fecha Final</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="ValorTotal" type="xs:double">
+        <xs:annotation>
+          <xs:documentation>Valor Total</xs:documentation>
+        </xs:annotation>
+      </xs:element>
+      <xs:element name="CantReg">
+        <xs:annotation>
+          <xs:documentation>Cantidad de registros</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:positiveInteger">
+            <xs:totalDigits value="4"/>
+            <xs:maxInclusive value="9999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="mas">
+    <xs:annotation>
+      <xs:documentation>Elemento raiz del xml de carga masiva</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Cab" type="CabType"/>
+        <xs:element ref="convenios" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+    <xs:unique name="ConvenioUnico">
+      <xs:selector xpath="convenios"/>
+      <xs:field xpath="@nconv"/>
+    </xs:unique>
+  </xs:element>
+  <xs:element name="convenios">
+    <xs:annotation>
+      <xs:documentation>Elemento que encapsula la información de Información del formato 1159:  Convenios</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="contratos" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="nconv" use="required">
+        <xs:annotation>
+          <xs:documentation>Número del Convenio</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="20"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="idconv" use="optional">
+        <xs:annotation>
+          <xs:documentation>Identificación Convenio en ejecución</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="450"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="raz" use="required">
+        <xs:annotation>
+          <xs:documentation>Nombre o Razón Social del Organismo Internacional con el cual se celebró el convenio</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="450"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="pais" use="required">
+        <xs:annotation>
+          <xs:documentation>País de origen del Organismo Internacional</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="9999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+    <xs:unique name="ContratoUnico">
+      <xs:selector xpath="contratos"/>
+      <xs:field xpath="@ncont"/>
+      <xs:field xpath="@ccon"/>
+    </xs:unique>
+  </xs:element>
+  <xs:element name="contratos">
+    <xs:annotation>
+      <xs:documentation>Elemento que contienen la Identificación de los Contratos celebrados.</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="pagos" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="ncont" use="required">
+        <xs:annotation>
+          <xs:documentation>Número del contrato</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="20"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="val" use="required">
+        <xs:annotation>
+          <xs:documentation>Valor total del Contrato</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:double">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="fini" type="xs:date" use="required">
+        <xs:annotation>
+          <xs:documentation>Fecha inicial del Contrato</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="ffin" type="xs:date" use="required">
+        <xs:annotation>
+          <xs:documentation>Fecha final del Contrato</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="ccon" use="required">
+        <xs:annotation>
+          <xs:documentation>Clase de contrato</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="9999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+    <xs:unique name="PagoUnico">
+      <xs:selector xpath="pagos"/>
+      <xs:field xpath="@cpt"/>
+      <xs:field xpath="@tdoc"/>
+      <xs:field xpath="@nid"/>
+    </xs:unique>
+  </xs:element>
+ <xs:element name="pagos">
+    <xs:annotation>
+      <xs:documentation>Elemento que contiene contienen la Identificación de los terceros beneficiarios de los pagos con cargo a los Contratos celebrados.</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:attribute name="cpt" use="required">
+        <xs:annotation>
+          <xs:documentation>Concepto de pago</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="9999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="tdoc" use="required">
+        <xs:annotation>
+          <xs:documentation>Tipo de Documento</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="nid" use="required">
+        <xs:annotation>
+          <xs:documentation>Número de identificación</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+		  <xs:pattern value="[a-zA-Z0-9]+"/>
+            <xs:minLength value="0"/>
+            <xs:maxLength value="20"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="apl1" use="optional">
+        <xs:annotation>
+          <xs:documentation>Primer Apellido del contratista</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="apl2" use="optional">
+        <xs:annotation>
+          <xs:documentation>Segundo Apellido del   contratista</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="nom1" use="optional">
+        <xs:annotation>
+          <xs:documentation>Primer Nombre del  contratista</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="nom2" use="optional">
+        <xs:annotation>
+          <xs:documentation>Otros nombres del  contratista</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="60"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="raz" use="optional">
+        <xs:annotation>
+          <xs:documentation>Razón Social  contratista</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="450"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="dir" use="required">
+        <xs:annotation>
+          <xs:documentation>Dirección del  contratista</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:minLength value="0"/>
+            <xs:maxLength value="200"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="dpto" use="optional">
+        <xs:annotation>
+          <xs:documentation>Código del departamento</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="99"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="mun" use="optional">
+        <xs:annotation>
+          <xs:documentation>Código del municipio</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+	  <xs:attribute name="pais" use="required">
+        <xs:annotation>
+          <xs:documentation>Código País</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:int">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="9999"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+	  <xs:attribute name="email" use="optional">
+        <xs:annotation>
+          <xs:documentation>Buzón, correo o dirección electrónicos</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+			<xs:pattern value="[A-Za-z0-9.!#$%&amp;'*+/=?^_`{|}~\-]+@[A-Za-z0-9]+([.-][A-Za-z0-9]+)*\.[A-Za-z]{2,}"/>
+            <xs:minLength value="0"/>
+            <xs:maxLength value="50"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute> 
+      <xs:attribute name="val" use="required">
+        <xs:annotation>
+          <xs:documentation>Valor pago o abono en cuenta</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="vrenta" use="required">
+        <xs:annotation>
+          <xs:documentation> Valor base Retención a titulo de renta </xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="rrenta" use="optional">
+        <xs:annotation>
+          <xs:documentation>Valor Retenciones practicadas a titulo de renta</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="riva" use="optional">
+        <xs:annotation>
+          <xs:documentation>Valor Retenciones practicadas a titulo de IVA</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="vimpo" use="optional">
+        <xs:annotation>
+          <xs:documentation>Valor impuesto descontable</xs:documentation>
+        </xs:annotation>
+        <xs:simpleType>
+          <xs:restriction base="xs:long">
+            <xs:pattern value="[0-9]{1,18}"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:attribute>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

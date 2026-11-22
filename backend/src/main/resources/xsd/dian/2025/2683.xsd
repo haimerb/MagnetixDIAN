@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:complexType name="CabType">
+		<xs:sequence>
+			<xs:element name="Ano" type="xs:gYear" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Año de envio</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CodCpt" nillable="false">
+				<xs:annotation>
+					<xs:documentation>Concepto</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Formato" fixed="2683">
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Version" type="xs:positiveInteger" fixed="1"/>
+			<xs:element name="NumEnvio">
+				<xs:annotation>
+					<xs:documentation>Numero de envio</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="8"/>
+						<xs:maxInclusive value="99999999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="FecEnvio" type="xs:dateTime">
+				<xs:annotation>
+					<xs:documentation>Fecha de envio</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecInicial" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha inicial</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="FecFinal" type="xs:date">
+				<xs:annotation>
+					<xs:documentation>Fecha Final</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="ValorTotal" type="xs:double">
+				<xs:annotation>
+					<xs:documentation>Valor Total</xs:documentation>
+				</xs:annotation>
+			</xs:element>
+			<xs:element name="CantReg">
+				<xs:annotation>
+					<xs:documentation>Cantidad de registros</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:positiveInteger">
+						<xs:totalDigits value="4"/>
+						<xs:maxInclusive value="9999"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="mas">
+		<xs:annotation>
+			<xs:documentation>Elemento raíz del xml de carga masiva</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Cab" type="CabType"/>
+				<xs:element ref="entidades" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="entidades">
+		<xs:annotation>
+			<xs:documentation>Elemento que encapsula la información del formulario 2683 v1 INFORMACIÓN DE LAS ENTIDADES QUE OTORGAN, CANCELAN O SUSPENDEN PERSONERÍAS JURÍDICAS</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="representa" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="esper" use="required">
+				<xs:annotation>
+					<xs:documentation>Estado de la personería jurídica</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,1}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>			
+			<xs:attribute name="torg" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de organización de la entidad</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,1}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nit" use="required">
+				<xs:annotation>
+					<xs:documentation>Nit de la entidad</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="raz" use="required">
+				<xs:annotation>
+					<xs:documentation>Razón social</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>			
+			<xs:attribute name="dir" use="required">
+				<xs:annotation>
+					<xs:documentation>Dirección</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="200"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="dpto" use="required">
+				<xs:annotation>
+					<xs:documentation>Código del Departamento</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{0,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="mun" use="required">
+				<xs:annotation>
+					<xs:documentation>Código del Municipio</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[0-9]{0,3}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="email" use="optional">
+				<xs:annotation>
+					<xs:documentation>Correo Electrónico</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[A-Za-z0-9.!#$%&amp;'*+/=?^_`{|}~\-]+@[A-Za-z0-9]+([.-][A-Za-z0-9]+)*\.[A-Za-z]{2,}"/>					
+						<xs:minLength value="0"/>
+						<xs:maxLength value="50"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="fecopj" type="xs:date" use="required">
+				<xs:annotation>
+					<xs:documentation>Fecha de otorgamiento personería jurídica</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="feccpj" type="xs:date" use="optional">
+				<xs:annotation>
+					<xs:documentation>Fecha de cancelación personería jurídica</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="fecispj" type="xs:date" use="optional">
+				<xs:annotation>
+					<xs:documentation>Fecha inicio suspensión personería jurídica</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="fecfspj" type="xs:date" use="optional">
+				<xs:annotation>	
+					<xs:documentation>Fecha final suspensión personería jurídica</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="tdoccsc" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de documento creación, suspensión o cancelación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,2}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="ndoccsc" use="required">
+				<xs:annotation>
+					<xs:documentation>Número del documento de creación, suspensión o cancelación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="1"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="enecyv" use="required">
+				<xs:annotation>
+					<xs:documentation>La entidad informante ejerce control y vigilancia</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:pattern value="[0-9]{0,1}"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="representa">
+		<xs:annotation>
+			<xs:documentation>Elemento que contienen la Hoja 2 formulario 2274 v2 FONDO DE CESANTIAS</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="trel" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de relación</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="9"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="tdocr" use="required">
+				<xs:annotation>
+					<xs:documentation>Tipo de Documento del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:int">
+						<xs:minInclusive value="0"/>
+						<xs:maxInclusive value="99"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="nidr" use="required">
+				<xs:annotation>
+					<xs:documentation>Número de Identificación del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:pattern value="[a-zA-Z0-9]+"/>
+						<xs:minLength value="1"/>
+						<xs:maxLength value="20"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="papr" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer apellido del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="sapr" use="optional">
+				<xs:annotation>
+					<xs:documentation>Segundo apellido del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="pnor" use="optional">
+				<xs:annotation>
+					<xs:documentation>Primer nombre del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="onor" use="optional">
+				<xs:annotation>
+					<xs:documentation>Otros nombres del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="60"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="razr" use="optional">
+				<xs:annotation>
+					<xs:documentation>Razón social del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+						<xs:minLength value="0"/>
+						<xs:maxLength value="450"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>	
+			<xs:attribute name="emailr" use="optional">
+				<xs:annotation>
+					<xs:documentation>Correo electrónico del representante o integrante</xs:documentation>
+				</xs:annotation>
+				<xs:simpleType>
+					<xs:restriction base="xs:string">
+					    <xs:pattern value="[A-Za-z0-9.!#$%&amp;'*+/=?^_`{|}~\-]+@[A-Za-z0-9]+([.-][A-Za-z0-9]+)*\.[A-Za-z]{2,}"/>					
+						<xs:minLength value="0"/>
+						<xs:maxLength value="50"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>			
+		</xs:complexType>
+	</xs:element>
+</xs:schema>
