@@ -1,9 +1,11 @@
 package com.magnetixdian.interfaces.rest;
 
+import com.magnetixdian.application.ServicioAsientos;
 import com.magnetixdian.application.ServicioConciliacion;
 import com.magnetixdian.application.ServicioContabilizacion;
 import com.magnetixdian.interfaces.dto.AsientoContableDto;
 import com.magnetixdian.interfaces.dto.ResultadoConciliacionDto;
+import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,13 +27,16 @@ public class ContabilidadController {
 
     private final ServicioContabilizacion servicioContabilizacion;
     private final ServicioConciliacion servicioConciliacion;
+    private final ServicioAsientos servicioAsientos;
     private final AutorizacionEmpresa autorizacion;
 
     public ContabilidadController(ServicioContabilizacion servicioContabilizacion,
                                   ServicioConciliacion servicioConciliacion,
+                                  ServicioAsientos servicioAsientos,
                                   AutorizacionEmpresa autorizacion) {
         this.servicioContabilizacion = servicioContabilizacion;
         this.servicioConciliacion = servicioConciliacion;
+        this.servicioAsientos = servicioAsientos;
         this.autorizacion = autorizacion;
     }
 
@@ -39,6 +45,30 @@ public class ContabilidadController {
                                                              Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicioContabilizacion.listar(empresaId));
+    }
+
+    @PostMapping("/asientos")
+    public ResponseEntity<AsientoContableDto> crearAsiento(@PathVariable Long empresaId,
+                                                           @RequestBody SolicitudAsientoDto solicitud,
+                                                           Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioAsientos.crear(empresaId, solicitud));
+    }
+
+    @PostMapping("/asientos/{asientoId}/reversar")
+    public ResponseEntity<AsientoContableDto> reversarAsiento(@PathVariable Long empresaId,
+                                                              @PathVariable Long asientoId,
+                                                              Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioAsientos.reversar(empresaId, asientoId));
+    }
+
+    @PostMapping("/periodos/{periodoId}/cerrar")
+    public ResponseEntity<AsientoContableDto> cerrarPeriodo(@PathVariable Long empresaId,
+                                                            @PathVariable Long periodoId,
+                                                            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioAsientos.cerrarPeriodo(empresaId, periodoId));
     }
 
     @PostMapping("/conciliacion")

@@ -1,16 +1,19 @@
 package com.magnetixdian.interfaces.rest;
 
+import com.magnetixdian.application.ServicioAsientos;
 import com.magnetixdian.application.ServicioConciliacion;
 import com.magnetixdian.application.ServicioContabilizacion;
 import com.magnetixdian.interfaces.dto.AsientoContableDto;
 import com.magnetixdian.interfaces.dto.ConciliacionLineaDto;
 import com.magnetixdian.interfaces.dto.ResultadoConciliacionDto;
+import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -20,6 +23,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
@@ -37,6 +41,8 @@ class ContabilidadControllerTest {
     @Mock
     private ServicioConciliacion servicioConciliacion;
     @Mock
+    private ServicioAsientos servicioAsientos;
+    @Mock
     private AutorizacionEmpresa autorizacion;
 
     private MockMvc mockMvc;
@@ -44,7 +50,7 @@ class ContabilidadControllerTest {
     @BeforeEach
     void setUp() {
         ContabilidadController controller = new ContabilidadController(
-                servicioContabilizacion, servicioConciliacion, autorizacion);
+                servicioContabilizacion, servicioConciliacion, servicioAsientos, autorizacion);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -61,6 +67,53 @@ class ContabilidadControllerTest {
                 .andExpect(jsonPath("$[0].numero").value("AS-1-5-CAUSACION"));
 
         verify(autorizacion).verificar(eq(1L), nullable(Authentication.class));
+    }
+
+    @Test
+    void crearAsientoManual() throws Exception {
+        when(servicioAsientos.crear(eq(1L), any(SolicitudAsientoDto.class))).thenReturn(asientoDto());
+
+        mockMvc.perform(post("/api/empresas/1/contabilidad/asientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fecha": "2026-03-01",
+                                  "descripcion": "Ajuste manual",
+                                  "tipoEvento": "AJUSTE",
+                                  "lineas": [
+                                    {"codigoCuenta": "110505", "debito": 100.00, "credito": 0.00},
+                                    {"codigoCuenta": "420505", "debito": 0.00, "credito": 100.00}
+                                  ],
+                                  "origen": null,
+                                  "origenId": null
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numero").value("AS-1-202603-0001"));
+
+        verify(servicioAsientos).crear(eq(1L), any(SolicitudAsientoDto.class));
+    }
+
+    @Test
+    void reversarAsiento() throws Exception {
+        when(servicioAsientos.reversar(1L, 20L)).thenReturn(asientoDto());
+
+        mockMvc.perform(post("/api/empresas/1/contabilidad/asientos/20/reversar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numero").value("AS-1-202603-0001"));
+
+        verify(servicioAsientos).reversar(1L, 20L);
+    }
+
+    @Test
+    void cerrarPeriodo() throws Exception {
+        when(servicioAsientos.cerrarPeriodo(1L, 3L)).thenReturn(asientoDto());
+
+        mockMvc.perform(post("/api/empresas/1/contabilidad/periodos/3/cerrar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numero").value("AS-1-202603-0001"));
+
+        verify(servicioAsientos).cerrarPeriodo(1L, 3L);
     }
 
     @Test
@@ -82,5 +135,13 @@ class ContabilidadControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.coincidencias").value(1))
                 .andExpect(jsonPath("$.lineas[0].resultado").value("COINCIDE"));
+    }
+
+    private static AsientoContableDto asientoDto() {
+        return new AsientoContableDto(
+                21L, 1L, "AS-1-202603-0001", LocalDate.of(2026, 3, 1), "Ajuste manual",
+                null, null, "AJUSTE", "CONTABILIZADO", new BigDecimal("100.00"),
+                new BigDecimal("100.00"), new BigDecimal("100.00"), BigDecimal.ZERO.setScale(2),
+                BigDecimal.ZERO.setScale(2), OffsetDateTime.now(), List.of());
     }
 }
