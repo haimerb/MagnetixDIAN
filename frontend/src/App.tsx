@@ -26,6 +26,12 @@ const ConfigFePage = lazy(() => import('./pages/ConfigFePage'))
 const SuscripcionPage = lazy(() => import('./pages/SuscripcionPage'))
 const IntegracionesPage = lazy(() => import('./pages/IntegracionesPage'))
 const ImportacionAvanzadaPage = lazy(() => import('./pages/ImportacionAvanzadaPage'))
+const RadianPage = lazy(() => import('./pages/RadianPage'))
+const ContabilidadPage = lazy(() => import('./pages/ContabilidadPage'))
+const MigracionContablePage = lazy(() => import('./pages/MigracionContablePage'))
+const ImportacionUniversalPage = lazy(() => import('./pages/ImportacionUniversalPage'))
+const FacturaRapidaPage = lazy(() => import('./pages/FacturaRapidaPage'))
+const BrandingPage = lazy(() => import('./pages/BrandingPage'))
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -59,6 +65,12 @@ export default function App() {
               <Route index element={<DashboardPage />} />
               <Route path="carga" element={<CargaPage />} />
               <Route path="importacion-avanzada" element={<ImportacionAvanzadaPage />} />
+              <Route path="importacion-universal" element={<ImportacionUniversalPage />} />
+              <Route path="radian" element={<RadianPage />} />
+              <Route path="contabilidad" element={<ContabilidadPage />} />
+              <Route path="migracion-contable" element={<MigracionContablePage />} />
+              <Route path="factura-rapida" element={<FacturaRapidaPage />} />
+              <Route path="branding" element={<BrandingPage />} />
               <Route path="validacion/:medioId?" element={<ValidacionPage />} />
               <Route path="reporte/:medioId?" element={<ReportePage />} />
               <Route path="guia" element={<GuiaMuiscaPage />} />

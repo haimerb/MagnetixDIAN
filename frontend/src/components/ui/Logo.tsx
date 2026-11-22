@@ -1,44 +1,63 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
+import type { Branding } from '../../api/client'
 
 type LogoProps = {
   size?: number
   showWordmark?: boolean
   variant?: 'default' | 'onDark'
+  branding?: Pick<Branding, 'displayName' | 'logoUrl' | 'primaryColor' | 'accentColor'> | null
 }
 
-export default function Logo({ size = 34, showWordmark = true, variant = 'default' }: LogoProps) {
+export default function Logo({
+  size = 34,
+  showWordmark = true,
+  variant = 'default',
+  branding,
+}: LogoProps) {
   const theme = useTheme()
   const onDark = variant === 'onDark'
+  const nombre = branding?.displayName?.trim() || 'MagnetixDIAN'
+  const primario = branding?.primaryColor ?? theme.palette.primary.main
+  const acento = branding?.accentColor ?? theme.palette.secondary.main
 
   return (
     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.25 }}>
-      <Box
-        component="svg"
-        viewBox="0 0 40 40"
-        role="img"
-        aria-label="MagnetixDIAN"
-        sx={{ width: size, height: size, display: 'block', flexShrink: 0 }}
-      >
-        <rect
-          x="2"
-          y="2"
-          width="36"
-          height="36"
-          rx="11"
-          fill={onDark ? 'rgba(255,255,255,0.14)' : theme.palette.primary.main}
+      {branding?.logoUrl ? (
+        <Box
+          component="img"
+          src={branding.logoUrl}
+          alt={nombre}
+          sx={{ width: size, height: size, objectFit: 'contain', display: 'block', flexShrink: 0 }}
         />
-        <path
-          d="M11 28V13l9 8 9-8v15"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="3.4"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        <circle cx="30.5" cy="10.5" r="3.4" fill={theme.palette.secondary.main} />
-      </Box>
+      ) : (
+        <Box
+          component="svg"
+          viewBox="0 0 40 40"
+          role="img"
+          aria-label={nombre}
+          sx={{ width: size, height: size, display: 'block', flexShrink: 0 }}
+        >
+          <rect
+            x="2"
+            y="2"
+            width="36"
+            height="36"
+            rx="11"
+            fill={onDark ? 'rgba(255,255,255,0.14)' : primario}
+          />
+          <path
+            d="M11 28V13l9 8 9-8v15"
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="3.4"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <circle cx="30.5" cy="10.5" r="3.4" fill={acento} />
+        </Box>
+      )}
       {showWordmark && (
         <Typography
           component="span"
@@ -51,10 +70,16 @@ export default function Logo({ size = 34, showWordmark = true, variant = 'defaul
             color: onDark ? '#ffffff' : 'text.primary',
           }}
         >
-          Magnetix
-          <Box component="span" sx={{ color: onDark ? 'secondary.light' : 'secondary.main' }}>
-            DIAN
-          </Box>
+          {branding?.displayName ? (
+            nombre
+          ) : (
+            <>
+              Magnetix
+              <Box component="span" sx={{ color: onDark ? 'secondary.light' : 'secondary.main' }}>
+                DIAN
+              </Box>
+            </>
+          )}
         </Typography>
       )}
     </Box>

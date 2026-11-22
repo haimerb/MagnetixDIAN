@@ -9,11 +9,36 @@ import DialogTitle from '@mui/material/DialogTitle'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
+import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
-import { importarFacturas, type ResultadoImportacion } from '../../api/client'
+import {
+  confirmarImportacion,
+  importarFacturas,
+  vistaPreviaArchivo,
+  type MapeoColumna,
+  type RespuestaVistaPrevia,
+  type ResultadoImportacion,
+  type ResultadoImportacionUniversal,
+} from '../../api/client'
+
+const CAMPOS_DESTINO = [
+  'grupo',
+  'adquirente_numero_documento',
+  'adquirente_nombre',
+  'descripcion',
+  'cantidad',
+  'unidad_medida',
+  'valor_unitario',
+  'descuento',
+  'iva_pct',
+  'inc_pct',
+  'forma_pago',
+  'medio_pago',
+]
 
 const PLANTILLA = [
   'grupo;tipo_documento;adquirente_tipo_documento;adquirente_numero_documento;adquirente_digito_verificacion;adquirente_nombre;adquirente_email;adquirente_direccion;adquirente_municipio;adquirente_regimen;adquirente_responsabilidad_fiscal;codigo_producto;descripcion;cantidad;unidad_medida;valor_unitario;descuento;iva_pct;inc_pct;unspsc;forma_pago;medio_pago;fecha_vencimiento;observaciones',
@@ -34,12 +59,19 @@ export default function ImportarFacturasDialog({ abierto, empresaId, onCerrar, o
   const [resultado, setResultado] = useState<ResultadoImportacion | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [importando, setImportando] = useState(false)
+  const [vistaPrevia, setVistaPrevia] = useState<RespuestaVistaPrevia | null>(null)
+  const [mapeos, setMapeos] = useState<MapeoColumna[]>([])
+  const [resultadoUniversal, setResultadoUniversal] = useState<ResultadoImportacionUniversal | null>(null)
+  const [analizando, setAnalizando] = useState(false)
 
   const cerrar = () => {
     if (importando) return
     setArchivo(null)
     setResultado(null)
     setError(null)
+    setVistaPrevia(null)
+    setMapeos([])
+    setResultadoUniversal(null)
     onCerrar()
   }
 
@@ -71,8 +103,47 @@ export default function ImportarFacturasDialog({ abierto, empresaId, onCerrar, o
     }
   }
 
+  const analizarColumnas = async () => {
+    if (!archivo) return
+    setAnalizando(true)
+    setError(null)
+    try {
+      const vista = await vistaPreviaArchivo(empresaId, archivo)
+      setVistaPrevia(vista)
+      setMapeos(vista.sugerencias)
+    } catch (e: unknown) {
+      const detalle = (e as { response?: { data?: { message?: string } } }).response?.data?.message
+      setError(detalle ?? 'No se pudo analizar el archivo.')
+    } finally {
+      setAnalizando(false)
+    }
+  }
+
+  const importarConMapeo = async () => {
+    if (!archivo || !vistaPrevia) return
+    setImportando(true)
+    setError(null)
+    try {
+      setResultadoUniversal(
+        await confirmarImportacion(empresaId, {
+          archivoId: vistaPrevia.archivoId ?? null,
+          nombreArchivo: vistaPrevia.nombreArchivo ?? archivo.name,
+          formatoDetectado: vistaPrevia.formatoDetectado,
+          contenidoBase64: vistaPrevia.contenidoBase64 ?? null,
+          columnas: mapeos,
+        }),
+      )
+      onImportado()
+    } catch (e: unknown) {
+      const detalle = (e as { response?: { data?: { message?: string } } }).response?.data?.message
+      setError(detalle ?? 'No se pudo importar el archivo con el mapeo indicado.')
+    } finally {
+      setImportando(false)
+    }
+  }
+
   return (
-    <Dialog open={abierto} onClose={cerrar} maxWidth="sm" fullWidth>
+    <Dialog open={abierto} onClose={cerrar} maxWidth="md" fullWidth>
       <DialogTitle>Importar facturas</DialogTitle>
       <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
         <Alert severity="info">
@@ -96,6 +167,9 @@ export default function ImportarFacturasDialog({ abierto, empresaId, onCerrar, o
               onChange={(e) => {
                 setArchivo(e.target.files?.[0] ?? null)
                 setResultado(null)
+                setVistaPrevia(null)
+                setMapeos([])
+                setResultadoUniversal(null)
               }}
             />
           </Button>
@@ -104,7 +178,75 @@ export default function ImportarFacturasDialog({ abierto, empresaId, onCerrar, o
           </Typography>
         </Stack>
 
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+          <Button
+            variant="outlined"
+            onClick={analizarColumnas}
+            disabled={!archivo || analizando || importando}
+            loading={analizando}
+          >
+            Analizar columnas
+          </Button>
+          <Button
+            variant="contained"
+            onClick={importarConMapeo}
+            disabled={!vistaPrevia || importando}
+            loading={importando}
+          >
+            Importar con mapeo
+          </Button>
+        </Stack>
+
         {error && <Alert severity="error">{error}</Alert>}
+
+        {vistaPrevia && (
+          <Box sx={{ display: 'grid', gap: 1 }}>
+            <Typography variant="subtitle2">
+              Formato detectado: {vistaPrevia.formatoDetectado} · {vistaPrevia.cabeceras.length} columnas
+            </Typography>
+            {mapeos.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No se detectaron mapeos. Puede usar la importación por plantilla.
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                {mapeos.map((mapeo) => (
+                  <Stack key={`${mapeo.indice}-${mapeo.cabeceraOrigen}`} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ minWidth: 180 }}>
+                      {mapeo.cabeceraOrigen}
+                    </Typography>
+                    <TextField
+                      select
+                      size="small"
+                      value={mapeo.campo}
+                      onChange={(event) =>
+                        setMapeos((actuales) =>
+                          actuales.map((actual) =>
+                            actual.indice === mapeo.indice ? { ...actual, campo: event.target.value } : actual,
+                          ),
+                        )
+                      }
+                      sx={{ flex: 1 }}
+                    >
+                      {CAMPOS_DESTINO.map((campo) => (
+                        <MenuItem key={campo} value={campo}>
+                          {campo}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Stack>
+                ))}
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {resultadoUniversal && (
+          <Alert severity={resultadoUniversal.filasImportadas > 0 ? 'success' : 'warning'}>
+            {resultadoUniversal.filasLeidas} fila(s) leídas, {resultadoUniversal.filasImportadas} importadas,{' '}
+            {resultadoUniversal.filasOmitidas} omitidas y {resultadoUniversal.errores} error(es).
+          </Alert>
+        )}
 
         {resultado && (
           <Box>
@@ -127,7 +269,7 @@ export default function ImportarFacturasDialog({ abierto, empresaId, onCerrar, o
       <DialogActions>
         <Button onClick={cerrar} disabled={importando}>Cerrar</Button>
         <Button variant="contained" onClick={importar} disabled={!archivo || importando} loading={importando}>
-          Importar
+          Importar plantilla
         </Button>
       </DialogActions>
     </Dialog>

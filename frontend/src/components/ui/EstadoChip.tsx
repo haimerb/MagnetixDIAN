@@ -19,6 +19,19 @@ const ESTADOS: Record<string, { tone: Tone; label: string }> = {
   ACTIVO: { tone: 'success', label: 'Activo' },
   PENDIENTE_XSD: { tone: 'warning', label: 'Pendiente de XSD' },
   PENDIENTE_GENERADOR: { tone: 'info', label: 'Pendiente de generador' },
+  RECIBIDO: { tone: 'info', label: 'Recibido' },
+  EMITIDO: { tone: 'info', label: 'Emitido' },
+  CAUSADA: { tone: 'primary', label: 'Causada' },
+  CONTABILIZADA: { tone: 'success', label: 'Contabilizada' },
+  SIN_ASIENTO: { tone: 'warning', label: 'Sin asiento' },
+  CONCILIADO: { tone: 'success', label: 'Conciliado' },
+  DIFERENCIA: { tone: 'error', label: 'Con diferencias' },
+  COMPLETADA: { tone: 'success', label: 'Completada' },
+  PARCIAL: { tone: 'warning', label: 'Parcial' },
+  FALLIDA: { tone: 'error', label: 'Fallida' },
+  REINTENTANDO: { tone: 'warning', label: 'Reintentando' },
+  ENVIADO: { tone: 'success', label: 'Enviado' },
+  ENTREGADO: { tone: 'success', label: 'Entregado' },
 }
 
 export default function EstadoChip({ estado }: { estado: string }) {

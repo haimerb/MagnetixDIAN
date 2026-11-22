@@ -2,9 +2,15 @@ import { ThemeProvider } from '@mui/material/styles'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { importarMultiformato, validarDatosJson } from '../api/client'
+import {
+  confirmarImportacion,
+  importarMultiformato,
+  validarDatosJson,
+  vistaPreviaArchivo,
+} from '../api/client'
 import theme from '../theme/theme'
 import ImportacionAvanzadaPage from './ImportacionAvanzadaPage'
+import ImportacionUniversalPage from './ImportacionUniversalPage'
 
 vi.mock('../features/auth/useEmpresaActiva', () => ({
   useEmpresaActiva: () => ({ empresaId: 1, cargando: false }),
@@ -13,10 +19,19 @@ vi.mock('../features/auth/useEmpresaActiva', () => ({
 vi.mock('../api/client', () => ({
   importarMultiformato: vi.fn(),
   validarDatosJson: vi.fn(),
+  vistaPreviaArchivo: vi.fn(),
+  confirmarImportacion: vi.fn(),
+  listarMapeos: vi.fn(),
+}))
+
+vi.mock('../features/notificaciones/contexto', () => ({
+  useNotificaciones: () => ({ notificar: vi.fn() }),
 }))
 
 const mockImportar = vi.mocked(importarMultiformato)
 const mockValidar = vi.mocked(validarDatosJson)
+const mockVistaPrevia = vi.mocked(vistaPreviaArchivo)
+const mockConfirmar = vi.mocked(confirmarImportacion)
 
 const RESULTADO = {
   anioGravable: 2025,
@@ -67,10 +82,43 @@ const VALIDACION = {
   ],
 }
 
+const VISTA_PREVIA = {
+  archivoId: 'archivo-1',
+          nombreArchivo: 'exogena.xlsx',
+  formatoDetectado: 'CSV',
+  cabeceras: ['NIT', 'Valor'],
+  filasEjemplo: [['900123456', '1000']],
+  sugerencias: [
+    { campo: 'nit', cabeceraOrigen: 'NIT', indice: 0, confianza: 0.95, formatoDetectado: 'CSV' },
+    { campo: 'total', cabeceraOrigen: 'Valor', indice: 1, confianza: 0.8, formatoDetectado: 'CSV' },
+  ],
+  confianza: 0.875,
+  totalFilas: 120,
+  contenidoBase64: 'YQ==',
+}
+
+const RESULTADO_IMPORTACION = {
+  archivoId: 'archivo-1',
+  estado: 'COMPLETADA',
+  filasLeidas: 120,
+  filasImportadas: 118,
+  filasOmitidas: 2,
+  errores: 0,
+  mensajes: [],
+}
+
 function renderPage() {
   return render(
     <ThemeProvider theme={theme}>
       <ImportacionAvanzadaPage />
+    </ThemeProvider>,
+  )
+}
+
+function renderUniversalPage() {
+  return render(
+    <ThemeProvider theme={theme}>
+      <ImportacionUniversalPage />
     </ThemeProvider>,
   )
 }
@@ -80,6 +128,8 @@ describe('ImportacionAvanzadaPage', () => {
     vi.clearAllMocks()
     mockImportar.mockResolvedValue(RESULTADO)
     mockValidar.mockResolvedValue(VALIDACION)
+    mockVistaPrevia.mockResolvedValue(VISTA_PREVIA)
+    mockConfirmar.mockResolvedValue(RESULTADO_IMPORTACION)
   })
 
   it('analiza el workbook y muestra el resumen por formato', async () => {
@@ -138,5 +188,39 @@ describe('ImportacionAvanzadaPage', () => {
     await waitFor(() => expect(mockValidar).toHaveBeenCalledWith(42))
     expect(await screen.findByText(/Validación estructural · registro #42/)).toBeInTheDocument()
     expect(screen.getByText('NIT con longitud inválida.')).toBeInTheDocument()
+  })
+
+  it('usa el contrato canónico de vista previa y confirmación universal', async () => {
+    const user = userEvent.setup()
+    renderUniversalPage()
+
+    await user.upload(
+      screen.getByLabelText('Archivo de importación universal'),
+      new File(['xlsx'], 'exogena.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Analizar archivo' }))
+
+    await waitFor(() => expect(mockVistaPrevia).toHaveBeenCalledWith(1, expect.any(File)))
+    expect(await screen.findByText('Mapeo de columnas')).toBeInTheDocument()
+    expect(screen.getByText('Columnas')).toBeInTheDocument()
+    expect(screen.getByText('95%')).toBeInTheDocument()
+    expect(screen.getByText('80%')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar importación' }))
+
+    await waitFor(() =>
+      expect(mockConfirmar).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+  archivoId: 'archivo-1',
+  nombreArchivo: 'exogena.xlsx',
+          formatoDetectado: 'CSV',
+          contenidoBase64: 'YQ==',
+          columnas: VISTA_PREVIA.sugerencias,
+        }),
+      ),
+    )
   })
 })

@@ -1,11 +1,35 @@
 import { createTheme, type Theme } from '@mui/material/styles'
+import type { Branding } from '../api/client'
 
 export type ThemeMode = 'light' | 'dark'
 
-export function createAppTheme(mode: ThemeMode): Theme {
+function colorValido(valor: string | null | undefined): string | null {
+  if (!valor) return null
+  return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(valor.trim()) ? valor.trim() : null
+}
+
+function contraste(color: string): string {
+  const hex = color.replace('#', '')
+  const completo = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex
+  const rojo = parseInt(completo.slice(0, 2), 16)
+  const verde = parseInt(completo.slice(2, 4), 16)
+  const azul = parseInt(completo.slice(4, 6), 16)
+  return (rojo * 299 + verde * 587 + azul * 114) / 1000 > 150 ? '#0F1D1B' : '#ffffff'
+}
+
+export function createAppTheme(mode: ThemeMode, branding?: Branding | null): Theme {
   const oscuro = mode === 'dark'
   const borde = oscuro ? 'rgba(230,239,236,0.12)' : 'rgba(15,29,27,0.10)'
   const textoHead = oscuro ? '#9FB3AE' : '#4C5D5A'
+  const primaryMain = colorValido(branding?.primaryColor)
+  const accentMain = colorValido(branding?.accentColor)
+  const fontFamily = branding?.fontFamily?.trim()
+  const tipografiaBase = fontFamily
+    ? `"${fontFamily}", "Inter", system-ui, sans-serif`
+    : '"Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif'
+  const tipografiaTitulos = fontFamily
+    ? `"Space Grotesk", "${fontFamily}", sans-serif`
+    : '"Space Grotesk", "Inter", sans-serif'
 
   return createTheme({
     palette: {
@@ -36,19 +60,45 @@ export function createAppTheme(mode: ThemeMode): Theme {
         : { main: '#D98A2B', light: '#EBB05F', dark: '#A6651A', contrastText: '#1a1a1a' },
       amber: { main: '#D98A2B', light: '#EBB05F', dark: '#A6651A', contrastText: '#1a1a1a' },
       clay: { main: '#C05746', light: '#D67F70', dark: '#8F3E31', contrastText: '#ffffff' },
+      ...(primaryMain
+        ? {
+            primary: {
+              main: primaryMain,
+              light: primaryMain,
+              dark: primaryMain,
+              contrastText: contraste(primaryMain),
+            },
+          }
+        : {}),
+      ...(accentMain
+        ? {
+            secondary: {
+              main: accentMain,
+              light: accentMain,
+              dark: accentMain,
+              contrastText: contraste(accentMain),
+            },
+            amber: {
+              main: accentMain,
+              light: accentMain,
+              dark: accentMain,
+              contrastText: contraste(accentMain),
+            },
+          }
+        : {}),
     },
     typography: {
-      fontFamily: '"Inter", system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
-      h1: { fontFamily: '"Space Grotesk", "Inter", sans-serif', fontWeight: 700, letterSpacing: '-0.02em' },
-      h2: { fontFamily: '"Space Grotesk", "Inter", sans-serif', fontWeight: 700, letterSpacing: '-0.02em' },
-      h3: { fontFamily: '"Space Grotesk", "Inter", sans-serif', fontWeight: 600, letterSpacing: '-0.01em' },
-      h4: { fontFamily: '"Space Grotesk", "Inter", sans-serif', fontWeight: 600, letterSpacing: '-0.01em' },
-      h5: { fontFamily: '"Space Grotesk", "Inter", sans-serif', fontWeight: 600 },
-      h6: { fontFamily: '"Space Grotesk", "Inter", sans-serif', fontWeight: 600 },
+      fontFamily: tipografiaBase,
+      h1: { fontFamily: tipografiaTitulos, fontWeight: 700, letterSpacing: '-0.02em' },
+      h2: { fontFamily: tipografiaTitulos, fontWeight: 700, letterSpacing: '-0.02em' },
+      h3: { fontFamily: tipografiaTitulos, fontWeight: 600, letterSpacing: '-0.01em' },
+      h4: { fontFamily: tipografiaTitulos, fontWeight: 600, letterSpacing: '-0.01em' },
+      h5: { fontFamily: tipografiaTitulos, fontWeight: 600 },
+      h6: { fontFamily: tipografiaTitulos, fontWeight: 600 },
       subtitle1: { fontWeight: 600 },
       subtitle2: { fontWeight: 600 },
-      body1: { fontFamily: '"Inter", sans-serif' },
-      body2: { fontFamily: '"Inter", sans-serif' },
+      body1: { fontFamily: tipografiaBase },
+      body2: { fontFamily: tipografiaBase },
       button: { fontWeight: 600 },
       caption: { fontFamily: '"JetBrains Mono", monospace', letterSpacing: 0 },
       overline: { fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em' },

@@ -31,11 +31,17 @@ const NAV_ITEMS = [
   { to: '/app', label: 'Panel' },
   { to: '/app/carga', label: 'Carga de datos' },
   { to: '/app/importacion-avanzada', label: 'Importación avanzada' },
+  { to: '/app/importacion-universal', label: 'Importación universal' },
   { to: '/app/validacion', label: 'Validación' },
   { to: '/app/reporte', label: 'Reportes' },
+  { to: '/app/radian', label: 'RADIAN' },
+  { to: '/app/contabilidad', label: 'Contabilidad' },
+  { to: '/app/migracion-contable', label: 'Migración contable' },
   { to: '/app/facturacion', label: 'Facturación' },
+  { to: '/app/factura-rapida', label: 'Factura rápida' },
   { to: '/app/suscripcion', label: 'Suscripción' },
   { to: '/app/integraciones', label: 'Integraciones' },
+  { to: '/app/branding', label: 'Branding' },
   { to: '/app/guia', label: 'Guía MUISCA' },
   { to: '/app/admin', label: 'Administración', admin: true as const },
 ]
@@ -50,7 +56,7 @@ export default function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { sesion, logout } = useAuth()
-  const { mode, alternar } = useThemeMode()
+  const { mode, alternar, branding } = useThemeMode()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
 
@@ -119,7 +125,7 @@ export default function AppLayout() {
                 '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' },
               }}
             >
-              <Logo size={32} />
+              <Logo size={32} branding={branding} />
             </Box>
 
             <Box
@@ -232,7 +238,7 @@ export default function AppLayout() {
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <Box sx={{ width: 280, p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Logo size={30} />
+            <Logo size={30} branding={branding} />
             <IconButton onClick={() => setDrawerOpen(false)} aria-label="Cerrar menú">
               <CloseIcon />
             </IconButton>

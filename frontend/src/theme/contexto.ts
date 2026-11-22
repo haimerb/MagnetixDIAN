@@ -1,9 +1,12 @@
 import { createContext } from 'react'
+import type { Branding } from '../api/client'
 import type { ThemeMode } from './theme'
 
 export type ContextoTema = {
   mode: ThemeMode
   alternar: () => void
+  branding: Branding | null
+  actualizarBranding: (branding: Branding | null) => void
 }
 
 export const ThemeModeContext = createContext<ContextoTema | null>(null)

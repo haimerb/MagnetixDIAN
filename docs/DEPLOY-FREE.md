@@ -30,7 +30,7 @@ Navegador
 2. En el proyecto, botón **Connect → pestaña "Session pooler"** (necesaria para IPv4, requerida por Render):
    - Host: `aws-0-<REGION>.pooler.supabase.com` · Puerto `5432`
    - User: `postgres.<project-ref>`
-3. No hay que crear tablas: **Flyway migra automáticamente (V1+V16)** al primer arranque del backend.
+3. No hay que crear tablas: **Flyway migra automáticamente (V1–V23)** al primer arranque del backend.
    - La conexión directa (`db.<ref>.supabase.co`) es **solo IPv6** → no funciona desde Render.
    - El schema `public` viene ocupado → la app usa **baseline-on-migrate** (`application.yml`).
 
@@ -89,6 +89,10 @@ Usa el flujo **Workers → Connect to Git** (compila con `wrangler`). El repo in
 - `worker.js` — sirve el frontend y **proxya `/api/*`** a Render (mismo-origin → sin CORS).
 - `wrangler.toml` — assets `frontend/dist`, `not_found_handling = single-page-application` (SPA),
   y sección `[build]` que compila Vite **automáticamente** antes de `npx wrangler deploy`.
+- **Assets PWA:** `/manifest.webmanifest`, `/sw.js` e `/icon.svg` se entregan desde el binding
+  `ASSETS` con `Content-Type`, `Cache-Control` y `Service-Worker-Allowed` propios. `worker.js`
+  solo toca esas tres rutas; `wrangler.toml` las declara en `run_worker_first` para que no las
+  sirva el asset server antes de aplicar cabeceras. El proxy `/api` y el fallback SPA quedan igual.
 
 Configuración en Cloudflare:
 
@@ -103,6 +107,8 @@ Configuración en Cloudflare:
 > Si el proyecto se creó con una variable `VITE_API_BASE_URL` apuntando a Render, el navegador
 > llama a Render **directo (cross-origin)** y ahí sí aplica CORS → por eso `CORS_ORIGINS` incluye
 > el dominio del worker. Para evitar CORS del todo, borrar esa variable y redeployear (el proxy lo cubre).
+> El manifiesto, el service worker y el icono se sirven **same-origin** desde el worker, así que no
+> necesitan CORS; los enlaces de WhatsApp (`https://wa.me`) se abren fuera de la app y tampoco lo requieren.
 
 URL final de la app: `https://magnetixdian.<cuenta>.workers.dev`
 
@@ -123,7 +129,15 @@ build `pnpm run build`, output `dist`, env `VITE_API_BASE_URL` = Render URL, y e
 | `DB_URL` | Render (env) | `jdbc:postgresql://aws-0-<REGION>.pooler.supabase.com:5432/postgres?sslmode=require` |
 | `DB_USER` / `DB_PASSWORD` | Render (env) | `postgres.<ref>` / password de Supabase |
 | `JWT_SECRET` | Render (env) | base64 de 64 bytes (`openssl rand -base64 64`) |
-| `CRYPTO_KEY` | Render (env) | secreto para cifrar credenciales DIAN en BD (`openssl rand -base64 32`) |
+| `CRYPTO_KEY` | Render (env) | secreto para cifrar credenciales DIAN en BD (`openssl rand -base64 32`); **no regenerar nunca** |
+| `CRYPTO_KEY_ID` | Render (env) | id de la clave activa para cifrar con prefijo `enc:v2:` (default `primary`) |
+| `CRYPTO_EXTRA_KEYS` | Render (env) | claves antiguas `id:base64,...` para rotar sin perder secretos; vacío por defecto |
+| `SEGURIDAD_FAIL_FAST` | Render (env) | `false` en el blueprint (default de código); subir a `true` cuando se confirme que `CRYPTO_KEY` nunca es la de desarrollo |
+| `WHATSAPP_BASE_URL` | Render (env) | base del enlace Click-to-Chat (default `https://wa.me`) |
+| `WHATSAPP_DEFAULT_TEMPLATE` | Render (env) | plantilla por defecto; soporta `{numero}`, `{factura}`, `{total}` y `{empresa}` |
+| `BRANDING_PRIMARY_COLOR` / `BRANDING_ACCENT_COLOR` | Render (env) | colores por defecto (default `#0E5C55` / `#D98A2B`) |
+| `BRANDING_FONT_FAMILY` / `BRANDING_PWA_BACKGROUND_COLOR` | Render (env) | tipografía y fondo PWA por defecto (`Roboto` / `#FFFFFF`) |
+| `RADIAN_ACEPTACION_TACITA` / `RADIAN_ACEPTACION_TACITA_CRON` | Render (env) | gate y cron de aceptación tácita (default `false` / `0 0 6 * * *`) |
 | `FRONTEND_URL` | Render (env) | URL pública usada en enlaces de recuperación, invitación y retorno de pagos |
 | `AUTH_EXPOSE_TOKEN` | Render (env) | `false` en producción (no devolver enlaces cuando SMTP falla) |
 | `NOTIFICATIONS_ENABLED` | Render (env) | `true` en el blueprint de producción; `false` en el default local |
@@ -191,6 +205,17 @@ Cuando compres el dominio:
 3. En Render cambiar solo `MAIL_FROM` a ese sender y hacer redeploy. No hace falta tocar código
    ni las credenciales SMTP.
 
+### WhatsApp, branding y PWA en el deploy
+
+- La entrega de facturas es **Click-to-Chat**: `POST /api/empresas/{empresaId}/facturacion/{facturaId}/entregar-whatsapp`
+  devuelve un enlace `https://wa.me/<numero>?text=...`. **No hay token de WhatsApp Cloud API** que configurar.
+- El número y la plantilla se toman de `empresa_branding` (configurables en **Branding**). Si no hay
+  número, el endpoint responde `400`; los placeholders `{numero}`, `{factura}`, `{total}` y `{empresa}`
+  se sustituyen con los datos de la factura y el evento se auditoría.
+- `GET /api/branding/{publicSlug}` está permitido sin JWT (permitAll) para la vista pública de marca.
+- La PWA se instala desde el worker con `/manifest.webmanifest`, `/sw.js` e `/icon.svg`; el service
+  worker omite `/api/`, por lo que la API nunca se sirve desde caché offline.
+
 ### Integraciones y pagos en el deploy
 
 - **Credenciales por proveedor** (SIIGO, ALEGRA, ODOO, WORLD_OFFICE, HELISA, SHOPIFY,
@@ -246,6 +271,13 @@ cliente. El backend no publica puerto externo; Cloudflare sirve los estáticos c
 - **Registro self-service**: `POST /api/auth/registro`, `GET /api/planes` público y migración V14.
 - **Integraciones y pagos**: migraciones V15/V16, adaptadores por proveedor, webhook firmado y
   métodos de pago Wompi (`CARD`/`NEQUI`/`PSE`/`BREB_QR`); ver manual técnico.
+- **Plataforma contable**: migraciones V18–V23 (RADIAN, contabilidad, migración contable, mapeo,
+  branding y seguridad) y endpoints `/api/empresas/{empresaId}/radian/documentos`,
+  `/api/empresas/{empresaId}/contabilidad/{asientos,conciliacion}`,
+  `/api/empresas/{empresaId}/integraciones/{proveedor}/migrar-contabilidad`,
+  `/api/empresas/{empresaId}/importaciones/{vista-previa,confirmar,mapeos}`,
+  `POST /api/empresas/{empresaId}/facturacion/{facturaId}/entregar-whatsapp` y
+  `GET|PUT /api/empresas/{empresaId}/branding`.
 
 El flujo local (docker-compose, Vite dev, CI) sigue igual; el cambio de rutas solo afecta bookmarks.
 
@@ -284,3 +316,6 @@ vault (nunca pasa por git). Verificar en *Environment* que quedó con valor; si 
 variable y re-sincronizar el blueprint.
 
 > La clave **no debe cambiar nunca**: si se regenera, todo lo cifrado con la anterior queda indescifrable.
+> Para rotar sin perder datos, mantener el valor anterior en `CRYPTO_EXTRA_KEYS` con el id que tenía
+> (`primary` por defecto), asignar un `CRYPTO_KEY_ID` nuevo y dejar el nuevo valor en `CRYPTO_KEY`.
+> Los registros antiguos siguen con prefijo `enc:`/`enc:v2:` y se desencriptan con la clave correcta.

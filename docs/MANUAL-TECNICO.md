@@ -1,10 +1,13 @@
 # MagnetixDIAN — Manual Técnico
 
-Sistema con **tres módulos**:
+Sistema con **seis módulos**:
 
 1. **Medios magnéticos (información exógena DIAN)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Flujo: carga de Excel → validación → reporte → XML → marcar presentado + normalización de terceros.
 2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con CUFE/CUDE (SHA-384), UBL 2.1, firma XAdES-EPES, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
 3. **Integraciones y pagos** — sincronización con ERP/contabilidad/e-commerce, webhooks firmados y checkout de suscripciones (simulado / Wompi / MercadoPago).
+4. **RADIAN y contabilidad** — documentos DIAN, causación, plan de cuentas, asientos y conciliación.
+5. **Importación universal y migración contable** — detección de formato, mapeo de columnas y migración desde proveedores.
+6. **Facturación rápida, branding y PWA** — formulario simple, entrega por WhatsApp Click-to-Chat, identidad visual por empresa y app instalable.
 
 ## 1. Stack
 
@@ -47,7 +50,9 @@ backend/src/main/java/com/magnetixdian/
                         FacturaController, ConfiguracionFeController, AdminController,
                         PlanController, ApiKeyController, PagoController,
                         IntegracionController, IntegracionWebhookController,
-                        GlobalExceptionHandler)
+                        RadianController, ContabilidadController,
+                        IntegracionMigracionController, ImportacionUniversalController,
+                        EntregaFacturaController, BrandingController, GlobalExceptionHandler)
   interfaces/dto/       Records de respuesta (NUNCA entidades JPA — open-in-view=false)
                         incluido PaginaDto<T> para listados paginados
   application/          Servicios de caso de uso (AuthService, JwtService, ServicioAdmin,
@@ -56,7 +61,11 @@ backend/src/main/java/com/magnetixdian/
                         ServicioConfigFe, ServicioGeneracionAutomatica, ServicioRecuperacion,
                         ServicioSuscripciones, ServicioApiKeys, ServicioPagos, PasarelasPago,
                         ServicioIntegraciones, RegistroIntegraciones,
-                        AuditoriaService, ProgramadorReintentos, ProgramadorAceptacionTacita)
+                        AuditoriaService, ProgramadorReintentos, ProgramadorAceptacionTacita,
+                        ServicioCausacionRadian, ServicioDocumentosRadian,
+                        ServicioContabilizacion, ServicioConciliacion,
+                        ServicioMigracionContable, ServicioMapeoColumnas,
+                        ServicioEntregaFactura, ServicioBranding)
   domain/
     rule/               ReglaValidacion (interfaz), RuleEngine, reglas 1001/1002, CatalogoConceptos
     rule/factura/       Reglas de facturación (ValidadorFactura + ReglaFactura)
@@ -66,8 +75,13 @@ backend/src/main/java/com/magnetixdian/
     transmision/        CanalTransmision (interfaz), ResultadoTransmision
     suscripcion/        LimiteUso (regla pura de límites)
     apikey/             ClaveApi (generación/hash SHA-256 de claves de API)
+    radian/             LectorDocumentosRadian, TipoDocumentoRadian, DireccionDocumento,
+                        EstadoCausacion
+    contabilidad/       PlanCuentas, GeneradorAsientoRadian
     integracion/        ProveedorIntegracion, AdaptadorIntegracion (firma HMAC y reintentos),
-                        DatosConexionIntegracion, EventoIntegracion, ResultadoIntegracion
+                        DatosConexionIntegracion, EventoIntegracion, ResultadoIntegracion,
+                        SolicitudMigracionContable, MapeoColumnaDto, VistaPreviaImportacionDto
+    notificacion/       NotificadorWhatsApp (puerto Click-to-Chat)
      pago/               PasarelaPago (interfaz), MetodoPago, SolicitudPago, CheckoutPago, EventoPago
      uvt/                UvtManager
      model/              OperacionDatos, ResultadoRegla, Severidad
@@ -80,7 +94,9 @@ backend/src/main/java/com/magnetixdian/
      pago/               PasarelaSimulada, PasarelaWompi, PasarelaMercadoPago
      integracion/        Adaptadores por proveedor (siigo, alegra, odoo, worldoffice, helisa,
                          shopify, woocommerce, sap, dynamics, netsuite)
-     notification/       NotificadorEmail, ServicioNotificaciones, SchedulerJobs
+     importacion/        MapperColumnasInteligente
+     crypto/             CifradorAes (prefijos enc:/enc:v2:, rotación de claves)
+     notification/       NotificadorEmail, NotificadorWhatsAppClickToChat, ServicioNotificaciones, SchedulerJobs
     persistence/        Repositorios y entidades JPA
   security/             JwtAuthFilter, ApiKeyAuthFilter, RateLimitFilter,
                         CustomUserDetailsService, AutorizacionEmpresa
@@ -119,6 +135,13 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 | `V14__registro_self_service.sql` | registro público, aceptación de términos y suscripción FREE |
 | `V15__integraciones.sql` | `integracion_config` (credenciales cifradas, hash del token de webhook) e `integracion_evento` (idempotencia/reintentos) |
 | `V16__pagos_metodo.sql` | columna `pago.metodo` (`MetodoPago`) |
+| `V17__medio_magnetico_datos_json.sql` | columna `medio_magnetico.datos_json` (JSONB) |
+| `V18__radian_documentos.sql` | `documento_radian`, `documento_radian_linea`, índices y único `(empresa_id, direccion, cufe_cude)` |
+| `V19__contabilidad.sql` | `cuenta_contable`, `asiento_contable` y catálogo inicial de cuentas |
+| `V20__migracion_contable.sql` | `migracion_contable`, `migracion_contable_detalle`, único `(empresa_id, proveedor, tipo, external_id)` |
+| `V21__mapeo_archivos.sql` | `mapeo_archivo`, `importacion_staging`, únicos por empresa/formato/cabecera y por archivo/tipo/external_id |
+| `V22__empresa_branding.sql` | `empresa_branding` (slug público, colores, tipografía, pie de factura y WhatsApp/PWA) |
+| `V23__seguridad_auditoria.sql` | `evento_auditoria.empresa_id`, `credencial_auditoria` e índices |
 
 **Tablas de medios magnéticos:** `empresa`, `tercero`, `medio_magnetico`, `operacion`, `uvt_vigencia`, `regla`, `validacion` / `detalle_error`, `calendario_dian`, `notificacion`, `role` / `usuario` / `usuario_role`.
 
@@ -141,6 +164,21 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 | `pago` | Intención de pago por pasarela (referencia única, monto, estado, URL de checkout y `metodo`) |
 | `integracion_config` | Configuración por empresa/proveedor (credenciales cifradas, estado, hash y prefijo del token de webhook) |
 | `integracion_evento` | Eventos de sincronización/webhook con `external_id` único, intentos y próximo intento |
+
+**Tablas de RADIAN, contabilidad, importación y branding:**
+
+| Tabla | Propósito |
+|---|---|
+| `documento_radian` | Documento importado (dirección, tipo, CUFE/CUDE, proveedor, totales, estado de causación) |
+| `documento_radian_linea` | Líneas del documento RADIAN |
+| `cuenta_contable` | Plan de cuentas por empresa (código, nombre, naturaleza) |
+| `asiento_contable` | Asientos generados desde RADIAN o migración (referencia, fecha, total, estado) |
+| `migracion_contable` | Cabecera de migración por empresa/proveedor con conteo de aciertos y errores |
+| `migracion_contable_detalle` | Detalle por registro externo (estado, error, external_id) |
+| `mapeo_archivo` | Mapeo guardado por empresa/formato/cabecera detectada |
+| `importacion_staging` | Filas normalizadas de la vista previa antes de confirmar |
+| `empresa_branding` | Identidad visual por empresa (colores, fuente, pie de factura, WhatsApp y PWA) |
+| `credencial_auditoria` | Credenciales y eventos de seguridad con ámbito de empresa (V23) |
 
 **Estados de `medio_magnetico`:** `BORRADOR` → `CARGADO` → `VALIDADO` | `VALIDADO_CON_ERRORES` → `XML_GENERADO` → `PRESENTADO`. Solo se permite `PRESENTADO` desde `VALIDADO`/`VALIDADO_CON_ERRORES`/`XML_GENERADO`.
 
@@ -299,6 +337,37 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | POST | `/api/empresas/{empresaId}/integraciones/eventos/{eventoId}/reintentar` | Fuerza el despacho de un evento |
 | POST | `/api/integraciones/webhook/{proveedor}/{token}` | Webhook público; cabeceras `X-Integracion-Firma` y `X-Integracion-Timestamp` (ver §13) |
 
+### RADIAN y contabilidad
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/empresas/{empresaId}/radian/documentos/importar` | Multipart: `archivo`, `direccion` (`EMITIDO`/`RECIBIDO`) |
+| GET | `/api/empresas/{empresaId}/radian/documentos` | Lista con filtros `direccion`, `tipoDocumento`, `estadoCausacion`, `fechaDesde`, `fechaHasta` |
+| POST | `/api/empresas/{empresaId}/radian/documentos/{id}/causar` | Causa el documento RADIAN |
+| POST | `/api/empresas/{empresaId}/radian/documentos/{id}/contabilizar` | Genera el asiento contable del documento |
+| GET | `/api/empresas/{empresaId}/contabilidad/asientos` | Lista de asientos contables |
+| POST | `/api/empresas/{empresaId}/contabilidad/conciliacion` | Conciliación contable (filtros opcionales) |
+
+### Migración contable e importación universal
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/empresas/{empresaId}/integraciones/{proveedor}/migrar-contabilidad` | Ejecuta la migración desde el proveedor |
+| GET | `/api/empresas/{empresaId}/integraciones/{proveedor}/migraciones/{migracionId}/reporte` | Reporte de aciertos/errores |
+| POST | `/api/empresas/{empresaId}/integraciones/{proveedor}/migraciones/{migracionId}/reintentar` | Reintenta los registros fallidos |
+| POST | `/api/empresas/{empresaId}/importaciones/vista-previa` | Multipart: `archivo`; detecta formato y sugiere mapeo |
+| POST | `/api/empresas/{empresaId}/importaciones/confirmar` | Confirma la importación con el mapeo elegido |
+| GET | `/api/empresas/{empresaId}/importaciones/mapeos` | Lista mapeos guardados por empresa |
+
+### Entrega de facturas y branding
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/empresas/{empresaId}/facturacion/{facturaId}/entregar-whatsapp` | Devuelve enlace `https://wa.me` con la plantilla de la empresa |
+| GET | `/api/empresas/{empresaId}/branding` | Configuración de marca de la empresa |
+| PUT | `/api/empresas/{empresaId}/branding` | Guarda colores, fuente, pie de factura y WhatsApp/PWA |
+| GET | `/api/branding/{publicSlug}` | Branding público (permitAll) |
+
 ### Administración (rol ADMIN)
 
 | Método | Ruta | Descripción |
@@ -316,7 +385,7 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | GET/POST/DELETE | `/api/admin/calendario` | Calendario DIAN |
 | GET | `/actuator/health` · `/actuator/health/liveness` · `/actuator/health/readiness` | Health checks (sin auth) |
 
-**Seguridad:** salvo `/api/auth/**`, `/api/pagos/webhook/**`, `/api/integraciones/webhook/**`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>` (o `X-API-Key`). `/api/admin/**` exige además `ROLE_ADMIN`. Los recursos por empresa se filtran con `AutorizacionEmpresa` (403 si no corresponde). CORS configurable con `CORS_ORIGINS` (default `localhost:5173`, `localhost:4173`).
+**Seguridad:** salvo `/api/auth/**`, `/api/pagos/webhook/**`, `/api/integraciones/webhook/**`, `/api/branding/{publicSlug}`, `/swagger-ui/**`, `/v3/api-docs/**` y `/actuator/health/**`, todo exige `Authorization: Bearer <jwt>` (o `X-API-Key`). `/api/admin/**` exige además `ROLE_ADMIN`. Los recursos por empresa se filtran con `AutorizacionEmpresa` (403 si no corresponde). CORS configurable con `CORS_ORIGINS` (default `localhost:5173`, `localhost:4173`).
 
 **Respuestas de error** (`GlobalExceptionHandler`): `400` argumentos inválidos, `403` acceso denegado, `409` estado inconsistente, `404` no encontrado, JSON limpio.
 
@@ -401,7 +470,16 @@ como respaldo cada 10 minutos. Es una **mitigación, no un SLA** (detalles en `d
 | `SERVER_PORT` | `8080` | puerto HTTP |
 | `FRONTEND_URL` | `http://localhost:5173` | base para enlaces de correo e retorno de checkout |
 | `AUTH_EXPOSE_TOKEN` | `true` | devuelve enlaces/tokens en la respuesta (usar `false` en producción) |
-| `CRYPTO_KEY` | valor dev | clave de cifrado de secretos (`empresa_fe_config`) |
+| `CRYPTO_KEY` | valor dev | clave de cifrado de secretos (`empresa_fe_config`, `integracion_config`); **no regenerar en producción** |
+| `CRYPTO_KEY_ID` | `primary` | identificador de la clave activa (`enc:v2:`) para rotación |
+| `CRYPTO_EXTRA_KEYS` | — | claves antiguas para desencriptar (`id:base64,...`), sin secretos en el repo |
+| `SEGURIDAD_FAIL_FAST` | `false` | si `true`, arranque falla con `CRYPTO_KEY` de desarrollo (recomendado `true` en producción) |
+| `WHATSAPP_BASE_URL` | `https://wa.me` | base del enlace Click-to-Chat |
+| `WHATSAPP_DEFAULT_TEMPLATE` | plantilla en español | texto por defecto si la empresa no define plantilla (`{numero}`, `{total}`, `{empresa}`) |
+| `BRANDING_PRIMARY_COLOR` | `#0E5C55` | color primario por defecto |
+| `BRANDING_ACCENT_COLOR` | `#D98A2B` | color de acento por defecto |
+| `BRANDING_FONT_FAMILY` | `Roboto` | tipografía por defecto |
+| `BRANDING_PWA_BACKGROUND_COLOR` | `#FFFFFF` | fondo de la PWA por defecto |
 | `REINTENTO_TRANSMISION_MS` | `60000` | intervalo del programador de reintentos |
 | `RADIAN_ACEPTACION_TACITA` | `false` | habilita la aceptación tácita automática |
 | `RADIAN_ACEPTACION_TACITA_CRON` | `0 0 6 * * *` | cron de la aceptación tácita |
@@ -435,7 +513,7 @@ como respaldo cada 10 minutos. Es una **mitigación, no un SLA** (detalles en `d
 
 `.github/workflows/ci.yml` ejecuta en cada push/PR a `main`/`develop`:
 - **backend:** `mvn clean package` (JDK 17, cache Maven).
-- **frontend:** `pnpm install --frozen-lockfile && pnpm run lint && pnpm run test && pnpm run build`.
+- **frontend:** `pnpm install --frozen-lockfile && pnpm run lint && pnpm run test && pnpm run build` (el paso de unit tests `pnpm run test` está explícito en `ci.yml`).
 - **e2e:** Playwright (`frontend/e2e/`) contra Postgres 16 + backend + preview; valida las migraciones Flyway.
 
 ### CD (GitHub Actions)
@@ -444,7 +522,7 @@ como respaldo cada 10 minutos. Es una **mitigación, no un SLA** (detalles en `d
 
 ## 12. Pruebas y smoke test
 
-Suite JUnit en `backend/src/test/java/` — **150 pruebas** (rule engine, reglas de facturación, CUFE/QR/CUDE, importador Excel, seguridad, generador automático, suscripciones, claves de API y pasarelas). Suite Vitest en `frontend/src/**/*.test.tsx` — **22 pruebas** (átomos, ErrorBoundary, notificaciones, tema). Suite E2E Playwright en `frontend/e2e/`.
+Suite JUnit en `backend/src/test/java/` (rule engine, reglas de facturación, CUFE/QR/CUDE, importador Excel, seguridad, generador automático, suscripciones, claves de API y pasarelas), ampliada con `CifradorAesTest`, `ServicioBrandingTest`, `ServicioEntregaFacturaTest`, `ServicioDocumentosRadianTest`, `ServicioCausacionRadianTest`, `ServicioContabilizacionTest`, `ServicioConciliacionTest`, `ServicioMigracionContableTest`, `ServicioMapeoColumnasTest`, `MapperColumnasInteligenteTest`, `RadianControllerTest`, `ContabilidadControllerTest`, `ImportacionUniversalControllerTest` y `GeneradorPdfFacturaBrandingTest`. Suite Vitest en `frontend/src/**/*.test.tsx` (átomos, ErrorBoundary, notificaciones, tema). Suite E2E Playwright en `frontend/e2e/`.
 
 ```bash
 # Backend con tests
@@ -561,3 +639,52 @@ Cada adaptador declara sus capacidades (`SYNC_CLIENTES`, `SYNC_PRODUCTOS`, `EMIT
 ofrece `CARD`/`NEQUI`/`PSE`/`BREB_QR`. Los webhooks de pago usan
 `POST /api/pagos/webhook/{proveedor}` y, con `PAGOS_EXIGIR_FIRMA_WEBHOOK=true`, una pasarela
 configurada sin secreto de firma rechaza el evento (fail-closed).
+
+## 14. RADIAN, contabilidad, importación, WhatsApp y branding
+
+### 14.1 RADIAN y contabilidad
+
+`LectorDocumentosRadian` interpreta los documentos importados (XML/CSV/Excel) y normaliza
+dirección, tipo, CUFE/CUDE, proveedor, líneas y totales en `documento_radian` /
+`documento_radian_linea` (único por empresa + dirección + CUFE/CUDE). `ServicioCausacionRadian`
+aplica la causación y `ServicioContabilizacion` usa `PlanCuentas` + `GeneradorAsientoRadian`
+para crear `asiento_contable`. `ServicioConciliacion` contrasta asientos y documentos dentro de
+un rango de fechas; los filtros son `fechaDesde`, `fechaHasta`, `direccion` y `tipoDocumento`.
+
+### 14.2 Migración contable e importación universal
+
+`ServicioMigracionContable` usa los adaptadores por proveedor y persiste
+`migracion_contable` / `migracion_contable_detalle`; el reporte expone aciertos y errores y el
+reintento solo reprocesa fallidos. `MapperColumnasInteligente` + `ServicioMapeoColumnas`
+detectan el formato, sugieren columnas y guardan `mapeo_archivo`; la vista previa escribe en
+`importacion_staging` y `POST /confirmar` mueve los datos ya normalizados al dominio.
+
+### 14.3 Entrega por WhatsApp y branding
+
+`NotificadorWhatsApp` es un puerto con un único adaptador, `NotificadorWhatsAppClickToChat`:
+normaliza el número (7–13 dígitos) y devuelve un enlace `https://wa.me/<numero>?text=...`.
+No hay token de WhatsApp Cloud API. `ServicioEntregaFactura` toma el número y la plantilla del
+branding de la empresa (o del cuerpo de la petición), reemplaza `{numero}`, `{factura}`,
+`{total}` y `{empresa}`, y registra la auditoría `FACTURA_ENTREGADA_WHATSAPP`.
+
+`empresa_branding` guarda colores, tipografía, pie de factura y ajustes de WhatsApp/PWA por
+empresa. `GET /api/branding/{publicSlug}` es público (`permitAll`) y el resto exige JWT con
+autorización por empresa.
+
+### 14.4 Cifrado v2, PWA y auditoría
+
+`CifradorAes` escribe con prefijo `enc:v2:` y `CRYPTO_KEY_ID`, y lee tanto `enc:v2:` como el
+prefijo legacy `enc:` usando `CRYPTO_EXTRA_KEYS` para rotar sin perder secretos ya guardados.
+Con `SEGURIDAD_FAIL_FAST=true` la aplicación se niega a arrancar si detecta la clave de desarrollo
+en producción.
+
+La PWA se sirve desde `frontend/public/`: `manifest.webmanifest`, `sw.js` e `icon.svg`. El
+service worker pre-cachea `/`, `/index.html`, `/manifest.webmanifest` e `/icon.svg` y omite
+`/api/`. En Cloudflare, `worker.js` entrega esos tres archivos desde el binding `ASSETS` con
+`Content-Type`, `Cache-Control` y `Service-Worker-Allowed` adecuados; `wrangler.toml` usa
+`run_worker_first` solo para esas rutas, por lo que el proxy `/api` y el fallback SPA siguen
+intactos.
+
+La auditoría de V23 añade `empresa_id` a `evento_auditoria` y crea `credencial_auditoria`,
+de forma que login, cambios de clave, CRUD admin, emisión/rechazo y entrega WhatsApp quedan
+trazables por empresa.

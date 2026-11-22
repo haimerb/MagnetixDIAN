@@ -5,6 +5,7 @@ const TOKEN_KEY = 'magnetixdian_token'
 const REFRESH_KEY = 'magnetixdian_refresh'
 
 export const EVENTO_ERROR_API = 'magnetixdian:error'
+export const EVENTO_SESION = 'magnetixdian:sesion'
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -826,5 +827,301 @@ export async function reintentarEventoIntegracion(empresaId: number, eventoId: n
     undefined,
     { skipGlobalError: true },
   )
+  return data
+}
+
+export type DocumentoRadian = {
+  id: number
+  empresaId: number
+  direccion: string
+  tipoDocumento: string
+  cufeCude: string
+  consecutivo: string
+  nitContraparte: string
+  razonSocialContraparte: string
+  fecha: string
+  subtotal: number
+  impuestos: number
+  retenciones: number
+  total: number
+  estadoRadian: string
+  estadoCausacion: string
+  estadoContabilizacion: string
+  asientoContableId: number | null
+  createdAt: string
+}
+
+export type AsientoContableLinea = {
+  id: number
+  codigoCuenta: string
+  nombreCuenta: string
+  descripcion: string | null
+  debito: number
+  credito: number
+}
+
+export type AsientoContable = {
+  id: number
+  numero: string
+  fecha: string
+  tipoEvento: string
+  descripcion: string
+  totalDebito: number
+  totalCredito: number
+  lineas: AsientoContableLinea[]
+}
+
+export type ResultadoConciliacion = {
+  coincidencias: number
+  diferencias: number
+  totalDocumentos: number
+  documentosSinAsiento: number
+}
+
+export type MapeoColumna = {
+  campo: string
+  cabeceraOrigen: string
+  indice: number
+  confianza: number
+  formatoDetectado: string
+}
+
+export type VistaPreviaArchivo = {
+  archivoId: string
+  nombreArchivo: string
+  formatoDetectado: string
+  cabeceras: string[]
+  filasEjemplo: string[][]
+  sugerencias: MapeoColumna[]
+  confianza: number
+  totalFilas: number
+  contenidoBase64: string
+}
+
+export type RespuestaVistaPrevia = VistaPreviaArchivo
+
+export type ConfirmacionImportacion = {
+  archivoId: string | null
+  nombreArchivo: string
+  formatoDetectado: string
+  contenidoBase64: string | null
+  columnas: MapeoColumna[]
+}
+
+export type ResultadoImportacionUniversal = {
+  filasLeidas: number
+  filasImportadas: number
+  filasOmitidas: number
+  errores: number
+  mensajes: string[]
+}
+
+export type ResultadoCausacionRadian = {
+  documentoId: number
+  causacionId: number
+  estado: string
+  fechaCausacion: string
+  total: number
+  mensaje: string | null
+}
+
+export type ItemMigracionContable = {
+  id: number
+  etapa: string
+  externalId: string
+  estado: string
+  error: string | null
+  payload: string | null
+  createdAt: string
+}
+
+export type MigracionContableDto = {
+  id: number
+  proveedor: ProveedorIntegracion
+  etapas: string[]
+  estado: string
+  exitosos: number
+  omitidos: number
+  errores: number
+  total: number
+  mensaje: string | null
+  createdAt: string
+}
+
+export type ResultadoMigracionDto = {
+  exitosos: number
+  omitidos: number
+  errores: number
+  total: number
+  items: ItemMigracionContable[]
+}
+
+export type Branding = {
+  empresaId: number
+  publicSlug: string
+  displayName: string | null
+  logoUrl: string | null
+  primaryColor: string
+  accentColor: string
+  fontFamily: string
+  invoiceFooter: string | null
+  whatsappNumber: string | null
+  whatsappTemplate: string | null
+  pwaThemeColor: string
+  pwaBackgroundColor: string
+}
+
+export type BrandingRequest = Pick<
+  Branding,
+  | 'publicSlug'
+  | 'displayName'
+  | 'logoUrl'
+  | 'primaryColor'
+  | 'accentColor'
+  | 'fontFamily'
+  | 'invoiceFooter'
+  | 'whatsappNumber'
+  | 'whatsappTemplate'
+  | 'pwaThemeColor'
+  | 'pwaBackgroundColor'
+>
+
+export type EntregaWhatsAppResponse = {
+  empresaId: number
+  facturaId: number
+  numero: string
+  enlace: string
+  mensaje: string
+  enviado: boolean
+}
+
+export async function listarDocumentosRadian(empresaId: number) {
+  const { data } = await api.get<DocumentoRadian[]>(`/empresas/${empresaId}/radian/documentos`)
+  return data
+}
+
+export async function importarDocumentosRadian(empresaId: number, archivo: File, direccion?: string) {
+  const form = new FormData()
+  form.append('archivo', archivo)
+  if (direccion) form.append('direccion', direccion)
+  const { data } = await api.post<DocumentoRadian[]>(
+    `/empresas/${empresaId}/radian/documentos/importar`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return data
+}
+
+export async function causarDocumentoRadian(empresaId: number, documentoId: number) {
+  const { data } = await api.post<ResultadoCausacionRadian>(
+    `/empresas/${empresaId}/radian/documentos/${documentoId}/causar`,
+    {},
+  )
+  return data
+}
+
+export async function contabilizarDocumentoRadian(empresaId: number, documentoId: number) {
+  const { data } = await api.post<AsientoContable>(
+    `/empresas/${empresaId}/radian/documentos/${documentoId}/contabilizar`,
+  )
+  return data
+}
+
+export async function listarAsientosContables(empresaId: number) {
+  const { data } = await api.get<AsientoContable[]>(`/empresas/${empresaId}/contabilidad/asientos`)
+  return data
+}
+
+export async function conciliarContabilidad(empresaId: number) {
+  const { data } = await api.post<ResultadoConciliacion>(
+    `/empresas/${empresaId}/contabilidad/conciliacion`,
+  )
+  return data
+}
+
+export async function migrarContabilidad(empresaId: number, proveedor: ProveedorIntegracion) {
+  const { data } = await api.post<MigracionContableDto>(
+    `/empresas/${empresaId}/integraciones/${proveedor}/migrar-contabilidad`,
+  )
+  return data
+}
+
+export async function obtenerReporteMigracion(
+  empresaId: number,
+  proveedor: ProveedorIntegracion,
+  migracionId: number,
+) {
+  const { data } = await api.get<ResultadoMigracionDto>(
+    `/empresas/${empresaId}/integraciones/${proveedor}/migraciones/${migracionId}/reporte`,
+  )
+  return data
+}
+
+export async function reintentarMigracion(
+  empresaId: number,
+  proveedor: ProveedorIntegracion,
+  migracionId: number,
+) {
+  const { data } = await api.post<MigracionContableDto>(
+    `/empresas/${empresaId}/integraciones/${proveedor}/migraciones/${migracionId}/reintentar`,
+  )
+  return data
+}
+
+export async function vistaPreviaArchivo(empresaId: number, archivo: File) {
+  const form = new FormData()
+  form.append('archivo', archivo)
+  const { data } = await api.post<VistaPreviaArchivo>(
+    `/empresas/${empresaId}/importaciones/vista-previa`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return data
+}
+
+export async function confirmarImportacion(empresaId: number, solicitud: ConfirmacionImportacion) {
+  const { data } = await api.post<ResultadoImportacionUniversal>(
+    `/empresas/${empresaId}/importaciones/confirmar`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarMapeos(empresaId: number) {
+  const { data } = await api.get<MapeoColumna[]>(
+    `/empresas/${empresaId}/importaciones/mapeos`,
+  )
+  return data
+}
+
+export async function entregarFacturaWhatsapp(
+  empresaId: number,
+  facturaId: number,
+  numero?: string,
+  mensaje?: string,
+) {
+  const { data } = await api.post<EntregaWhatsAppResponse>(
+    `/empresas/${empresaId}/facturacion/${facturaId}/entregar-whatsapp`,
+    { numero, mensaje },
+  )
+  return data
+}
+
+export async function obtenerBranding(empresaId: number) {
+  const { data } = await api.get<Branding>(`/empresas/${empresaId}/branding`, {
+    skipGlobalError: true,
+  })
+  return data
+}
+
+export async function guardarBranding(empresaId: number, solicitud: BrandingRequest) {
+  const { data } = await api.put<Branding>(`/empresas/${empresaId}/branding`, solicitud)
+  return data
+}
+
+export async function obtenerBrandingPublico(publicSlug: string) {
+  const { data } = await api.get<Branding>(`/branding/${encodeURIComponent(publicSlug)}`, {
+    skipGlobalError: true,
+  })
   return data
 }
