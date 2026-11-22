@@ -51,7 +51,7 @@ class ServicioImportacionExogenaTest {
                 "1001", "1001", "ACTIVO", true, 1,
                 List.of("NIT"), List.of(Map.of("NIT", "900123456")), null);
         FormatoDetectadoDto inactivo = new FormatoDetectadoDto(
-                "1003", "1003", "PENDIENTE_XSD", false, 1,
+                "1003", "1003", "PENDIENTE_GENERADOR", false, 1,
                 List.of("CONCEPTO"), List.of(Map.of("CONCEPTO", "C1003")), null);
         when(importador.importar(any(MultipartFile.class))).thenReturn(
                 new ImportacionMultiFormatoDto(null, List.of(activo, inactivo), List.of(), 0));

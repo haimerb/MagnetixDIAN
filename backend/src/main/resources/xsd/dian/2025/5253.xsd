@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified"
+attributeFormDefault="unqualified">
+<xs:element name="mas">
+<xs:annotation>
+<xs:documentation>Elemento raiz del xml de carga
+masiva</xs:documentation>
+</xs:annotation>
+<xs:complexType>
+<xs:sequence>
+<xs:element name="Cab" type="CabType"/>
+<xs:element ref="bene" maxOccurs="5000"/>
+</xs:sequence>
+</xs:complexType>
+</xs:element>
+<xs:complexType name="CabType">
+<xs:sequence>
+<xs:element name="Ano" type="xs:gYear" nillable="false">
+<xs:annotation>
+<xs:documentation>Año de envio</xs:documentation>
+</xs:annotation>
+</xs:element>
+<xs:element name="CodCpt" nillable="false">
+<xs:annotation>
+<xs:documentation>Concepto</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:int">
+<xs:minInclusive value="0"/>
+<xs:maxInclusive value="99"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:element>
+<xs:element name="Formato" fixed="5253">
+<xs:simpleType>
+<xs:restriction base="xs:positiveInteger">
+<xs:totalDigits value="4"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:element>
+<xs:element name="Version" type="xs:positiveInteger" fixed="2"/>
+<xs:element name="NumEnvio">
+<xs:annotation>
+<xs:documentation>Numero de envio</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:positiveInteger">
+<xs:totalDigits value="8"/>
+<xs:maxInclusive value="99999999"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:element>
+<xs:element name="FecEnvio" type="xs:dateTime">
+<xs:annotation>
+<xs:documentation>Fecha de envio</xs:documentation>
+</xs:annotation>
+</xs:element>
+<xs:element name="FecInicial" type="xs:date">
+<xs:annotation>
+<xs:documentation>Fecha inicial</xs:documentation>
+</xs:annotation>
+</xs:element>
+<xs:element name="FecFinal" type="xs:date">
+<xs:annotation>
+<xs:documentation>Fecha Final</xs:documentation>
+</xs:annotation>
+</xs:element>
+<xs:element name="ValorTotal" type="xs:double">
+<xs:annotation>
+<xs:documentation>Valor Total</xs:documentation>
+</xs:annotation>
+</xs:element>
+<xs:element name="CantReg">
+<xs:annotation>
+<xs:documentation>Cantidad de
+registros</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:positiveInteger">
+<xs:totalDigits value="4"/>
+<xs:maxInclusive value="9999"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:element>
+</xs:sequence>
+</xs:complexType>
+<xs:element name="bene">
+<xs:annotation>
+<xs:documentation>Información de beneficiarios efectivos - Formato
+5253v2</xs:documentation>
+</xs:annotation>
+<xs:complexType>
+<xs:attribute name="tinfo" use="required">
+<xs:annotation>
+<xs:documentation>Tipo de
+informante</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:int">
+<xs:minInclusive value="0"/>
+<xs:maxInclusive value="9"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="tdoc" use="required">
+<xs:annotation>
+<xs:documentation>Tipo de
+Documento</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:int">
+<xs:minInclusive value="0"/>
+<xs:maxInclusive value="99"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="nid" use="required">
+<xs:annotation>
+<xs:documentation>Número
+identificación</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:pattern value="[a-zA-Z0-9]+"/>
+<xs:minLength value="1"/>
+<xs:maxLength value="20"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="apl1" use="required">
+<xs:annotation>
+<xs:documentation>Primer apellido del
+informado</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:minLength value="1"/>
+<xs:maxLength value="60"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="apl2" use="optional">
+<xs:annotation>
+<xs:documentation>Segundo apellido del
+informado</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:minLength value="0"/>
+<xs:maxLength value="60"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="nom1" use="required">
+<xs:annotation>
+<xs:documentation>Primer nombre del
+informado</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:minLength value="1"/>
+<xs:maxLength value="60"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="nom2" use="optional">
+<xs:annotation>
+<xs:documentation>Otros nombres del
+informado</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:minLength value="0"/>
+<xs:maxLength value="60"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="fena" type="xs:date" use="required">
+<xs:annotation>
+<xs:documentation>Fecha de
+nacimiento</xs:documentation>
+</xs:annotation>
+</xs:attribute>
+<xs:attribute name="paina" use="required">
+<xs:annotation>
+<xs:documentation>País de
+nacionalidad</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:int">
+<xs:minInclusive value="0"/>
+<xs:maxInclusive value="9999"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="dir" use="optional">
+<xs:annotation>
+<xs:documentation>Direccion</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:minLength value="0"/>
+<xs:maxLength value="200"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="dpto" use="optional">
+<xs:annotation>
+<xs:documentation>Codigo Dpto</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:pattern value="[0-9]{0,2}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="mun" use="optional">
+<xs:annotation>
+<xs:documentation>Codigo Mcpio</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:pattern value="[0-9]{0,3}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="paire" use="required">
+<xs:annotation>
+<xs:documentation>País de residencia
+fiscal</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:int">
+<xs:minInclusive value="0"/>
+<xs:maxInclusive value="9999"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="email" use="optional">
+<xs:annotation>
+<xs:documentation>Correo
+Electronico</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:minLength value="0"/>
+<xs:maxLength value="50"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="fein" type="xs:date" use="required">
+<xs:annotation>
+<xs:documentation>Fecha inicial como beneficiario
+efectivo</xs:documentation>
+</xs:annotation>
+</xs:attribute>
+<xs:attribute name="fefi" type="xs:date" use="required">
+<xs:annotation>
+<xs:documentation>Fecha final como beneficiario
+efectivo</xs:documentation>
+</xs:annotation>
+</xs:attribute>
+<xs:attribute name="papj" use="required">
+<xs:annotation>
+<xs:documentation>Participación en la persona jurídica o
+estructura sin personería jurídica</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:double">
+<xs:pattern value="[0-9]{1,18}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="papjpd" use="required">
+<xs:annotation>
+<xs:documentation>Participación en la persona jurídica o
+estructura sin personería jurídica Posición decimal</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:int">
+<xs:pattern value="[0-9]{1,2}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="prupj" use="required">
+<xs:annotation>
+<xs:documentation>Participación en los rendimientos o
+utilidades decretados o causados por la persona jurídica o estructura sin personería
+jurídica</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:double">
+<xs:pattern value="[0-9]{1,18}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="prupjpd" use="required">
+<xs:annotation>
+<xs:documentation>Participación en los rendimientos o
+utilidades decretados o causados por la persona jurídica o estructura sin personería jurídica
+Posición decimal</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:int">
+<xs:pattern value="[0-9]{1,2}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="vtrupjbe" use="required">
+<xs:annotation>
+<xs:documentation>Valor total de los rendimientos o
+utilidades decretados o causados por la persona jurídica o estructura sin personería jurídica a favor
+del beneficiario efectivo</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:long">
+<xs:pattern value="[0-9]{1,18}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="vtprpj" use="required">
+<xs:annotation>
+<xs:documentation>Valor total de la persona jurídica o
+estructura sin personería jurídica.</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:long">
+<xs:pattern value="[0-9]{1,18}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="vtrupj" use="required">
+<xs:annotation>
+<xs:documentation>Valor total de los rendimientos o
+utilidades decretados o causados por la persona jurídica o estructura sin personería
+jurídica</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:long">
+<xs:pattern value="[0-9]{1,18}"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+<xs:attribute name="ifide" use="optional">
+<xs:annotation>
+<xs:documentation>Identificación del fideicomiso, título o
+contrato</xs:documentation>
+</xs:annotation>
+<xs:simpleType>
+<xs:restriction base="xs:string">
+<xs:minLength value="0"/>
+<xs:maxLength value="14"/>
+</xs:restriction>
+</xs:simpleType>
+</xs:attribute>
+</xs:complexType>
+</xs:element>
+</xs:schema>
