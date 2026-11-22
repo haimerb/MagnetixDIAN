@@ -84,7 +84,7 @@ export default function ContabilidadPage() {
       <PageHeader
         overline="Contabilidad"
         title="Asientos contables"
-        subtitle="Revise los asientos generados desde RADIAN y concilie los saldos contra los documentos."
+        subtitle="Revise los asientos generados al asentar la facturación y concilie los saldos contra los documentos."
         actions={
           <Button
             variant="contained"
@@ -145,7 +145,7 @@ export default function ContabilidadPage() {
           <EmptyState
             icon={<ReceiptLongOutlinedIcon />}
             title="Sin asientos contables"
-            description="Cause documentos RADIAN y genere sus asientos desde la bandeja de RADIAN."
+            description="Traiga documentos de la DIAN, cáuselos y asíntelos desde Asentar facturación."
           />
         ) : (
           <TableContainer>

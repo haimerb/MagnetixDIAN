@@ -2,13 +2,15 @@
 
 ## Qué hace MagnetixDIAN
 
-MagnetixDIAN le permite **generar la información exógena de la DIAN** en los formatos **1001** (pagos/abonos y retenciones a terceros) y **1002** (créditos, descuentos y notas de ajuste) de forma ágil, y además **gestionar facturación electrónica, documentos RADIAN, contabilidad, migraciones, branding y PWA**:
+MagnetixDIAN es un ERP contable centrado en la DIAN. El menú tiene cuatro áreas: **Inicio**, **Facturación**, **Contabilidad** y **Empresa**.
 
-1. Descarga la plantilla Excel del formato y la diligencia (o usa su sistema de origen).
-2. Carga el archivo con las operaciones del período.
-3. El sistema valida los datos contra las reglas DIAN (dígito de verificación del NIT, conceptos válidos, montos mínimos) y le sugiere corregir los DV de los terceros.
-4. Una vez sin errores, genera y descarga el XML listo para presentar en MUISCA.
-5. Marca el reporte como presentado para registrar el estado.
+El flujo principal es:
+
+1. En **Contabilidad → Asentar facturación**, traiga facturas, notas y documentos soporte desde la DIAN usando su **token** o un **archivo Excel/CSV/JSON/ZIP** exportado del catálogo.
+2. Cause los documentos y asíntelos a contabilidad desde la misma bandeja.
+3. En **Contabilidad → Asientos contables**, revise los asientos y concilie con los documentos.
+4. Los datos asentados alimentan la información exógena en formatos **1001** (pagos/abonos y retenciones) y **1002** (créditos, descuentos y notas).
+5. Genere el XML y preséntelo en MUISCA; luego marque el reporte como presentado.
 
 ## Requisitos
 
@@ -129,39 +131,41 @@ Si necesita integrar sus sistemas con MagnetixDIAN:
 - Revise periódicamente los avisos de **vencimiento** que el sistema envía por correo (si están habilitados en su instalación).
 - Si un error aparece solo en el prevalidador oficial de la DIAN, ajuste los datos en el Excel y repita desde la carga.
 
-## 13. Documentos RADIAN (`/app/radian`)
+## 13. Asentar facturación (`/app/contabilidad/asentar-facturacion`)
 
-1. Ingrese a **RADIAN** desde el menú.
-2. En **Importar**, seleccione el archivo (XML/CSV/Excel), indique la dirección (**Emitido** o **Recibido**) y pulse **Importar**. Los documentos repetidos por empresa + dirección + CUFE/CUDE se omiten.
-3. En el listado puede filtrar por dirección, tipo de documento, estado de causación y rango de fechas.
-4. Pulse **Causar** para registrar el documento; si requiere asiento, pulse **Contabilizar**. El sistema genera el asiento con el plan de cuentas de la empresa.
+1. Ingrese a **Contabilidad → Asentar facturación**.
+2. Pulse **Traer de la DIAN** y elija:
+   - **Token o enlace:** pegue el token/enlace que obtuvo en el catálogo DIAN. Si lo guarda, queda cifrado y no se muestra de nuevo.
+   - **Archivo Excel:** seleccione un `.xlsx`, `.xls`, `.csv`, `.json` o `.zip` exportado desde la DIAN.
+3. Indique dirección (**Emitidos** o **Recibidos**), rango de fechas y, si aplica, grupo o NIT del tercero.
+4. Pulse **Traer documentos**. Los documentos repetidos por empresa + dirección + CUFE/CUDE se omiten.
+5. En la bandeja puede filtrar y pulsar **Causar**. Después pulse **Asentar** para generar el asiento con el plan de cuentas de la empresa.
 
-## 14. Contabilidad (`/app/contabilidad`)
+## 14. Asientos contables (`/app/contabilidad`)
 
-1. En **Contabilidad → Asientos** consulte los asientos generados desde RADIAN o desde una migración.
+1. En **Contabilidad → Asientos contables** consulte los asientos generados al asentar la facturación o desde una migración.
 2. En **Conciliación** elija el rango de fechas y, si lo desea, la dirección y el tipo de documento.
 3. El resultado muestra las diferencias entre documentos y asientos para que pueda corregir la causación.
 
-## 15. Migración contable (`/app/migracion-contable`)
+## 15. Empresa (`/app/empresa`)
 
-1. En **Integraciones** guarde primero las credenciales del proveedor (SIIGO, ALEGRA, ODOO, etc.).
-2. Vaya a **Migración contable**, seleccione el proveedor y ejecute la migración.
-3. Abra el **reporte** para ver registros migrados y errores. Si hay fallos, pulse **Reintentar**: solo se reprocesan los registros en error.
+1. En **Usuarios** cree y administre usuarios de la organización.
+2. En **Identidad visual** defina nombre visible, colores, tipografía, pie de factura, número/plantilla de WhatsApp y colores de la PWA.
+3. En **Integraciones** consulte el catálogo con estados reales y guarde credenciales cuando exista una conexión configurada.
+4. En **Suscripción** consulte su plan, consumo y método de pago.
+5. En **Administración** gestione empresas, calendario DIAN, reintentos y auditoría.
 
-## 16. Importación universal (`/app/importacion-universal`)
+## 16. Orígenes externos y migración
 
-1. Arrastre un archivo y pulse **Vista previa**: el sistema detecta el formato y sugiere el mapeo de columnas.
-2. Revise y ajuste el mapeo; puede guardarlo para la próxima carga.
-3. Pulse **Confirmar** para importar los datos normalizados. El listado **Mapeos** muestra las plantillas guardadas por empresa.
+Cuando su información no viene directamente de la DIAN, exporte desde su sistema de origen y use la importación con mapeo inteligente de columnas o la migración contable por proveedor. Estas herramientas son de apoyo; el flujo de negocio sigue siendo **traer → causar → asentar**.
 
 ## 17. Factura rápida y entrega por WhatsApp (`/app/factura-rapida`)
 
 1. Complete el formulario de factura (adquirente, líneas, impuestos) y valide antes de emitir.
 2. Tras emitir, use **Entregar por WhatsApp**: el sistema abre un enlace `https://wa.me` con el número y la plantilla configurados.
-3. Si no hay número en la empresa, diligéncielo en **Branding** o escríbalo en el diálogo de entrega. No se requiere token de API de WhatsApp.
+3. Si no hay número en la empresa, diligéncielo en **Empresa → Identidad visual** o escríbalo en el diálogo de entrega. No se requiere token de API de WhatsApp.
 
-## 18. Branding y PWA (`/app/branding`)
+## 18. PWA
 
-1. En **Branding** defina nombre visible, colores primario/acento, tipografía, pie de factura, número/plantilla de WhatsApp y colores de la PWA.
-2. El slug público le permite compartir una vista de marca sin iniciar sesión.
-3. En el navegador, use **Instalar aplicación** (icono `/icon.svg` y manifiesto `/manifest.webmanifest`) para abrir MagnetixDIAN como app. El service worker funciona solo en HTTPS/localhost y nunca intercepta `/api`.
+1. En el navegador, use **Instalar aplicación** (icono `/icon.svg` y manifiesto `/manifest.webmanifest`) para abrir MagnetixDIAN como app.
+2. El service worker funciona solo en HTTPS/localhost y nunca intercepta `/api`.

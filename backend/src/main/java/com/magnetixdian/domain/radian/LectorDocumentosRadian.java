@@ -27,6 +27,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public final class LectorDocumentosRadian {
 
@@ -46,6 +50,19 @@ public final class LectorDocumentosRadian {
             throw new IllegalArgumentException("El archivo de documentos RADIAN está vacío.");
         }
         String nombre = nombreArchivo == null ? "" : nombreArchivo.toLowerCase(Locale.ROOT);
+        if (esZip(contenido, nombre)) {
+            if (!nombre.endsWith(".zip")) {
+                try {
+                    List<DocumentoRadianImportDto> libros = parsearExcel(contenido);
+                    if (!libros.isEmpty()) {
+                        return libros;
+                    }
+                } catch (RuntimeException ex) {
+                    return parsearZip(contenido);
+                }
+            }
+            return parsearZip(contenido);
+        }
         String texto = new String(contenido, StandardCharsets.UTF_8).replace("\uFEFF", "").trim();
         if (texto.startsWith("[") || texto.startsWith("{") || nombre.endsWith(".json")) {
             return parsearJson(texto);
@@ -122,6 +139,32 @@ public final class LectorDocumentosRadian {
         return documentos;
     }
 
+    private static boolean esZip(byte[] contenido, String nombre) {
+        return nombre.endsWith(".zip")
+                || (contenido.length >= 2 && contenido[0] == 'P' && contenido[1] == 'K');
+    }
+
+    private static List<DocumentoRadianImportDto> parsearZip(byte[] contenido) {
+        List<DocumentoRadianImportDto> documentos = new ArrayList<>();
+        List<String> extensiones = List.of(".xlsx", ".xls", ".csv", ".json");
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(contenido))) {
+            ZipEntry entrada;
+            while ((entrada = zip.getNextEntry()) != null) {
+                if (entrada.isDirectory()) {
+                    continue;
+                }
+                String nombre = entrada.getName().toLowerCase(Locale.ROOT);
+                if (extensiones.stream().noneMatch(nombre::endsWith)) {
+                    continue;
+                }
+                documentos.addAll(parsear(zip.readAllBytes(), entrada.getName()));
+            }
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("No se pudo leer el ZIP de documentos RADIAN.", ex);
+        }
+        return documentos;
+    }
+
     private static List<String> dividir(String fila, String separador) {
         List<String> campos = new ArrayList<>();
         StringBuilder actual = new StringBuilder();
@@ -152,31 +195,47 @@ public final class LectorDocumentosRadian {
             return;
         }
         switch (clave) {
-            case "direccion" -> destino.put("direccion", valor);
-            case "tipodocumento", "tipo", "tipodocumentoelectronico" -> destino.put("tipoDocumento", valor);
-            case "cufecude", "cufe", "cude" -> destino.put("cufeCude", valor);
-            case "consecutivo", "numero", "numerodocumento" -> destino.put("consecutivo", valor);
-            case "nitcontraparte", "nit", "nitadquirente" -> destino.put("nitContraparte", valor);
-            case "razonsocialcontraparte", "razonsocial", "nombrecontraparte" ->
-                    destino.put("razonSocialContraparte", valor);
-            case "fecha", "fechadocumento", "fechaemision" -> destino.put("fecha", valor);
-            case "subtotal", "base" -> destino.put("subtotal", valor);
-            case "impuestos", "totalimpuestos", "iva" -> destino.put("impuestos", valor);
-            case "retenciones", "totalretenciones" -> destino.put("retenciones", valor);
-            case "total", "totaldocumento", "valortotal" -> destino.put("total", valor);
-            case "estadoradian", "estado" -> destino.put("estadoRadian", valor);
+            case "direccion", "sentido" -> destino.put("direccion", valor);
+            case "tipodocumento", "tipo", "tipodocumentoelectronico", "tipocomprobante", "clasedocumento" ->
+                    destino.put("tipoDocumento", valor);
+            case "cufecude", "cufe", "cude", "claveunica", "clave" -> destino.put("cufeCude", valor);
+            case "consecutivo", "numero", "numerodocumento", "numerofactura" ->
+                    destino.put("consecutivo", valor);
+            case "prefijo", "pre" -> destino.put("prefijo", valor);
+            case "folio", "numerofolio" -> destino.put("folio", valor);
+            case "nitcontraparte", "nit", "nitadquirente", "nitreceptor", "nitproveedor",
+                    "identificacioncontraparte", "identificaciontercero" -> destino.put("nitContraparte", valor);
+            case "razonsocialcontraparte", "razonsocial", "nombrecontraparte", "razonsocialadquirente",
+                    "razonsocialproveedor", "nombretercero" -> destino.put("razonSocialContraparte", valor);
+            case "fecha", "fechadocumento", "fechaemision", "fechadeemision", "fechageneracion" ->
+                    destino.put("fecha", valor);
+            case "subtotal", "base", "basegravable", "subtotalbruto" -> destino.put("subtotal", valor);
+            case "impuestos", "totalimpuestos", "iva", "valoriva", "totaliva" ->
+                    destino.put("impuestos", valor);
+            case "retenciones", "totalretenciones", "valorretenciones" -> destino.put("retenciones", valor);
+            case "total", "totaldocumento", "valortotal", "valorbruto", "totalfactura" ->
+                    destino.put("total", valor);
+            case "estadoradian", "estado", "estadodocumento", "resultado" ->
+                    destino.put("estadoRadian", valor);
             default -> {
             }
         }
     }
 
     private static DocumentoRadianImportDto desdeRegistro(Map<String, String> registro) {
+        String consecutivo = registro.get("consecutivo");
+        if (consecutivo == null || consecutivo.isBlank()) {
+            consecutivo = Stream.of(registro.get("prefijo"), registro.get("folio"))
+                    .filter(valor -> valor != null && !valor.isBlank())
+                    .map(String::trim)
+                    .collect(Collectors.joining("-"));
+        }
         return new DocumentoRadianImportDto(
                 null,
                 registro.get("direccion"),
                 registro.get("tipoDocumento"),
                 registro.get("cufeCude"),
-                registro.get("consecutivo"),
+                consecutivo,
                 registro.get("nitContraparte"),
                 registro.get("razonSocialContraparte"),
                 fecha(registro.get("fecha")),

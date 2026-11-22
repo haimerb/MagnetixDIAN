@@ -102,6 +102,20 @@ services:
         value: "30000"
       - key: DIAN_REQUEST_TIMEOUT_MS
         value: "60000"
+      - key: DIAN_CATALOGO_BASE_URL
+        value: https://catalogo-vpfe.dian.gov.co
+      - key: DIAN_CATALOGO_TOKEN_URL
+        sync: false
+      - key: DIAN_CATALOGO_LISTADO_URL
+        sync: false
+      - key: DIAN_CATALOGO_HOSTS_PERMITIDOS
+        value: catalogo-vpfe.dian.gov.co,vpfe.dian.gov.co,vpfe-hab.dian.gov.co
+      - key: DIAN_CATALOGO_CONNECT_TIMEOUT_MS
+        value: "5000"
+      - key: DIAN_CATALOGO_READ_TIMEOUT_MS
+        value: "60000"
+      - key: DIAN_CATALOGO_MAX_BYTES
+        value: "52428800"
       - key: WHATSAPP_BASE_URL
         value: https://wa.me
       - key: WHATSAPP_DEFAULT_TEMPLATE

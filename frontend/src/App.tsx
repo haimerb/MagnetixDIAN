@@ -15,7 +15,6 @@ const RecuperarPasswordPage = lazy(() => import('./pages/RecuperarPasswordPage')
 const ActivarCuentaPage = lazy(() => import('./pages/ActivarCuentaPage'))
 const CambiarPasswordPage = lazy(() => import('./pages/CambiarPasswordPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
-const CargaPage = lazy(() => import('./pages/CargaPage'))
 const ValidacionPage = lazy(() => import('./pages/ValidacionPage'))
 const ReportePage = lazy(() => import('./pages/ReportePage'))
 const GuiaMuiscaPage = lazy(() => import('./pages/GuiaMuiscaPage'))
@@ -24,14 +23,9 @@ const FacturacionPage = lazy(() => import('./pages/FacturacionPage'))
 const FacturaDetallePage = lazy(() => import('./pages/FacturaDetallePage'))
 const ConfigFePage = lazy(() => import('./pages/ConfigFePage'))
 const SuscripcionPage = lazy(() => import('./pages/SuscripcionPage'))
-const IntegracionesPage = lazy(() => import('./pages/IntegracionesPage'))
-const ImportacionAvanzadaPage = lazy(() => import('./pages/ImportacionAvanzadaPage'))
 const RadianPage = lazy(() => import('./pages/RadianPage'))
 const ContabilidadPage = lazy(() => import('./pages/ContabilidadPage'))
-const MigracionContablePage = lazy(() => import('./pages/MigracionContablePage'))
-const ImportacionUniversalPage = lazy(() => import('./pages/ImportacionUniversalPage'))
 const FacturaRapidaPage = lazy(() => import('./pages/FacturaRapidaPage'))
-const BrandingPage = lazy(() => import('./pages/BrandingPage'))
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -63,14 +57,15 @@ export default function App() {
               }
             >
               <Route index element={<DashboardPage />} />
-              <Route path="carga" element={<CargaPage />} />
-              <Route path="importacion-avanzada" element={<ImportacionAvanzadaPage />} />
-              <Route path="importacion-universal" element={<ImportacionUniversalPage />} />
-              <Route path="radian" element={<RadianPage />} />
+              <Route path="carga" element={<Navigate to="/app/contabilidad/asentar-facturacion" replace />} />
+              <Route path="importacion-avanzada" element={<Navigate to="/app/contabilidad/asentar-facturacion" replace />} />
+              <Route path="importacion-universal" element={<Navigate to="/app/contabilidad/asentar-facturacion" replace />} />
+              <Route path="radian" element={<Navigate to="/app/contabilidad/asentar-facturacion" replace />} />
+              <Route path="contabilidad/asentar-facturacion" element={<RadianPage />} />
               <Route path="contabilidad" element={<ContabilidadPage />} />
-              <Route path="migracion-contable" element={<MigracionContablePage />} />
+              <Route path="migracion-contable" element={<Navigate to="/app/contabilidad/asentar-facturacion" replace />} />
               <Route path="factura-rapida" element={<FacturaRapidaPage />} />
-              <Route path="branding" element={<BrandingPage />} />
+              <Route path="branding" element={<Navigate to="/app/empresa" replace />} />
               <Route path="validacion/:medioId?" element={<ValidacionPage />} />
               <Route path="reporte/:medioId?" element={<ReportePage />} />
               <Route path="guia" element={<GuiaMuiscaPage />} />
@@ -78,8 +73,9 @@ export default function App() {
               <Route path="facturacion/config" element={<ConfigFePage />} />
               <Route path="facturacion/:id" element={<FacturaDetallePage />} />
               <Route path="suscripcion" element={<SuscripcionPage />} />
-              <Route path="integraciones" element={<IntegracionesPage />} />
-              <Route path="admin" element={<AdminPage />} />
+              <Route path="integraciones" element={<Navigate to="/app/empresa" replace />} />
+              <Route path="admin" element={<Navigate to="/app/empresa" replace />} />
+              <Route path="empresa" element={<AdminPage />} />
               <Route path="cuenta" element={<CambiarPasswordPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

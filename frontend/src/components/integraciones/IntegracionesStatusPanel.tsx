@@ -42,6 +42,35 @@ type CampoIntegracion = {
   tipo?: 'text' | 'url'
 }
 
+type CategoriaIntegracion = 'Colombia' | 'Global ERP' | 'Contabilidad/finanzas' | 'E-commerce'
+type DisponibilidadIntegracion = 'Activo' | 'Vía importación' | 'Próximamente' | 'Sin conexión directa'
+
+type EntradaCatalogo = {
+  categoria: CategoriaIntegracion
+  disponibilidad: DisponibilidadIntegracion
+  descripcion: string
+}
+
+const CATALOGO: Record<ProveedorIntegracion, EntradaCatalogo> = {
+  SIIGO: { categoria: 'Colombia', disponibilidad: 'Vía importación', descripcion: 'Traiga movimientos desde archivos exportados por SIIGO.' },
+  ALEGRA: { categoria: 'Colombia', disponibilidad: 'Vía importación', descripcion: 'Traiga movimientos desde archivos exportados por ALEGRA.' },
+  ODOO: { categoria: 'Global ERP', disponibilidad: 'Vía importación', descripcion: 'Traiga clientes, productos y movimientos exportados desde Odoo.' },
+  WORLD_OFFICE: { categoria: 'Contabilidad/finanzas', disponibilidad: 'Vía importación', descripcion: 'Traiga documentos contables exportados desde World Office.' },
+  HELISA: { categoria: 'Colombia', disponibilidad: 'Vía importación', descripcion: 'Traiga documentos contables exportados desde HELISA.' },
+  SHOPIFY: { categoria: 'E-commerce', disponibilidad: 'Vía importación', descripcion: 'Traiga pedidos exportados desde Shopify.' },
+  WOOCOMMERCE: { categoria: 'E-commerce', disponibilidad: 'Vía importación', descripcion: 'Traiga pedidos exportados desde WooCommerce.' },
+  SAP_BUSINESS_ONE: { categoria: 'Global ERP', disponibilidad: 'Vía importación', descripcion: 'Traiga movimientos exportados desde SAP Business One.' },
+  DYNAMICS_365: { categoria: 'Global ERP', disponibilidad: 'Vía importación', descripcion: 'Traiga movimientos exportados desde Dynamics 365.' },
+  NETSUITE: { categoria: 'Global ERP', disponibilidad: 'Vía importación', descripcion: 'Traiga movimientos exportados desde NetSuite.' },
+}
+
+const TONO_DISPONIBILIDAD: Record<DisponibilidadIntegracion, 'success' | 'info' | 'default' | 'warning'> = {
+  Activo: 'success',
+  'Vía importación': 'info',
+  Próximamente: 'warning',
+  'Sin conexión directa': 'default',
+}
+
 const CAMPOS: Record<ProveedorIntegracion, CampoIntegracion[]> = {
   SIIGO: [
     { clave: 'username', etiqueta: 'Usuario' },
@@ -214,7 +243,7 @@ export default function IntegracionesStatusPanel({
 
       <SectionCard
         title="Proveedores conectables"
-        subtitle="Configure, pruebe y sincronice cada sistema externo de esta empresa."
+        subtitle="Catálogo con estado real: conexión activa, importación de archivos o disponibilidad futura."
         padded={false}
       >
         <Box sx={{ px: { xs: 1, md: 2 }, py: 1 }}>
@@ -225,6 +254,9 @@ export default function IntegracionesStatusPanel({
             const cargandoGuardar = accion === `guardar:${proveedor}`
             const cargandoPrueba = accion === `probar:${proveedor}`
             const cargandoSync = accion === `sincronizar:${proveedor}`
+            const entrada = CATALOGO[proveedor]
+            const disponibilidad: DisponibilidadIntegracion =
+              config.estado === 'CONECTADO' && config.configurada ? 'Activo' : entrada.disponibilidad
 
             return (
               <Accordion key={proveedor} disableGutters elevation={0} sx={{ border: '1px solid', borderColor: 'divider', mb: 1.5 }}>
@@ -249,10 +281,19 @@ export default function IntegracionesStatusPanel({
                       variant="outlined"
                       label={config.configurada ? 'Configurada' : 'Sin configurar'}
                     />
+                    <Chip
+                      size="small"
+                      color={TONO_DISPONIBILIDAD[disponibilidad]}
+                      label={`${entrada.categoria} · ${disponibilidad}`}
+                      aria-label={`${proveedor}: ${entrada.categoria}, ${disponibilidad}`}
+                    />
                   </Stack>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Stack spacing={2}>
+                    <Typography variant="body2" color="text.secondary">
+                      {entrada.descripcion}
+                    </Typography>
                     {config.ultimoError && (
                       <Alert severity="error">
                         Último error: {config.ultimoError}

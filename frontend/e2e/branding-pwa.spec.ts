@@ -59,16 +59,17 @@ async function stubAutenticacion(page: Page) {
   })
 }
 
-test.describe('Branding y PWA', () => {
+test.describe('Identidad visual y PWA', () => {
   test.beforeEach(async ({ page }) => {
     await stubAutenticacion(page)
   })
 
   test('guarda la marca y refleja el manifiesto PWA', async ({ page }) => {
     await loginAdmin(page)
-    await page.goto('/app/branding')
+    await page.goto('/app/empresa')
+    await page.getByRole('tab', { name: 'Identidad visual' }).click()
 
-    await expect(page.getByRole('heading', { name: 'Branding por empresa' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Identidad visual' })).toBeVisible()
     await page.getByLabel('Nombre visible').fill('Marca E2E')
     await page.getByRole('button', { name: 'Guardar' }).click()
 
