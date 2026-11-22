@@ -4,6 +4,7 @@ import com.magnetixdian.domain.dian.ArchivoListadoDian;
 import com.magnetixdian.domain.dian.OrigenListadoDian;
 import com.magnetixdian.domain.dian.ProveedorListadosDian;
 import com.magnetixdian.domain.dian.SolicitudListadoDian;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +46,7 @@ public class TokenDianAdapter implements ProveedorListadosDian {
     private final long maxBytes;
     private final FabricaHttpClientDian fabrica;
 
+    @Autowired
     public TokenDianAdapter(
             @Value("${magnetixdian.dian.catalogo.base-url:https://catalogo-vpfe.dian.gov.co}") String baseUrl,
             @Value("${magnetixdian.dian.catalogo.token-url:}") String tokenUrl,
