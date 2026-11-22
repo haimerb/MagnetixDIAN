@@ -37,13 +37,13 @@ public class AsientoContableJpa {
     @Column(length = 300)
     private String descripcion;
 
-    @Column(name = "documento_tipo", nullable = false, length = 30)
+    @Column(name = "documento_tipo", length = 30)
     private String documentoTipo;
 
-    @Column(name = "documento_id", nullable = false)
+    @Column(name = "documento_id")
     private Long documentoId;
 
-    @Column(name = "tipo_evento", nullable = false, length = 30)
+    @Column(name = "tipo_evento", length = 30)
     private String tipoEvento;
 
     @Column(nullable = false, length = 15)
@@ -63,6 +63,24 @@ public class AsientoContableJpa {
 
     @Column(name = "valor_retenciones", nullable = false, precision = 18, scale = 2)
     private BigDecimal valorRetenciones = BigDecimal.ZERO;
+
+    @Column(name = "periodo_id")
+    private Long periodoId;
+
+    @Column(length = 30)
+    private String origen;
+
+    @Column(name = "origen_id")
+    private Long origenId;
+
+    @Column(name = "reversa_de_id")
+    private Long reversaDeId;
+
+    @Column(name = "centro_costo_id")
+    private Long centroCostoId;
+
+    @Column(name = "tercero_id")
+    private Long terceroId;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
@@ -197,6 +215,54 @@ public class AsientoContableJpa {
 
     public void setValorRetenciones(BigDecimal valorRetenciones) {
         this.valorRetenciones = valorRetenciones;
+    }
+
+    public Long getPeriodoId() {
+        return periodoId;
+    }
+
+    public void setPeriodoId(Long periodoId) {
+        this.periodoId = periodoId;
+    }
+
+    public String getOrigen() {
+        return origen;
+    }
+
+    public void setOrigen(String origen) {
+        this.origen = origen;
+    }
+
+    public Long getOrigenId() {
+        return origenId;
+    }
+
+    public void setOrigenId(Long origenId) {
+        this.origenId = origenId;
+    }
+
+    public Long getReversaDeId() {
+        return reversaDeId;
+    }
+
+    public void setReversaDeId(Long reversaDeId) {
+        this.reversaDeId = reversaDeId;
+    }
+
+    public Long getCentroCostoId() {
+        return centroCostoId;
+    }
+
+    public void setCentroCostoId(Long centroCostoId) {
+        this.centroCostoId = centroCostoId;
+    }
+
+    public Long getTerceroId() {
+        return terceroId;
+    }
+
+    public void setTerceroId(Long terceroId) {
+        this.terceroId = terceroId;
     }
 
     public OffsetDateTime getCreatedAt() {

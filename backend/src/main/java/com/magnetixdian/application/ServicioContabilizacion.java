@@ -1,12 +1,11 @@
 package com.magnetixdian.application;
 
-import com.magnetixdian.domain.contabilidad.GeneradorAsientoRadian;
+import com.magnetixdian.domain.contabilidad.MotorAsientos;
 import com.magnetixdian.domain.radian.EstadoCausacion;
 import com.magnetixdian.infrastructure.persistence.AsientoContableJpa;
 import com.magnetixdian.infrastructure.persistence.AsientoContableLineaJpa;
 import com.magnetixdian.infrastructure.persistence.AsientoContableRepository;
 import com.magnetixdian.infrastructure.persistence.CuentaContableJpa;
-import com.magnetixdian.infrastructure.persistence.CuentaContableRepository;
 import com.magnetixdian.infrastructure.persistence.DocumentoAsientoJpa;
 import com.magnetixdian.infrastructure.persistence.DocumentoRadianJpa;
 import com.magnetixdian.infrastructure.persistence.DocumentoRadianRepository;
@@ -16,8 +15,6 @@ import com.magnetixdian.interfaces.dto.DocumentoRadianDto;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,14 +24,14 @@ import java.util.Optional;
 public class ServicioContabilizacion {
 
     private final DocumentoRadianRepository documentoRepository;
-    private final CuentaContableRepository cuentaRepository;
+    private final ServicioPlanCuentas servicioPlanCuentas;
     private final AsientoContableRepository asientoRepository;
 
     public ServicioContabilizacion(DocumentoRadianRepository documentoRepository,
-                                   CuentaContableRepository cuentaRepository,
+                                   ServicioPlanCuentas servicioPlanCuentas,
                                    AsientoContableRepository asientoRepository) {
         this.documentoRepository = documentoRepository;
-        this.cuentaRepository = cuentaRepository;
+        this.servicioPlanCuentas = servicioPlanCuentas;
         this.asientoRepository = asientoRepository;
     }
 
@@ -51,8 +48,8 @@ public class ServicioContabilizacion {
         }
 
         DocumentoRadianDto dto = ServicioDocumentosRadian.mapear(documento);
-        GeneradorAsientoRadian.Asiento generado = GeneradorAsientoRadian.generar(dto);
-        Map<String, CuentaContableJpa> cuentas = asegurarPlanCuentas(empresaId);
+        MotorAsientos.Resultado generado = MotorAsientos.desdeDocumentoRadian(dto);
+        Map<String, CuentaContableJpa> cuentas = servicioPlanCuentas.asegurar(empresaId);
 
         AsientoContableJpa asiento = new AsientoContableJpa();
         asiento.setEmpresaId(empresaId);
@@ -69,7 +66,7 @@ public class ServicioContabilizacion {
         asiento.setValorRetenciones(dto.retenciones());
 
         int numeroLinea = 1;
-        for (GeneradorAsientoRadian.Linea linea : generado.lineas()) {
+        for (MotorAsientos.Linea linea : generado.lineas()) {
             CuentaContableJpa cuenta = cuentas.get(linea.codigoCuenta());
             if (cuenta == null) {
                 throw new IllegalStateException("Cuenta contable no configurada: " + linea.codigoCuenta());
@@ -128,41 +125,5 @@ public class ServicioContabilizacion {
                 asiento.getValorRetenciones(),
                 asiento.getCreatedAt(),
                 lineas);
-    }
-
-    private Map<String, CuentaContableJpa> asegurarPlanCuentas(Long empresaId) {
-        List<CuentaContableJpa> propias = cuentaRepository.findByEmpresaId(empresaId);
-        List<CuentaContableJpa> globales = cuentaRepository.findByEmpresaIdIsNull();
-        Map<String, CuentaContableJpa> porCodigo = new LinkedHashMap<>();
-        for (CuentaContableJpa cuenta : globales) {
-            porCodigo.put(cuenta.getCodigo(), cuenta);
-        }
-        for (CuentaContableJpa cuenta : propias) {
-            porCodigo.put(cuenta.getCodigo(), cuenta);
-        }
-        List<CuentaContableJpa> faltantes = new ArrayList<>();
-        for (CuentaContableJpa cuenta : globales) {
-            boolean existe = propias.stream()
-                    .anyMatch(propia -> propia.getCodigo().equals(cuenta.getCodigo()));
-            if (!existe) {
-                CuentaContableJpa copia = new CuentaContableJpa();
-                copia.setEmpresaId(empresaId);
-                copia.setCodigo(cuenta.getCodigo());
-                copia.setNombre(cuenta.getNombre());
-                copia.setTipo(cuenta.getTipo());
-                copia.setActiva(cuenta.isActiva());
-                faltantes.add(copia);
-            }
-        }
-        if (!faltantes.isEmpty()) {
-            List<CuentaContableJpa> guardadas = cuentaRepository.saveAll(faltantes);
-            if (guardadas == null) {
-                guardadas = faltantes;
-            }
-            for (CuentaContableJpa cuenta : guardadas) {
-                porCodigo.put(cuenta.getCodigo(), cuenta);
-            }
-        }
-        return porCodigo;
     }
 }

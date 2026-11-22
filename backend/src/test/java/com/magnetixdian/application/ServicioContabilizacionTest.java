@@ -4,7 +4,6 @@ import com.magnetixdian.domain.contabilidad.PlanCuentas;
 import com.magnetixdian.infrastructure.persistence.AsientoContableJpa;
 import com.magnetixdian.infrastructure.persistence.AsientoContableRepository;
 import com.magnetixdian.infrastructure.persistence.CuentaContableJpa;
-import com.magnetixdian.infrastructure.persistence.CuentaContableRepository;
 import com.magnetixdian.infrastructure.persistence.DocumentoRadianJpa;
 import com.magnetixdian.infrastructure.persistence.DocumentoRadianRepository;
 import com.magnetixdian.interfaces.dto.AsientoContableDto;
@@ -17,14 +16,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,7 +33,7 @@ class ServicioContabilizacionTest {
     @Mock
     private DocumentoRadianRepository documentoRepository;
     @Mock
-    private CuentaContableRepository cuentaRepository;
+    private ServicioPlanCuentas servicioPlanCuentas;
     @Mock
     private AsientoContableRepository asientoRepository;
 
@@ -43,7 +41,7 @@ class ServicioContabilizacionTest {
 
     @BeforeEach
     void setUp() {
-        servicio = new ServicioContabilizacion(documentoRepository, cuentaRepository, asientoRepository);
+        servicio = new ServicioContabilizacion(documentoRepository, servicioPlanCuentas, asientoRepository);
     }
 
     @Test
@@ -61,7 +59,7 @@ class ServicioContabilizacionTest {
         assertEquals(new BigDecimal("190.00"), linea(resultado, PlanCuentas.IVA_GENERADO).credito());
         assertEquals(new BigDecimal("50.00"), linea(resultado, PlanCuentas.RETENCIONES).debito());
         assertEquals("CONTABILIZADA", documento.getEstadoCausacion());
-        verify(cuentaRepository).saveAll(anyList());
+        verify(servicioPlanCuentas).asegurar(1L);
         verify(asientoRepository).saveAndFlush(any(AsientoContableJpa.class));
     }
 
@@ -119,7 +117,7 @@ class ServicioContabilizacionTest {
 
         assertEquals(11L, resultado.id());
         verify(asientoRepository, never()).saveAndFlush(any(AsientoContableJpa.class));
-        verify(cuentaRepository, never()).saveAll(anyList());
+        verify(servicioPlanCuentas, never()).asegurar(1L);
     }
 
     @Test
@@ -137,16 +135,7 @@ class ServicioContabilizacionTest {
         when(documentoRepository.findByIdAndEmpresaId(5L, 1L)).thenReturn(Optional.of(documento));
         when(asientoRepository.findByEmpresaIdAndDocumentoTipoAndDocumentoIdAndTipoEvento(
                 1L, "RADIAN", 5L, "CAUSACION")).thenReturn(Optional.empty());
-        when(cuentaRepository.findByEmpresaId(1L)).thenReturn(List.of());
-        when(cuentaRepository.findByEmpresaIdIsNull()).thenReturn(cuentasGlobales());
-        when(cuentaRepository.saveAll(anyList())).thenAnswer(invocation -> {
-            List<CuentaContableJpa> guardadas = invocation.getArgument(0);
-            long id = 100L;
-            for (CuentaContableJpa cuenta : guardadas) {
-                cuenta.setId(id++);
-            }
-            return guardadas;
-        });
+        when(servicioPlanCuentas.asegurar(1L)).thenReturn(cuentasGlobales());
         when(asientoRepository.saveAndFlush(any(AsientoContableJpa.class))).thenAnswer(invocation -> {
             AsientoContableJpa asiento = invocation.getArgument(0);
             asiento.setId(20L);
@@ -154,7 +143,7 @@ class ServicioContabilizacionTest {
         });
     }
 
-    private static List<CuentaContableJpa> cuentasGlobales() {
+    private static Map<String, CuentaContableJpa> cuentasGlobales() {
         String[] codigos = {
                 PlanCuentas.CLIENTES, PlanCuentas.PROVEEDORES, PlanCuentas.VENTAS,
                 PlanCuentas.DEVOLUCIONES_VENTAS, PlanCuentas.COMPRAS,
@@ -162,7 +151,7 @@ class ServicioContabilizacionTest {
                 PlanCuentas.IVA_DESCONTABLE, PlanCuentas.RETENCIONES,
                 PlanCuentas.RETENCION_FUENTE, PlanCuentas.CAJA, PlanCuentas.AJUSTES
         };
-        List<CuentaContableJpa> cuentas = new ArrayList<>();
+        Map<String, CuentaContableJpa> cuentas = new LinkedHashMap<>();
         long id = 1L;
         for (String codigo : codigos) {
             CuentaContableJpa cuenta = new CuentaContableJpa();
@@ -170,13 +159,13 @@ class ServicioContabilizacionTest {
             cuenta.setCodigo(codigo);
             cuenta.setNombre(PlanCuentas.nombre(codigo));
             cuenta.setTipo("OTRO");
-            cuentas.add(cuenta);
+            cuentas.put(codigo, cuenta);
         }
         return cuentas;
     }
 
     private static DocumentoRadianJpa documento(String direccion, String tipo, String subtotal,
-                                                String impuestos, String retenciones, String total) {
+                                                 String impuestos, String retenciones, String total) {
         DocumentoRadianJpa entidad = new DocumentoRadianJpa();
         entidad.setId(5L);
         entidad.setEmpresaId(1L);

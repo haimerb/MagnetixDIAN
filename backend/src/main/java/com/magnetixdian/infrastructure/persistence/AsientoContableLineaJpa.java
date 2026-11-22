@@ -40,6 +40,18 @@ public class AsientoContableLineaJpa {
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal credito = BigDecimal.ZERO;
 
+    @Column(name = "centro_costo_id")
+    private Long centroCostoId;
+
+    @Column(name = "tercero_id")
+    private Long terceroId;
+
+    @Column(name = "base_imponible", nullable = false, precision = 18, scale = 2)
+    private BigDecimal baseImponible = BigDecimal.ZERO;
+
+    @Column(name = "impuesto_codigo", length = 20)
+    private String impuestoCodigo;
+
     public Long getId() {
         return id;
     }
@@ -90,5 +102,37 @@ public class AsientoContableLineaJpa {
 
     public void setCredito(BigDecimal credito) {
         this.credito = credito;
+    }
+
+    public Long getCentroCostoId() {
+        return centroCostoId;
+    }
+
+    public void setCentroCostoId(Long centroCostoId) {
+        this.centroCostoId = centroCostoId;
+    }
+
+    public Long getTerceroId() {
+        return terceroId;
+    }
+
+    public void setTerceroId(Long terceroId) {
+        this.terceroId = terceroId;
+    }
+
+    public BigDecimal getBaseImponible() {
+        return baseImponible;
+    }
+
+    public void setBaseImponible(BigDecimal baseImponible) {
+        this.baseImponible = baseImponible;
+    }
+
+    public String getImpuestoCodigo() {
+        return impuestoCodigo;
+    }
+
+    public void setImpuestoCodigo(String impuestoCodigo) {
+        this.impuestoCodigo = impuestoCodigo;
     }
 }
