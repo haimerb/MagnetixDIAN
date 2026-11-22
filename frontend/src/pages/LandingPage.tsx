@@ -77,7 +77,7 @@ export default function LandingPage() {
     let activo = true
     listarPlanes()
       .then((respuesta) => {
-        if (activo && respuesta.length > 0) setPlanes(respuesta)
+        if (activo && Array.isArray(respuesta) && respuesta.length > 0) setPlanes(respuesta)
       })
       .catch(() => undefined)
     return () => {
