@@ -1,6 +1,6 @@
 {
-  "descripcion": "XSD oficiales DIAN vigencia 2025 extraidos de los prevalidadores publicados por la DIAN. Los archivos se conservan byte a byte.",
-  "total": 69,
+  "descripcion": "XSD oficiales DIAN vigencia 2025 extraidos de prevalidadores y anexos normativos publicados por la DIAN. Los XSD de prevalidadores se conservan byte a byte; los XSD de anexos se transcriben del PDF oficial y se validan con el compilador de esquemas.",
+  "total": 72,
   "archivos": [
     {
       "formato": "1001",
@@ -355,6 +355,17 @@
       "paginaOficial": "https://www.dian.gov.co/Transaccional/Paginas/Prevalidadores-Informacion-Tributaria.aspx"
     },
     {
+      "formato": "1125",
+      "archivo": "1125.xsd",
+      "anioGravable": 2025,
+      "version": "13",
+      "encoding": "ISO-8859-1",
+      "bytes": 16142,
+      "sha256": "a8672430f8b6a7009a5026a3a80b24ef15e7d9531f0447c59256ad99359b7b59",
+      "fuente": "https://storagecdndian.blob.core.windows.net/site/Transaccional/PREVALIDADORES/Prevalidador-Precios-Transferencia-AG2025-v3-6-2-26.zip",
+      "paginaOficial": "https://www.dian.gov.co/Transaccional/Paginas/Prevalidadores-Informacion-Tributaria.aspx"
+    },
+    {
       "formato": "1159",
       "archivo": "1159.xsd",
       "anioGravable": 2025,
@@ -463,6 +474,17 @@
       "sha256": "bea682427e4f0a1108d77fec727fc0da98a9502a7208e712b678a450f77cbf8d",
       "fuente": "https://storagecdndian.blob.core.windows.net/site/Transaccional/PREVALIDADORES/Prevalidador-Tributario-E-Financieras-AG2025-v3-1-0-26-1.zip",
       "paginaOficial": "https://www.dian.gov.co/Transaccional/Paginas/Prevalidadores-Informacion-Tributaria.aspx"
+    },
+    {
+      "formato": "2278",
+      "archivo": "2278.xsd",
+      "anioGravable": 2025,
+      "version": "1",
+      "encoding": "ISO-8859-1",
+      "bytes": 6565,
+      "sha256": "6edd639b4979bfabf3935b2b36e08a318f308b89456d194c1ae2e2cd54d0ab6b",
+      "fuente": "https://www.dian.gov.co/normatividad/Normatividad/Anexo%2010%20-%20Resoluci%C3%B3n%20000024%20de%202016.pdf",
+      "paginaOficial": "https://normograma.dian.gov.co/dian/compilacion/docs/resolucion_dian_0024_2016.htm"
     },
     {
       "formato": "2279",
@@ -760,6 +782,17 @@
       "sha256": "9c31654f2a5e4c31c2fa4e1110527661acd5266099f56051bc29966d7cf613ea",
       "fuente": "https://storagecdndian.blob.core.windows.net/site/Transaccional/PREVALIDADORES/Prevalidador_Tributario_CCE_AG2025_v3.3.0-26.zip",
       "paginaOficial": "https://www.dian.gov.co/Transaccional/Paginas/Prevalidadores-Informacion-Tributaria.aspx"
+    },
+    {
+      "formato": "5253",
+      "archivo": "5253.xsd",
+      "anioGravable": 2025,
+      "version": "2",
+      "encoding": "ISO-8859-1",
+      "bytes": 9701,
+      "sha256": "32cb5e0ef806832b8682e42164a0f81716ce4cf495d8ef9849d4d651332f94b8",
+      "fuente": "https://www.dian.gov.co/normatividad/Normatividad/Resoluci%C3%B3n%20000070%20de%2005-11-2019.pdf",
+      "paginaOficial": "https://www.dian.gov.co/normatividad/Normatividad/Resoluci%C3%B3n%20000070%20de%2005-11-2019.pdf"
     }
   ]
 }

@@ -28,9 +28,9 @@ class XsdOficialesDian2025Test {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void manifiestoDeclara69XsdOficiales() throws IOException {
+    void manifiestoDeclara72XsdOficiales() throws IOException {
         JsonNode manifest = manifest();
-        assertEquals(69, manifest.get("total").asInt());
+        assertEquals(72, manifest.get("total").asInt());
         assertEquals(manifest.get("total").asInt(), manifest.get("archivos").size());
     }
 

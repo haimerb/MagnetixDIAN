@@ -60,9 +60,6 @@ public class FormatoExogenaRegistry {
         formatos.put("1002", activo("1002", "Créditos, descuentos, devoluciones y notas", "GeneradorXml1002"));
         CatalogoXsdOficialesDian2025.versiones().forEach((codigo, version) ->
                 formatos.putIfAbsent(codigo, conXsdOficial(codigo, version)));
-        formatos.putIfAbsent("1125", pendiente("1125"));
-        formatos.putIfAbsent("2278", pendiente("2278"));
-        formatos.putIfAbsent("5253", pendiente("5253"));
         return Collections.unmodifiableMap(formatos);
     }
 
@@ -94,17 +91,4 @@ public class FormatoExogenaRegistry {
         );
     }
 
-    private static FormatoExogena pendiente(String codigo) {
-        return new FormatoExogena(
-                codigo,
-                "Formato " + codigo,
-                ESTADO_PENDIENTE_XSD,
-                false,
-                null,
-                null,
-                null,
-                null,
-                List.of()
-        );
-    }
 }
