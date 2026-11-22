@@ -1,10 +1,13 @@
 # MagnetixDIAN
 
-Plataforma de cumplimiento tributario DIAN con **tres módulos**:
+Plataforma de cumplimiento tributario DIAN con **seis módulos**:
 
 1. **Información exógena (medios magnéticos)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Carga un Excel, valida contra las reglas DIAN (dígito de verificación del NIT, conceptos del catálogo, topes en UVT), genera el reporte y descarga el **XML listo para presentar en MUISCA**.
 2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con **CUFE/CUDE** (SHA-384), **UBL 2.1**, firma **XAdES-EPES**, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
 3. **Integraciones y pagos** — sincronización con ERP/contabilidad/e-commerce mediante webhooks firmados y checkout de suscripciones (simulado / Wompi / MercadoPago).
+4. **RADIAN y contabilidad** — importación de documentos (causación/contabilización), plan de cuentas, asientos y conciliación.
+5. **Importación universal y migración** — detección de formato, mapeo inteligente de columnas y migración contable desde proveedores con reintentos.
+6. **Facturación rápida, branding y PWA** — formulario simple de facturación, entrega por WhatsApp Click-to-Chat, identidad visual por empresa e instalación como app.
 
 ## Stack
 
@@ -37,6 +40,7 @@ docker compose up -d --build
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8080 · Swagger: http://localhost:8080/swagger-ui.html
 - Usuario demo: `admin` / `admin123`
+- Flyway aplica automáticamente las migraciones **V1–V23** (V18–V23: RADIAN, contabilidad, migración contable, mapeo de archivos, branding y seguridad).
 
 ## Desarrollo local
 
@@ -128,5 +132,9 @@ El keep-alive del plan free ya está automatizado en `.github/workflows/keep-ali
 - [x] Configuración FE validada con certificados PKCS#12 y auditoría de cambios.
 - [x] Integraciones con ERP/contabilidad/e-commerce (10 proveedores), webhooks firmados y reintentos.
 - [x] Métodos de pago Wompi: tarjeta, Nequi, PSE y QR dinámico Bre-B.
+- [x] RADIAN: importación de documentos, causación y contabilización.
+- [x] Contabilidad: plan de cuentas, asientos y conciliación.
+- [x] Importación universal y migración contable con mapeo inteligente de columnas.
+- [x] Entrega de facturas por WhatsApp Click-to-Chat, branding por empresa y PWA instalable.
 
 Ver issues del repo para el backlog detallado.

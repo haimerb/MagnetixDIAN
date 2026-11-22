@@ -33,6 +33,42 @@ public interface AdaptadorIntegracion {
         return ResultadoIntegracion.noSoportado(proveedor(), CapacidadIntegracion.RECIBIR_WEBHOOK);
     }
 
+    default ResultadoIntegracion migrarPlanCuentas(DatosConexionIntegracion datos) {
+        return ResultadoIntegracion.noSoportado(proveedor(), CapacidadIntegracion.MIGRAR_CONTABILIDAD);
+    }
+
+    default ResultadoIntegracion migrarSaldos(DatosConexionIntegracion datos) {
+        return ResultadoIntegracion.noSoportado(proveedor(), CapacidadIntegracion.IMPORTAR_SALDOS);
+    }
+
+    default ResultadoIntegracion migrarAsientos(DatosConexionIntegracion datos) {
+        return ResultadoIntegracion.noSoportado(proveedor(), CapacidadIntegracion.MIGRAR_CONTABILIDAD);
+    }
+
+    default ResultadoIntegracion migrarTerceros(DatosConexionIntegracion datos) {
+        return ResultadoIntegracion.noSoportado(proveedor(), CapacidadIntegracion.MIGRAR_CONTABILIDAD);
+    }
+
+    default ResultadoMigracionContable migrarPlanCuentas(DatosConexionIntegracion datos,
+                                                         SolicitudMigracionContable solicitud) {
+        return ResultadoMigracionContable.desde(migrarPlanCuentas(datos), "PLAN_CUENTAS");
+    }
+
+    default ResultadoMigracionContable migrarSaldos(DatosConexionIntegracion datos,
+                                                    SolicitudMigracionContable solicitud) {
+        return ResultadoMigracionContable.desde(migrarSaldos(datos), "SALDO_INICIAL");
+    }
+
+    default ResultadoMigracionContable migrarAsientos(DatosConexionIntegracion datos,
+                                                      SolicitudMigracionContable solicitud) {
+        return ResultadoMigracionContable.desde(migrarAsientos(datos), "ASIENTO");
+    }
+
+    default ResultadoMigracionContable migrarTerceros(DatosConexionIntegracion datos,
+                                                      SolicitudMigracionContable solicitud) {
+        return ResultadoMigracionContable.desde(migrarTerceros(datos), "TERCERO");
+    }
+
     default boolean verificarFirma(DatosConexionIntegracion datos, EventoIntegracion evento) {
         String secreto = datos.credencial("webhookSecret");
         String firma = evento.headers() == null ? null : evento.headers().get("X-Integracion-Firma");

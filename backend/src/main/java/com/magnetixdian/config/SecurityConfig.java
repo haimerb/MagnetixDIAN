@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/me", "/api/auth/change-password").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/planes").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/branding/**").permitAll()
                         .requestMatchers("/api/auth/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/pagos/webhook/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/integraciones/webhook/**").permitAll()

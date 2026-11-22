@@ -18,7 +18,12 @@ import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import { importarMultiformato, validarDatosJson } from '../api/client'
-import type { ImportacionMultiFormato, ValidacionEstructura } from '../api/client'
+import type {
+  ImportacionMultiFormato,
+  RespuestaVistaPrevia,
+  ResultadoImportacionUniversal,
+  ValidacionEstructura,
+} from '../api/client'
 import EstadoChip from '../components/ui/EstadoChip'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
@@ -33,6 +38,8 @@ export default function ImportacionAvanzadaPage() {
   const [error, setError] = useState<string | null>(null)
   const [validando, setValidando] = useState<number | null>(null)
   const [validacion, setValidacion] = useState<ValidacionEstructura | null>(null)
+  const [vistaUniversal, setVistaUniversal] = useState<RespuestaVistaPrevia | null>(null)
+  const [resultadoUniversal, setResultadoUniversal] = useState<ResultadoImportacionUniversal | null>(null)
 
   const anio = Number(anioGravable)
   const anioValido = Number.isInteger(anio) && anio >= 1900 && anio <= 2100
@@ -42,6 +49,8 @@ export default function ImportacionAvanzadaPage() {
     setResultado(null)
     setError(null)
     setValidacion(null)
+    setVistaUniversal(null)
+    setResultadoUniversal(null)
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -73,6 +82,42 @@ export default function ImportacionAvanzadaPage() {
       setError('No se pudo validar la estructura del registro persistido.')
     } finally {
       setValidando(null)
+    }
+  }
+
+  const onVistaUniversal = async () => {
+    if (!archivo || empresaId == null) return
+    setCargando(true)
+    setError(null)
+    try {
+      const { vistaPreviaArchivo } = await import('../api/client')
+      setVistaUniversal(await vistaPreviaArchivo(empresaId, archivo))
+    } catch {
+      setError('No se pudo generar la vista previa universal.')
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  const onConfirmarUniversal = async () => {
+    if (!vistaUniversal || empresaId == null) return
+    setCargando(true)
+    setError(null)
+    try {
+      const { confirmarImportacion } = await import('../api/client')
+      setResultadoUniversal(
+        await confirmarImportacion(empresaId, {
+          archivoId: vistaUniversal.archivoId ?? null,
+          nombreArchivo: vistaUniversal.nombreArchivo ?? archivo?.name ?? 'archivo',
+          formatoDetectado: vistaUniversal.formatoDetectado,
+          contenidoBase64: vistaUniversal.contenidoBase64 ?? null,
+          columnas: vistaUniversal.sugerencias,
+        }),
+      )
+    } catch {
+      setError('No se pudo confirmar la importación universal.')
+    } finally {
+      setCargando(false)
     }
   }
 
@@ -163,6 +208,21 @@ export default function ImportacionAvanzadaPage() {
             onClick={onImportar}
           >
             Analizar workbook
+          </Button>
+          <Button
+            variant="outlined"
+            disabled={!archivo || empresaId == null || cargando}
+            onClick={onVistaUniversal}
+          >
+            Vista previa universal
+          </Button>
+          <Button
+            component="a"
+            href="/app/importacion-universal"
+            variant="text"
+            disabled={cargando}
+          >
+            Abrir importación universal
           </Button>
         </Box>
 
@@ -301,6 +361,46 @@ export default function ImportacionAvanzadaPage() {
             </SectionCard>
           )}
         </>
+      )}
+
+      {vistaUniversal && (
+        <SectionCard
+          title="Mapeo universal detectado"
+          subtitle={`${vistaUniversal.formatoDetectado} · ${vistaUniversal.cabeceras.length} columnas · ${Math.round(vistaUniversal.confianza * 100)}% de confianza`}
+        >
+          <TableContainer>
+            <Table size="small" sx={{ minWidth: 520 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Cabecera origen</TableCell>
+                  <TableCell>Campo destino</TableCell>
+                  <TableCell align="right">Confianza</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {vistaUniversal.sugerencias.map((mapeo) => (
+                  <TableRow key={`${mapeo.indice}-${mapeo.cabeceraOrigen}`}>
+                    <TableCell>{mapeo.cabeceraOrigen}</TableCell>
+                    <TableCell>{mapeo.campo}</TableCell>
+                    <TableCell align="right">{Math.round(mapeo.confianza * 100)}%</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <Box sx={{ mt: 2 }}>
+            <Button variant="contained" onClick={onConfirmarUniversal} disabled={cargando} loading={cargando}>
+              Confirmar con mapeo universal
+            </Button>
+          </Box>
+        </SectionCard>
+      )}
+
+      {resultadoUniversal && (
+        <Alert severity={resultadoUniversal.filasImportadas > 0 ? 'success' : 'warning'}>
+          {resultadoUniversal.filasLeidas} fila(s) leídas, {resultadoUniversal.filasImportadas} importadas,{' '}
+          {resultadoUniversal.filasOmitidas} omitidas y {resultadoUniversal.errores} error(es).
+        </Alert>
       )}
     </Box>
   )

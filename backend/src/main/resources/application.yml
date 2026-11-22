@@ -89,6 +89,18 @@ magnetixdian:
     dir: ${UPLOAD_DIR:./uploads}
   crypto:
     key: ${CRYPTO_KEY:magnetixdian-dev-crypto-key-change-me}
+    key-id: ${CRYPTO_KEY_ID:primary}
+    extra-keys: ${CRYPTO_EXTRA_KEYS:}
+  seguridad:
+    fail-fast: ${SEGURIDAD_FAIL_FAST:false}
+  whatsapp:
+    base-url: ${WHATSAPP_BASE_URL:https://wa.me}
+    default-template: ${WHATSAPP_DEFAULT_TEMPLATE:Hola, le compartimos su factura {numero} por un total de {total}. ¡Gracias!}
+  branding:
+    primary-color: ${BRANDING_PRIMARY_COLOR:#0E5C55}
+    accent-color: ${BRANDING_ACCENT_COLOR:#D98A2B}
+    font-family: ${BRANDING_FONT_FAMILY:Roboto}
+    pwa-background-color: ${BRANDING_PWA_BACKGROUND_COLOR:#FFFFFF}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:4173}
   notifications:

@@ -1,5 +1,21 @@
 const HEALTH_TIMEOUT_MS = 90_000
 
+const PWA_ASSETS = new Map([
+  ['/manifest.webmanifest', {
+    'Content-Type': 'application/manifest+json; charset=utf-8',
+    'Cache-Control': 'public, max-age=3600',
+  }],
+  ['/sw.js', {
+    'Content-Type': 'application/javascript; charset=utf-8',
+    'Cache-Control': 'no-cache',
+    'Service-Worker-Allowed': '/',
+  }],
+  ['/icon.svg', {
+    'Content-Type': 'image/svg+xml',
+    'Cache-Control': 'public, max-age=86400',
+  }],
+])
+
 async function pingBackend(env) {
   const backend = env.BACKEND_ORIGIN || 'https://magnetixdian-backend.onrender.com'
   const controller = new AbortController()
@@ -28,6 +44,21 @@ async function pingBackend(env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
+
+    const pwaHeaders = PWA_ASSETS.get(url.pathname)
+    if (pwaHeaders) {
+      const asset = await env.ASSETS.fetch(request)
+      const headers = new Headers(asset.headers)
+      for (const [name, value] of Object.entries(pwaHeaders)) {
+        headers.set(name, value)
+      }
+      headers.set('X-Content-Type-Options', 'nosniff')
+      return new Response(asset.body, {
+        status: asset.status,
+        statusText: asset.statusText,
+        headers,
+      })
+    }
 
     if (url.pathname.startsWith('/api/')) {
       const backend = env.BACKEND_ORIGIN || 'https://magnetixdian-backend.onrender.com'

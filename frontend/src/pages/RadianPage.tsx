@@ -1,0 +1,345 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Alert from '@mui/material/Alert'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
+import Grid from '@mui/material/Grid2'
+import MenuItem from '@mui/material/MenuItem'
+import Stack from '@mui/material/Stack'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
+import {
+  causarDocumentoRadian,
+  contabilizarDocumentoRadian,
+  importarDocumentosRadian,
+  listarDocumentosRadian,
+} from '../api/client'
+import type { DocumentoRadian } from '../api/client'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import EmptyState from '../components/ui/EmptyState'
+import EstadoChip from '../components/ui/EstadoChip'
+import PageHeader from '../components/ui/PageHeader'
+import SectionCard from '../components/ui/SectionCard'
+import StatCard from '../components/ui/StatCard'
+import TableSkeleton from '../components/ui/TableSkeleton'
+import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+import { useNotificaciones } from '../features/notificaciones/contexto'
+import { money } from '../features/facturacion/calculos'
+
+type Accion = { tipo: 'causar' | 'contabilizar'; documento: DocumentoRadian }
+
+const DIRECCIONES = ['EMITIDO', 'RECIBIDO']
+
+function keyDocumento(documento: DocumentoRadian) {
+  return String(documento.id ?? documento.cufeCude ?? documento.consecutivo)
+}
+
+export default function RadianPage() {
+  const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
+  const { notificar } = useNotificaciones()
+  const [documentos, setDocumentos] = useState<DocumentoRadian[]>([])
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [filtro, setFiltro] = useState('TODOS')
+  const [recarga, setRecarga] = useState(0)
+  const [importacionAbierta, setImportacionAbierta] = useState(false)
+  const [archivo, setArchivo] = useState<File | null>(null)
+  const [direccion, setDireccion] = useState('RECIBIDO')
+  const [importando, setImportando] = useState(false)
+  const [accion, setAccion] = useState<Accion | null>(null)
+  const [procesando, setProcesando] = useState(false)
+
+  const cargar = useCallback(() => {
+    if (empresaId == null) {
+      setCargando(false)
+      return
+    }
+    setCargando(true)
+    setError(null)
+    listarDocumentosRadian(empresaId)
+      .then(setDocumentos)
+      .catch(() => setError('No se pudieron cargar los documentos RADIAN.'))
+      .finally(() => setCargando(false))
+  }, [empresaId])
+
+  useEffect(() => {
+    cargar()
+  }, [cargar, recarga])
+
+  const filtrados = useMemo(
+    () => (filtro === 'TODOS' ? documentos : documentos.filter((d) => d.direccion === filtro)),
+    [documentos, filtro],
+  )
+
+  const resumen = useMemo(
+    () => ({
+      total: documentos.length,
+      pendientes: documentos.filter((d) => d.estadoCausacion === 'PENDIENTE').length,
+      contabilizados: documentos.filter((d) => d.asientoContableId != null).length,
+    }),
+    [documentos],
+  )
+
+  const volverACargar = () => setRecarga((n) => n + 1)
+
+  const onImportar = async () => {
+    if (empresaId == null || !archivo) return
+    setImportando(true)
+    try {
+      const documentosImportados = await importarDocumentosRadian(empresaId, archivo, direccion)
+      notificar(`${documentosImportados.length} documento(s) RADIAN importados.`, 'success')
+      setImportacionAbierta(false)
+      setArchivo(null)
+      volverACargar()
+    } finally {
+      setImportando(false)
+    }
+  }
+
+  const onConfirmarAccion = async () => {
+    if (empresaId == null || !accion) return
+    setProcesando(true)
+    try {
+      if (accion.tipo === 'causar') {
+        await causarDocumentoRadian(empresaId, accion.documento.id)
+        notificar(`Documento ${accion.documento.consecutivo} causado.`, 'success')
+      } else {
+        await contabilizarDocumentoRadian(empresaId, accion.documento.id)
+        notificar(`Asiento generado para ${accion.documento.consecutivo}.`, 'success')
+      }
+      setAccion(null)
+      volverACargar()
+    } finally {
+      setProcesando(false)
+    }
+  }
+
+  return (
+    <Box component="section" sx={{ display: 'grid', gap: 3 }}>
+      <PageHeader
+        overline="RADIAN"
+        title="Documentos RADIAN"
+        subtitle="Importe documentos recibidos y emitidos, cáuselos y genere sus asientos contables."
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<UploadFileOutlinedIcon />}
+            disabled={empresaId == null}
+            onClick={() => setImportacionAbierta(true)}
+          >
+            Importar documentos
+          </Button>
+        }
+      />
+
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <StatCard label="Documentos" value={resumen.total} icon={<DescriptionOutlinedIcon />} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <StatCard
+            label="Pendientes de causación"
+            value={resumen.pendientes}
+            tone="warning"
+            icon={<FactCheckOutlinedIcon />}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <StatCard
+            label="Contabilizados"
+            value={resumen.contabilizados}
+            tone="success"
+            icon={<AccountTreeOutlinedIcon />}
+          />
+        </Grid>
+      </Grid>
+
+      {empresaId == null && !cargandoEmpresa && (
+        <Alert severity="info">No hay una empresa asociada para consultar documentos RADIAN.</Alert>
+      )}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      <SectionCard
+        title="Bandeja de documentos"
+        subtitle="Causación y contabilización por documento"
+        actions={
+          <TextField
+            select
+            size="small"
+            label="Dirección"
+            value={filtro}
+            onChange={(event) => setFiltro(event.target.value)}
+            sx={{ minWidth: 160 }}
+          >
+            <MenuItem value="TODOS">Todas</MenuItem>
+            {DIRECCIONES.map((valor) => (
+              <MenuItem key={valor} value={valor}>
+                {valor === 'EMITIDO' ? 'Emitidos' : 'Recibidos'}
+              </MenuItem>
+            ))}
+          </TextField>
+        }
+        padded={false}
+      >
+        {cargando || cargandoEmpresa ? (
+          <TableSkeleton filas={5} columnas={9} label="Cargando documentos RADIAN…" />
+        ) : filtrados.length === 0 ? (
+          <EmptyState
+            icon={<DescriptionOutlinedIcon />}
+            title="Sin documentos RADIAN"
+            description="Importe un archivo CSV, Excel o JSON para comenzar la causación."
+          />
+        ) : (
+          <TableContainer>
+            <Table size="small" aria-label="Documentos RADIAN" sx={{ minWidth: 980 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Consecutivo</TableCell>
+                  <TableCell>Contraparte</TableCell>
+                  <TableCell>Tipo</TableCell>
+                  <TableCell>Fecha</TableCell>
+                  <TableCell align="right">Total</TableCell>
+                  <TableCell>RADIAN</TableCell>
+                  <TableCell>Causación</TableCell>
+                  <TableCell>Contabilización</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filtrados.map((documento) => (
+                  <TableRow key={keyDocumento(documento)} hover>
+                    <TableCell sx={{ fontWeight: 600 }}>{documento.consecutivo}</TableCell>
+                    <TableCell>
+                      <Stack spacing={0}>
+                        <Box component="span" sx={{ fontSize: '0.875rem' }}>
+                          {documento.razonSocialContraparte || documento.nitContraparte}
+                        </Box>
+                        <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                          {documento.nitContraparte} · {documento.direccion}
+                        </Box>
+                      </Stack>
+                    </TableCell>
+                    <TableCell>{documento.tipoDocumento}</TableCell>
+                    <TableCell>{documento.fecha}</TableCell>
+                    <TableCell align="right">{money(documento.total)}</TableCell>
+                    <TableCell>
+                      <EstadoChip estado={documento.estadoRadian} />
+                    </TableCell>
+                    <TableCell>
+                      <EstadoChip estado={documento.estadoCausacion} />
+                    </TableCell>
+                    <TableCell>
+                      <Stack spacing={0}>
+                        <EstadoChip estado={documento.estadoContabilizacion || 'PENDIENTE'} />
+                        {documento.asientoContableId != null && (
+                          <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                            Asiento #{documento.asientoContableId}
+                          </Box>
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={documento.estadoCausacion !== 'PENDIENTE'}
+                          onClick={() => setAccion({ tipo: 'causar', documento })}
+                        >
+                          Causar
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={documento.asientoContableId != null}
+                          onClick={() => setAccion({ tipo: 'contabilizar', documento })}
+                        >
+                          Contabilizar
+                        </Button>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </SectionCard>
+
+      <Dialog
+        open={importacionAbierta}
+        onClose={() => {
+          if (!importando) setImportacionAbierta(false)
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Importar documentos RADIAN</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
+          <TextField
+            select
+            label="Dirección"
+            value={direccion}
+            onChange={(event) => setDireccion(event.target.value)}
+          >
+            {DIRECCIONES.map((valor) => (
+              <MenuItem key={valor} value={valor}>
+                {valor === 'EMITIDO' ? 'Emitidos' : 'Recibidos'}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button variant="outlined" component="label" startIcon={<UploadFileOutlinedIcon />}>
+            Seleccionar archivo
+            <input
+              type="file"
+              hidden
+              accept=".csv,.xlsx,.json"
+              onChange={(event) => setArchivo(event.target.files?.[0] ?? null)}
+            />
+          </Button>
+          {archivo && <Alert severity="info">Archivo seleccionado: {archivo.name}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportacionAbierta(false)} disabled={importando}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={onImportar}
+            disabled={!archivo}
+            loading={importando}
+          >
+            Importar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <ConfirmDialog
+        abierto={accion != null}
+        titulo={accion?.tipo === 'causar' ? 'Causar documento' : 'Contabilizar documento'}
+        mensaje={
+          accion
+            ? `Se ${accion.tipo === 'causar' ? 'causará' : 'contabilizará'} el documento ${accion.documento.consecutivo}. ¿Desea continuar?`
+            : ''
+        }
+        textoConfirmar="Confirmar"
+        color="primary"
+        cargando={procesando}
+        onConfirmar={onConfirmarAccion}
+        onCancelar={() => setAccion(null)}
+      />
+    </Box>
+  )
+}

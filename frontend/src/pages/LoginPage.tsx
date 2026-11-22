@@ -57,14 +57,14 @@ export default function LoginPage() {
           flexDirection: 'column',
           justifyContent: 'space-between',
           p: 6,
-          color: '#fff',
+          color: (t) => t.palette.common.white,
           background: (t) =>
             `linear-gradient(150deg, ${t.palette.primary.dark}, ${t.palette.primary.main} 58%, ${t.palette.primary.light})`,
         }}
       >
         <Logo size={40} variant="onDark" />
         <Box sx={{ maxWidth: 460 }}>
-          <Typography variant="h3" sx={{ color: '#fff', mb: 2 }}>
+          <Typography variant="h3" sx={{ color: (t) => t.palette.common.white, mb: 2 }}>
             Información exógena DIAN sin fricción
           </Typography>
           <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.82)' }}>

@@ -28,6 +28,12 @@ services:
         sync: false
       - key: CRYPTO_KEY
         generateValue: true
+      - key: CRYPTO_KEY_ID
+        value: primary
+      - key: CRYPTO_EXTRA_KEYS
+        sync: false
+      - key: SEGURIDAD_FAIL_FAST
+        value: "false"
       - key: CORS_ORIGINS
         value: https://magnetixdian.pages.dev,https://magnetixdian.hbarbetti-ing.workers.dev
       - key: UPLOAD_DIR
@@ -96,3 +102,15 @@ services:
         value: "30000"
       - key: DIAN_REQUEST_TIMEOUT_MS
         value: "60000"
+      - key: WHATSAPP_BASE_URL
+        value: https://wa.me
+      - key: WHATSAPP_DEFAULT_TEMPLATE
+        value: "Hola, le compartimos su factura {numero} por un total de {total}. ¡Gracias!"
+      - key: BRANDING_PRIMARY_COLOR
+        value: "#0E5C55"
+      - key: BRANDING_ACCENT_COLOR
+        value: "#D98A2B"
+      - key: BRANDING_FONT_FAMILY
+        value: Roboto
+      - key: BRANDING_PWA_BACKGROUND_COLOR
+        value: "#FFFFFF"

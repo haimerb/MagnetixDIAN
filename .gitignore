@@ -21,6 +21,7 @@ Thumbs.db
 frontend/playwright-report/
 frontend/test-results/
 frontend/e2e/.cache/
+.playwright-mcp/
 
 # Entorno
 .env
