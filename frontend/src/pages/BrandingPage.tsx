@@ -25,7 +25,7 @@ const COLORES: { clave: keyof Pick<BrandingRequest, 'primaryColor' | 'accentColo
   { clave: 'pwaBackgroundColor', etiqueta: 'Fondo de la PWA' },
 ]
 
-export default function BrandingPage() {
+export default function BrandingPage({ ocultarEncabezado = false }: { ocultarEncabezado?: boolean }) {
   const { empresaId, cargando: cargandoEmpresa } = useEmpresaActiva()
   const { notificar } = useNotificaciones()
   const { actualizarBranding } = useThemeMode()
@@ -104,21 +104,23 @@ export default function BrandingPage() {
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
-      <PageHeader
-        overline="Personalización"
-        title="Branding por empresa"
-        subtitle="Personalice logo, colores, fuente, pie de factura y plantilla de WhatsApp. Los cambios se aplican a todo el tema."
-        actions={
-          <Button
-            variant="outlined"
-            startIcon={<CloudSyncOutlinedIcon />}
-            disabled={!form?.publicSlug}
-            onClick={onVerPublico}
-          >
-            Ver versión pública
-          </Button>
-        }
-      />
+      {!ocultarEncabezado && (
+        <PageHeader
+          overline="Personalización"
+          title="Identidad visual"
+          subtitle="Personalice logo, colores, fuente, pie de factura y plantilla de WhatsApp. Los cambios se aplican a todo el tema."
+          actions={
+            <Button
+              variant="outlined"
+              startIcon={<CloudSyncOutlinedIcon />}
+              disabled={!form?.publicSlug}
+              onClick={onVerPublico}
+            >
+              Ver versión pública
+            </Button>
+          }
+        />
+      )}
 
       {empresaId == null && !cargandoEmpresa && (
         <Alert severity="info">No hay una empresa asociada para configurar la marca.</Alert>

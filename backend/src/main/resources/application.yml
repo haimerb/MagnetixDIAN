@@ -67,6 +67,14 @@ magnetixdian:
     url-produccion: ${DIAN_URL_PRODUCCION:https://vpfe.dian.gov.co/WcfDianCustomerServices.svc}
     connect-timeout-ms: ${DIAN_CONNECT_TIMEOUT_MS:30000}
     request-timeout-ms: ${DIAN_REQUEST_TIMEOUT_MS:60000}
+    catalogo:
+      base-url: ${DIAN_CATALOGO_BASE_URL:https://catalogo-vpfe.dian.gov.co}
+      token-url: ${DIAN_CATALOGO_TOKEN_URL:}
+      listado-url: ${DIAN_CATALOGO_LISTADO_URL:}
+      hosts-permitidos: ${DIAN_CATALOGO_HOSTS_PERMITIDOS:catalogo-vpfe.dian.gov.co,vpfe.dian.gov.co,vpfe-hab.dian.gov.co}
+      connect-timeout-ms: ${DIAN_CATALOGO_CONNECT_TIMEOUT_MS:5000}
+      read-timeout-ms: ${DIAN_CATALOGO_READ_TIMEOUT_MS:60000}
+      max-bytes: ${DIAN_CATALOGO_MAX_BYTES:52428800}
   radian:
     aceptacion-tacita: ${RADIAN_ACEPTACION_TACITA:false}
     aceptacion-tacita-cron: ${RADIAN_ACEPTACION_TACITA_CRON:0 0 6 * * *}

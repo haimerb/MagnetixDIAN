@@ -28,22 +28,10 @@ import { useAuth } from '../../features/auth/useAuth'
 import { useThemeMode } from '../../theme/useThemeMode'
 
 const NAV_ITEMS = [
-  { to: '/app', label: 'Panel' },
-  { to: '/app/carga', label: 'Carga de datos' },
-  { to: '/app/importacion-avanzada', label: 'Importación avanzada' },
-  { to: '/app/importacion-universal', label: 'Importación universal' },
-  { to: '/app/validacion', label: 'Validación' },
-  { to: '/app/reporte', label: 'Reportes' },
-  { to: '/app/radian', label: 'RADIAN' },
-  { to: '/app/contabilidad', label: 'Contabilidad' },
-  { to: '/app/migracion-contable', label: 'Migración contable' },
+  { to: '/app', label: 'Inicio' },
   { to: '/app/facturacion', label: 'Facturación' },
-  { to: '/app/factura-rapida', label: 'Factura rápida' },
-  { to: '/app/suscripcion', label: 'Suscripción' },
-  { to: '/app/integraciones', label: 'Integraciones' },
-  { to: '/app/branding', label: 'Branding' },
-  { to: '/app/guia', label: 'Guía MUISCA' },
-  { to: '/app/admin', label: 'Administración', admin: true as const },
+  { to: '/app/contabilidad/asentar-facturacion', label: 'Contabilidad' },
+  { to: '/app/empresa', label: 'Empresa' },
 ]
 
 const ROL_LABEL: Record<string, string> = {
@@ -60,9 +48,14 @@ export default function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
 
-  const items = NAV_ITEMS.filter((item) => !item.admin || sesion?.roles?.includes('ROLE_ADMIN'))
-  const isActive = (to: string) =>
-    to === '/app' ? location.pathname === '/app' : location.pathname.startsWith(to)
+  const items = NAV_ITEMS
+  const isActive = (to: string) => {
+    if (to === '/app') return location.pathname === '/app'
+    if (to === '/app/contabilidad/asentar-facturacion') {
+      return location.pathname.startsWith('/app/contabilidad')
+    }
+    return location.pathname.startsWith(to)
+  }
 
   const iniciales = (sesion?.username ?? '?').slice(0, 2).toUpperCase()
   const roles = (sesion?.roles ?? []).map((r) => ROL_LABEL[r] ?? r).join(' · ')

@@ -5,7 +5,7 @@ Sistema con **seis módulos**:
 1. **Medios magnéticos (información exógena DIAN)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Flujo: carga de Excel → validación → reporte → XML → marcar presentado + normalización de terceros.
 2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con CUFE/CUDE (SHA-384), UBL 2.1, firma XAdES-EPES, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
 3. **Integraciones y pagos** — sincronización con ERP/contabilidad/e-commerce, webhooks firmados y checkout de suscripciones (simulado / Wompi / MercadoPago).
-4. **RADIAN y contabilidad** — documentos DIAN, causación, plan de cuentas, asientos y conciliación.
+4. **Contabilidad** — traer documentos DIAN por token o archivo, causación, asientos y conciliación.
 5. **Importación universal y migración contable** — detección de formato, mapeo de columnas y migración desde proveedores.
 6. **Facturación rápida, branding y PWA** — formulario simple, entrega por WhatsApp Click-to-Chat, identidad visual por empresa y app instalable.
 
@@ -337,11 +337,13 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | POST | `/api/empresas/{empresaId}/integraciones/eventos/{eventoId}/reintentar` | Fuerza el despacho de un evento |
 | POST | `/api/integraciones/webhook/{proveedor}/{token}` | Webhook público; cabeceras `X-Integracion-Firma` y `X-Integracion-Timestamp` (ver §13) |
 
-### RADIAN y contabilidad
+### Asentar facturación: DIAN y contabilidad
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| POST | `/api/empresas/{empresaId}/radian/documentos/importar` | Multipart: `archivo`, `direccion` (`EMITIDO`/`RECIBIDO`) |
+| POST | `/api/empresas/{empresaId}/dian/documentos/token` | JSON: `token`, `fechaDesde`, `fechaHasta`, `direccion`, filtros opcionales y `guardarToken`. Guarda el token cifrado y trae el listado DIAN |
+| POST | `/api/empresas/{empresaId}/dian/documentos/archivo` | Multipart: `archivo` (`.xlsx/.xls/.csv/.json/.zip`), `fechaDesde`, `fechaHasta`, `direccion`, filtros opcionales |
+| POST | `/api/empresas/{empresaId}/radian/documentos/importar` | Multipart heredado: `archivo`, `direccion` (`EMITIDO`/`RECIBIDO`) |
 | GET | `/api/empresas/{empresaId}/radian/documentos` | Lista con filtros `direccion`, `tipoDocumento`, `estadoCausacion`, `fechaDesde`, `fechaHasta` |
 | POST | `/api/empresas/{empresaId}/radian/documentos/{id}/causar` | Causa el documento RADIAN |
 | POST | `/api/empresas/{empresaId}/radian/documentos/{id}/contabilizar` | Genera el asiento contable del documento |
@@ -497,6 +499,10 @@ como respaldo cada 10 minutos. Es una **mitigación, no un SLA** (detalles en `d
 | `PAC_CONNECT_TIMEOUT_MS` / `PAC_READ_TIMEOUT_MS` | `5000` / `30000` | timeouts del adaptador PAC REST |
 | `DIAN_URL_HABILITACION` / `DIAN_URL_PRODUCCION` | endpoints oficiales DIAN | SOAP `SendBillSync` |
 | `DIAN_CONNECT_TIMEOUT_MS` / `DIAN_REQUEST_TIMEOUT_MS` | `30000` / `60000` | timeouts de transmisión DIAN directa |
+| `DIAN_CATALOGO_BASE_URL` | `https://catalogo-vpfe.dian.gov.co` | host base del catálogo DIAN |
+| `DIAN_CATALOGO_TOKEN_URL` / `DIAN_CATALOGO_LISTADO_URL` | — | plantilla HTTP del token y URL de descarga del listado; el token de usuario no va en variables de entorno |
+| `DIAN_CATALOGO_HOSTS_PERMITIDOS` | hosts DIAN oficiales | allowlist de hosts para URLs de token/listado |
+| `DIAN_CATALOGO_CONNECT_TIMEOUT_MS` / `DIAN_CATALOGO_READ_TIMEOUT_MS` / `DIAN_CATALOGO_MAX_BYTES` | `5000` / `60000` / `52428800` | timeouts y límite de descarga del listado |
 | `VITE_API_BASE_URL` / `VITE_SENTRY_DSN` | — | frontend (build-time) |
 
 ## 11. Notificaciones, jobs y CI/CD
@@ -640,11 +646,17 @@ ofrece `CARD`/`NEQUI`/`PSE`/`BREB_QR`. Los webhooks de pago usan
 `POST /api/pagos/webhook/{proveedor}` y, con `PAGOS_EXIGIR_FIRMA_WEBHOOK=true`, una pasarela
 configurada sin secreto de firma rechaza el evento (fail-closed).
 
-## 14. RADIAN, contabilidad, importación, WhatsApp y branding
+## 14. Asentar facturación, contabilidad, importación, WhatsApp e identidad visual
 
-### 14.1 RADIAN y contabilidad
+### 14.1 DIAN y contabilidad
 
-`LectorDocumentosRadian` interpreta los documentos importados (XML/CSV/Excel) y normaliza
+`ServicioTraerDian` decide entre `TokenDianAdapter` y `ArchivoDianAdapter`. El token se guarda
+cifrado en `integracion_config` (proveedor `DIAN`) y cada consulta genera cookies nuevas;
+`TokenDianAdapter` solo sigue hosts de la allowlist y registra `TRAER_DIAN` / `TRAER_DIAN_ERROR`
+en auditoría sin exponer credenciales. La descarga por token depende de `DIAN_CATALOGO_TOKEN_URL`
+y `DIAN_CATALOGO_LISTADO_URL`; si no están configuradas, la carga por archivo sigue disponible.
+
+`LectorDocumentosRadian` interpreta los documentos importados (XML/CSV/Excel/ZIP) y normaliza
 dirección, tipo, CUFE/CUDE, proveedor, líneas y totales en `documento_radian` /
 `documento_radian_linea` (único por empresa + dirección + CUFE/CUDE). `ServicioCausacionRadian`
 aplica la causación y `ServicioContabilizacion` usa `PlanCuentas` + `GeneradorAsientoRadian`

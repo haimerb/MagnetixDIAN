@@ -6,6 +6,8 @@ import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
 import Grid from '@mui/material/Grid2'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
@@ -23,8 +25,9 @@ import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
 import {
   causarDocumentoRadian,
   contabilizarDocumentoRadian,
-  importarDocumentosRadian,
   listarDocumentosRadian,
+  traerDocumentosDianPorArchivo,
+  traerDocumentosDianPorToken,
 } from '../api/client'
 import type { DocumentoRadian } from '../api/client'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
@@ -41,6 +44,14 @@ import { money } from '../features/facturacion/calculos'
 type Accion = { tipo: 'causar' | 'contabilizar'; documento: DocumentoRadian }
 
 const DIRECCIONES = ['EMITIDO', 'RECIBIDO']
+type ModoTraida = 'TOKEN' | 'ARCHIVO'
+
+function fechaLocal(fecha: Date) {
+  const anio = fecha.getFullYear()
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dia = String(fecha.getDate()).padStart(2, '0')
+  return `${anio}-${mes}-${dia}`
+}
 
 function keyDocumento(documento: DocumentoRadian) {
   return String(documento.id ?? documento.cufeCude ?? documento.consecutivo)
@@ -54,10 +65,17 @@ export default function RadianPage() {
   const [error, setError] = useState<string | null>(null)
   const [filtro, setFiltro] = useState('TODOS')
   const [recarga, setRecarga] = useState(0)
-  const [importacionAbierta, setImportacionAbierta] = useState(false)
+  const [traidaAbierta, setTraidaAbierta] = useState(false)
+  const [modoTraida, setModoTraida] = useState<ModoTraida>('TOKEN')
   const [archivo, setArchivo] = useState<File | null>(null)
+  const [token, setToken] = useState('')
+  const [fechaDesde, setFechaDesde] = useState(() => fechaLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1)))
+  const [fechaHasta, setFechaHasta] = useState(() => fechaLocal(new Date()))
+  const [grupo, setGrupo] = useState('')
+  const [nitTercero, setNitTercero] = useState('')
+  const [guardarToken, setGuardarToken] = useState(true)
   const [direccion, setDireccion] = useState('RECIBIDO')
-  const [importando, setImportando] = useState(false)
+  const [trayendo, setTrayendo] = useState(false)
   const [accion, setAccion] = useState<Accion | null>(null)
   const [procesando, setProcesando] = useState(false)
 
@@ -70,7 +88,7 @@ export default function RadianPage() {
     setError(null)
     listarDocumentosRadian(empresaId)
       .then(setDocumentos)
-      .catch(() => setError('No se pudieron cargar los documentos RADIAN.'))
+      .catch(() => setError('No se pudieron cargar los documentos de la DIAN.'))
       .finally(() => setCargando(false))
   }, [empresaId])
 
@@ -94,17 +112,39 @@ export default function RadianPage() {
 
   const volverACargar = () => setRecarga((n) => n + 1)
 
-  const onImportar = async () => {
-    if (empresaId == null || !archivo) return
-    setImportando(true)
+  const onTraer = async () => {
+    if (empresaId == null) return
+    if (modoTraida === 'ARCHIVO' && !archivo) return
+    if (modoTraida === 'TOKEN' && !token.trim()) return
+    setTrayendo(true)
     try {
-      const documentosImportados = await importarDocumentosRadian(empresaId, archivo, direccion)
-      notificar(`${documentosImportados.length} documento(s) RADIAN importados.`, 'success')
-      setImportacionAbierta(false)
-      setArchivo(null)
+      const resultado = modoTraida === 'TOKEN'
+        ? await traerDocumentosDianPorToken(empresaId, {
+            token: token.trim(),
+            direccion,
+            fechaDesde,
+            fechaHasta,
+            grupo: grupo.trim() || undefined,
+            nitTercero: nitTercero.trim() || undefined,
+            guardarToken,
+          })
+        : await traerDocumentosDianPorArchivo(
+            empresaId,
+            archivo as File,
+            fechaDesde,
+            fechaHasta,
+            direccion,
+            grupo.trim() || undefined,
+            nitTercero.trim() || undefined,
+          )
+      notificar(`${resultado.documentos} documento(s) traídos de la DIAN.`, 'success')
+      setTraidaAbierta(false)
+      if (modoTraida === 'ARCHIVO') setArchivo(null)
       volverACargar()
+    } catch {
+      notificar('No se pudieron traer los documentos de la DIAN.', 'error')
     } finally {
-      setImportando(false)
+      setTrayendo(false)
     }
   }
 
@@ -129,17 +169,17 @@ export default function RadianPage() {
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
       <PageHeader
-        overline="RADIAN"
-        title="Documentos RADIAN"
-        subtitle="Importe documentos recibidos y emitidos, cáuselos y genere sus asientos contables."
+        overline="Contabilidad"
+        title="Asentar la facturación"
+        subtitle="Traiga facturas, notas y documentos soporte de la DIAN, cáuselos y asiente sus asientos contables."
         actions={
           <Button
             variant="contained"
             startIcon={<UploadFileOutlinedIcon />}
             disabled={empresaId == null}
-            onClick={() => setImportacionAbierta(true)}
+            onClick={() => setTraidaAbierta(true)}
           >
-            Importar documentos
+            Traer de la DIAN
           </Button>
         }
       />
@@ -167,13 +207,13 @@ export default function RadianPage() {
       </Grid>
 
       {empresaId == null && !cargandoEmpresa && (
-        <Alert severity="info">No hay una empresa asociada para consultar documentos RADIAN.</Alert>
+        <Alert severity="info">No hay una empresa asociada para consultar documentos de la DIAN.</Alert>
       )}
       {error && <Alert severity="error">{error}</Alert>}
 
       <SectionCard
         title="Bandeja de documentos"
-        subtitle="Causación y contabilización por documento"
+        subtitle="Causación y asentamiento por documento"
         actions={
           <TextField
             select
@@ -194,16 +234,16 @@ export default function RadianPage() {
         padded={false}
       >
         {cargando || cargandoEmpresa ? (
-          <TableSkeleton filas={5} columnas={9} label="Cargando documentos RADIAN…" />
+          <TableSkeleton filas={5} columnas={9} label="Cargando documentos de la DIAN…" />
         ) : filtrados.length === 0 ? (
           <EmptyState
             icon={<DescriptionOutlinedIcon />}
-            title="Sin documentos RADIAN"
-            description="Importe un archivo CSV, Excel o JSON para comenzar la causación."
+            title="Sin documentos de la DIAN"
+            description="Traiga los listados desde la DIAN con su token o con un archivo exportado."
           />
         ) : (
           <TableContainer>
-            <Table size="small" aria-label="Documentos RADIAN" sx={{ minWidth: 980 }}>
+            <Table size="small" aria-label="Documentos de la DIAN" sx={{ minWidth: 980 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Consecutivo</TableCell>
@@ -211,7 +251,7 @@ export default function RadianPage() {
                   <TableCell>Tipo</TableCell>
                   <TableCell>Fecha</TableCell>
                   <TableCell align="right">Total</TableCell>
-                  <TableCell>RADIAN</TableCell>
+                  <TableCell>DIAN</TableCell>
                   <TableCell>Causación</TableCell>
                   <TableCell>Contabilización</TableCell>
                   <TableCell align="right">Acciones</TableCell>
@@ -266,7 +306,7 @@ export default function RadianPage() {
                           disabled={documento.asientoContableId != null}
                           onClick={() => setAccion({ tipo: 'contabilizar', documento })}
                         >
-                          Contabilizar
+                          Asentar
                         </Button>
                       </Stack>
                     </TableCell>
@@ -279,59 +319,144 @@ export default function RadianPage() {
       </SectionCard>
 
       <Dialog
-        open={importacionAbierta}
+        open={traidaAbierta}
         onClose={() => {
-          if (!importando) setImportacionAbierta(false)
+          if (!trayendo) setTraidaAbierta(false)
         }}
         fullWidth
-        maxWidth="xs"
+        maxWidth="sm"
       >
-        <DialogTitle>Importar documentos RADIAN</DialogTitle>
+        <DialogTitle>Traer de la DIAN</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '16px !important' }}>
-          <TextField
-            select
-            label="Dirección"
-            value={direccion}
-            onChange={(event) => setDireccion(event.target.value)}
-          >
-            {DIRECCIONES.map((valor) => (
-              <MenuItem key={valor} value={valor}>
-                {valor === 'EMITIDO' ? 'Emitidos' : 'Recibidos'}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button variant="outlined" component="label" startIcon={<UploadFileOutlinedIcon />}>
-            Seleccionar archivo
-            <input
-              type="file"
-              hidden
-              accept=".csv,.xlsx,.json"
-              onChange={(event) => setArchivo(event.target.files?.[0] ?? null)}
-            />
-          </Button>
-          {archivo && <Alert severity="info">Archivo seleccionado: {archivo.name}</Alert>}
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant={modoTraida === 'TOKEN' ? 'contained' : 'outlined'}
+              onClick={() => setModoTraida('TOKEN')}
+            >
+              Token o enlace
+            </Button>
+            <Button
+              variant={modoTraida === 'ARCHIVO' ? 'contained' : 'outlined'}
+              onClick={() => setModoTraida('ARCHIVO')}
+            >
+              Archivo Excel
+            </Button>
+          </Stack>
+
+          {modoTraida === 'TOKEN' ? (
+            <>
+              <TextField
+                label="Token o enlace de la DIAN"
+                type="password"
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+                helperText="Se guarda cifrado y nunca se muestra en pantalla."
+                fullWidth
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={guardarToken}
+                    onChange={(event) => setGuardarToken(event.target.checked)}
+                  />
+                }
+                label="Guardar para próximas consultas"
+              />
+            </>
+          ) : (
+            <>
+              <Button variant="outlined" component="label" startIcon={<UploadFileOutlinedIcon />}>
+                Seleccionar archivo
+                <input
+                  type="file"
+                  hidden
+                  accept=".csv,.xlsx,.xls,.json,.zip"
+                  onChange={(event) => setArchivo(event.target.files?.[0] ?? null)}
+                />
+              </Button>
+              {archivo && <Alert severity="info">Archivo seleccionado: {archivo.name}</Alert>}
+            </>
+          )}
+
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                select
+                label="Dirección"
+                value={direccion}
+                onChange={(event) => setDireccion(event.target.value)}
+                fullWidth
+              >
+                {DIRECCIONES.map((valor) => (
+                  <MenuItem key={valor} value={valor}>
+                    {valor === 'EMITIDO' ? 'Emitidos' : 'Recibidos'}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Grupo (opcional)"
+                value={grupo}
+                onChange={(event) => setGrupo(event.target.value)}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Desde"
+                type="date"
+                value={fechaDesde}
+                onChange={(event) => setFechaDesde(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                label="Hasta"
+                type="date"
+                value={fechaHasta}
+                onChange={(event) => setFechaHasta(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="NIT tercero (opcional)"
+                value={nitTercero}
+                onChange={(event) => setNitTercero(event.target.value)}
+                fullWidth
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setImportacionAbierta(false)} disabled={importando}>
+          <Button onClick={() => setTraidaAbierta(false)} disabled={trayendo}>
             Cancelar
           </Button>
           <Button
             variant="contained"
-            onClick={onImportar}
-            disabled={!archivo}
-            loading={importando}
+            onClick={onTraer}
+            disabled={
+              !fechaDesde ||
+              !fechaHasta ||
+              (modoTraida === 'TOKEN' ? !token.trim() : !archivo)
+            }
+            loading={trayendo}
           >
-            Importar
+            Traer documentos
           </Button>
         </DialogActions>
       </Dialog>
 
       <ConfirmDialog
         abierto={accion != null}
-        titulo={accion?.tipo === 'causar' ? 'Causar documento' : 'Contabilizar documento'}
+        titulo={accion?.tipo === 'causar' ? 'Causar documento' : 'Asentar documento'}
         mensaje={
           accion
-            ? `Se ${accion.tipo === 'causar' ? 'causará' : 'contabilizará'} el documento ${accion.documento.consecutivo}. ¿Desea continuar?`
+            ? `Se ${accion.tipo === 'causar' ? 'causará' : 'asentará'} el documento ${accion.documento.consecutivo}. ¿Desea continuar?`
             : ''
         }
         textoConfirmar="Confirmar"
