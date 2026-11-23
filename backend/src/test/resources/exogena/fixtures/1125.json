@@ -1,0 +1,18 @@
+{
+  "anioGravable": 2025,
+  "filas": [
+    {
+      "TIPO_DOCUMENTO": "31",
+      "NIT": "900123456",
+      "APELLIDO1": "PEREZ",
+      "NOMBRE1": "ANA",
+      "TIPVINC": "1",
+      "TOP": "1",
+      "PAIS": "1",
+      "CIUDAD": "BOGOTA",
+      "VALOR_PAGO": "1000000",
+      "REEST": "NO",
+      "ACCOST": "NO"
+    }
+  ]
+}
