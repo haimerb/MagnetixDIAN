@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -21,6 +22,7 @@ import TextField from '@mui/material/TextField'
 import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined'
 import {
   causarDocumentoRadian,
@@ -173,14 +175,24 @@ export default function RadianPage() {
         title="Asentar la facturación"
         subtitle="Traiga facturas, notas y documentos soporte de la DIAN, cáuselos y asiente sus asientos contables."
         actions={
-          <Button
-            variant="contained"
-            startIcon={<UploadFileOutlinedIcon />}
-            disabled={empresaId == null}
-            onClick={() => setTraidaAbierta(true)}
-          >
-            Traer de la DIAN
-          </Button>
+          <>
+            <Button
+              component={RouterLink}
+              to="/app/contabilidad"
+              variant="outlined"
+              startIcon={<ReceiptLongOutlinedIcon />}
+            >
+              Asientos contables
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<UploadFileOutlinedIcon />}
+              disabled={empresaId == null}
+              onClick={() => setTraidaAbierta(true)}
+            >
+              Traer de la DIAN
+            </Button>
+          </>
         }
       />
 
