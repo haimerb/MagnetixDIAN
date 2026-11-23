@@ -3,7 +3,13 @@ package com.magnetixdian.interfaces.rest;
 import com.magnetixdian.application.ServicioAsientos;
 import com.magnetixdian.application.ServicioConciliacion;
 import com.magnetixdian.application.ServicioContabilizacion;
+import com.magnetixdian.application.ServicioReportesContables;
 import com.magnetixdian.interfaces.dto.AsientoContableDto;
+import com.magnetixdian.interfaces.dto.BalanceComprobacionDto;
+import com.magnetixdian.interfaces.dto.EstadoFinancieroDto;
+import com.magnetixdian.interfaces.dto.FlujoEfectivoDto;
+import com.magnetixdian.interfaces.dto.MovimientoContableDto;
+import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoConciliacionDto;
 import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
@@ -28,15 +34,18 @@ public class ContabilidadController {
     private final ServicioContabilizacion servicioContabilizacion;
     private final ServicioConciliacion servicioConciliacion;
     private final ServicioAsientos servicioAsientos;
+    private final ServicioReportesContables servicioReportes;
     private final AutorizacionEmpresa autorizacion;
 
     public ContabilidadController(ServicioContabilizacion servicioContabilizacion,
                                   ServicioConciliacion servicioConciliacion,
                                   ServicioAsientos servicioAsientos,
+                                  ServicioReportesContables servicioReportes,
                                   AutorizacionEmpresa autorizacion) {
         this.servicioContabilizacion = servicioContabilizacion;
         this.servicioConciliacion = servicioConciliacion;
         this.servicioAsientos = servicioAsientos;
+        this.servicioReportes = servicioReportes;
         this.autorizacion = autorizacion;
     }
 
@@ -69,6 +78,100 @@ public class ContabilidadController {
                                                             Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicioAsientos.cerrarPeriodo(empresaId, periodoId));
+    }
+
+    @GetMapping("/reportes/libro-diario")
+    public ResponseEntity<PaginaDto<AsientoContableDto>> libroDiario(
+            @PathVariable Long empresaId,
+            @RequestParam(value = "fechaDesde", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(value = "fechaHasta", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(value = "centroCostoId", required = false) Long centroCostoId,
+            @RequestParam(value = "terceroId", required = false) Long terceroId,
+            @RequestParam(value = "pagina", defaultValue = "0") int pagina,
+            @RequestParam(value = "tamano", defaultValue = "20") int tamano,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioReportes.libroDiario(empresaId, fechaDesde, fechaHasta,
+                centroCostoId, terceroId, pagina, tamano));
+    }
+
+    @GetMapping("/reportes/libro-mayor")
+    public ResponseEntity<PaginaDto<MovimientoContableDto>> libroMayor(
+            @PathVariable Long empresaId,
+            @RequestParam(value = "fechaDesde", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(value = "fechaHasta", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(value = "codigoCuenta", required = false) String codigoCuenta,
+            @RequestParam(value = "centroCostoId", required = false) Long centroCostoId,
+            @RequestParam(value = "terceroId", required = false) Long terceroId,
+            @RequestParam(value = "pagina", defaultValue = "0") int pagina,
+            @RequestParam(value = "tamano", defaultValue = "20") int tamano,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioReportes.libroMayor(empresaId, fechaDesde, fechaHasta,
+                codigoCuenta, centroCostoId, terceroId, pagina, tamano));
+    }
+
+    @GetMapping("/reportes/auxiliares")
+    public ResponseEntity<PaginaDto<MovimientoContableDto>> auxiliares(
+            @PathVariable Long empresaId,
+            @RequestParam(value = "fechaDesde", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(value = "fechaHasta", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            @RequestParam(value = "codigoCuenta", required = false) String codigoCuenta,
+            @RequestParam(value = "centroCostoId", required = false) Long centroCostoId,
+            @RequestParam(value = "terceroId", required = false) Long terceroId,
+            @RequestParam(value = "pagina", defaultValue = "0") int pagina,
+            @RequestParam(value = "tamano", defaultValue = "20") int tamano,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioReportes.auxiliar(empresaId, fechaDesde, fechaHasta,
+                codigoCuenta, centroCostoId, terceroId, pagina, tamano));
+    }
+
+    @GetMapping("/reportes/balance-comprobacion")
+    public ResponseEntity<BalanceComprobacionDto> balanceComprobacion(
+            @PathVariable Long empresaId,
+            @RequestParam(value = "fechaDesde", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(value = "fechaHasta", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioReportes.balanceComprobacion(empresaId, fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/reportes/balance-general")
+    public ResponseEntity<EstadoFinancieroDto> balanceGeneral(
+            @PathVariable Long empresaId,
+            @RequestParam("fechaCorte") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaCorte,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioReportes.balanceGeneral(empresaId, fechaCorte));
+    }
+
+    @GetMapping("/reportes/estado-resultados")
+    public ResponseEntity<EstadoFinancieroDto> estadoResultados(
+            @PathVariable Long empresaId,
+            @RequestParam("fechaDesde") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam("fechaHasta") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioReportes.estadoResultados(empresaId, fechaDesde, fechaHasta));
+    }
+
+    @GetMapping("/reportes/flujo-efectivo")
+    public ResponseEntity<FlujoEfectivoDto> flujoEfectivo(
+            @PathVariable Long empresaId,
+            @RequestParam("fechaDesde") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam("fechaHasta") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioReportes.flujoEfectivo(empresaId, fechaDesde, fechaHasta));
     }
 
     @PostMapping("/conciliacion")
