@@ -2,12 +2,12 @@
 
 ERP contable centrado en la DIAN, organizado en **cuatro áreas**:
 
-1. **Inicio** — estado del cumplimiento, accesos a exógena, facturación y asentamiento.
+1. **Inicio** — estado del cumplimiento y accesos a los reportes exógenos clásicos.
 2. **Facturación** — emisión FEV v1.9 (facturas y notas), validación, reportes, factura rápida y entrega por WhatsApp Click-to-Chat.
-3. **Contabilidad** — **Asentar facturación**: traiga documentos de la DIAN por **token o archivo Excel/CSV/JSON/ZIP**, cáuselos, asíntelos y consulte asientos y conciliación. Los asientos alimentan la información exógena.
+3. **Contabilidad** — **Asentar facturación** y el núcleo `v0.4.0`: traiga documentos de la DIAN por **token o archivo Excel/CSV/JSON/ZIP**, cáuselos, aséntelos y consulte PUC, periodos, asientos, libros, balances, impuestos, exógena y conciliación.
 4. **Empresa** — usuarios, identidad visual, integraciones, suscripción y administración.
 
-La información exógena (formatos **1001 v10** y **1002 v10**) se genera y presenta en MUISCA desde los datos validados y asentados.
+La información exógena mantiene los formatos clásicos **1001 v10** y **1002 v10** y añade los formatos oficiales activos **1125 v13**, **2278 v1** y **5253 v2**, con generador XML y validación XSD local (no prevalidador oficial).
 
 ## Stack
 
@@ -40,7 +40,7 @@ docker compose up -d --build
 - Frontend: http://localhost:5173
 - Backend: http://localhost:8080 · Swagger: http://localhost:8080/swagger-ui.html
 - Usuario demo: `admin` / `admin123`
-- Flyway aplica automáticamente las migraciones **V1–V23** (V18–V23: RADIAN, contabilidad, migración contable, mapeo de archivos, branding y seguridad).
+- Flyway aplica automáticamente las migraciones **V1–V25** (V18–V23: RADIAN, contabilidad, migración contable, mapeo de archivos, branding y seguridad; V24–V25: núcleo contable base y módulo de impuestos).
 
 ## Desarrollo local
 
@@ -70,6 +70,7 @@ cd ../frontend
 pnpm run lint        # 0 errores, 0 warnings
 pnpm run build       # tsc -b + vite build
 pnpm run test        # Vitest
+pnpm exec playwright test --list
 pnpm run test:e2e    # Playwright (backend + preview)
 ```
 
@@ -83,6 +84,19 @@ Desde **Contabilidad → Asentar facturación** se traen documentos de la DIAN d
 Variables de configuración del catálogo DIAN: `DIAN_CATALOGO_BASE_URL`, `DIAN_CATALOGO_TOKEN_URL`, `DIAN_CATALOGO_LISTADO_URL`, `DIAN_CATALOGO_HOSTS_PERMITIDOS`, `DIAN_CATALOGO_CONNECT_TIMEOUT_MS`, `DIAN_CATALOGO_READ_TIMEOUT_MS` y `DIAN_CATALOGO_MAX_BYTES`. El token de cada empresa **no** es una variable de entorno.
 
 Los documentos traídos se causan y asientan en la misma pantalla; los asientos alimentan la conciliación y la información exógena.
+
+## Núcleo contable, impuestos y exógena (`v0.4.0`)
+
+`Contabilidad → Asientos contables` (`/app/contabilidad`) expone ocho pestañas: `PUC`, `Periodos`, `Asientos`, `Libros`, `Balances`, `Impuestos`, `Exógena` y `Conciliación`.
+
+- **PUC y periodos:** el plan de cuentas 2025 se copia automáticamente a la empresa al contabilizar. No hay endpoints REST de consulta de PUC/periodos: la UI muestra estados vacíos honestos en lugar de datos falsos.
+- **Asientos:** creación manual/de ajuste, reversión, cierre de periodo, numeración `AS-{empresa}-{YYYYMM}-{0001}` y validación de balance débito=crédito.
+- **Libros y balances:** libro diario, libro mayor, auxiliares, balance de comprobación, balance general, estado de resultados y flujo de efectivo.
+- **Impuestos:** tarifas vigentes por año, responsabilidades fiscales, causación, pagos, anulación, certificados, declaraciones en borrador y calendario tributario.
+- **Exógena oficial:** formatos **1125**, **2278** y **5253** con `generar`, `conceptos` y `validar-xml`; la validación es `xsd-local-2025` (`prevalidacionOficial=false`).
+- **Conciliación:** compara documentos DIAN con asientos por rango de fechas, dirección y tipo de documento.
+
+Endpoints principales: `/api/empresas/{empresaId}/contabilidad/{asientos,reportes/*,conciliacion}`, `/api/empresas/{empresaId}/impuestos/*` y `/api/empresas/{empresaId}/exogena/{formatos,formatos/{formato}/conceptos,{formato}/generar,{formato}/validar-xml}`.
 
 ## Integraciones y pagos
 
@@ -147,5 +161,10 @@ El keep-alive del plan free ya está automatizado en `.github/workflows/keep-ali
 - [x] Contabilidad: plan de cuentas, asientos y conciliación.
 - [x] Importación/migración con mapeo inteligente de columnas para proveedores externos.
 - [x] Entrega de facturas por WhatsApp Click-to-Chat, branding por empresa y PWA instalable.
+- [x] `v0.4.0`: periodos, PUC jerárquico, centros de costo, terceros, asientos con reversión/cierre y libros/estados financieros.
+- [x] `v0.4.0`: módulo de impuestos con tarifas, causación, pagos, certificados, declaraciones y calendario.
+- [x] `v0.4.0`: exógena DIAN oficial 1125/2278/5253 con generador XML y XSD local.
+- [x] `v0.4.0`: UI de contabilidad, impuestos y exógena con E2E Playwright.
+- [x] `v0.4.0`: JUnit, documentación y quality gates.
 
 Ver issues del repo para el backlog detallado.

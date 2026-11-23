@@ -2,15 +2,18 @@
 
 ## Qué hace MagnetixDIAN
 
-MagnetixDIAN es un ERP contable centrado en la DIAN. El menú tiene cuatro áreas: **Inicio**, **Facturación**, **Contabilidad** y **Empresa**.
+MagnetixDIAN es un ERP contable centrado en la DIAN. El menú tiene cuatro áreas: **Inicio**, **Facturación**, **Contabilidad** y **Empresa**. **Contabilidad** abre **Asentar facturación**; desde allí, el botón **Asientos contables** lleva al centro contable de `v0.4.0`.
 
 El flujo principal es:
 
 1. En **Contabilidad → Asentar facturación**, traiga facturas, notas y documentos soporte desde la DIAN usando su **token** o un **archivo Excel/CSV/JSON/ZIP** exportado del catálogo.
-2. Cause los documentos y asíntelos a contabilidad desde la misma bandeja.
-3. En **Contabilidad → Asientos contables**, revise los asientos y concilie con los documentos.
-4. Los datos asentados alimentan la información exógena en formatos **1001** (pagos/abonos y retenciones) y **1002** (créditos, descuentos y notas).
-5. Genere el XML y preséntelo en MUISCA; luego marque el reporte como presentado.
+2. Cause los documentos y aséntelos a contabilidad desde la misma bandeja.
+3. En **Asientos contables**, revise las pestañas **PUC**, **Periodos**, **Asientos**, **Libros**, **Balances**, **Impuestos**, **Exógena** y **Conciliación**.
+4. En **Impuestos** calcule tarifas, registre responsabilidades, causaciones, pagos, certificados y declaraciones.
+5. En **Exógena** genere XML para los formatos oficiales activos **1125 v13**, **2278 v1** y **5253 v2**, o use el flujo clásico de **1001/1002** desde **Inicio**.
+6. Descargue el XML y preséntelo en MUISCA; en el flujo clásico marque el reporte como presentado y en impuestos marque la declaración como presentada.
+
+> **Nota de navegación:** las pantallas antiguas de carga, validación, reportes y guía MUISCA ya no aparecen en el menú principal; siguen accesibles por sus rutas directas (`/app/validacion/:medioId`, `/app/reporte/:medioId`, `/app/guia`) y desde los reportes listados en **Inicio**. Las secciones 2–5 de este manual describen ese flujo heredado de 1001/1002.
 
 ## Requisitos
 
@@ -26,13 +29,16 @@ El flujo principal es:
 
 Al entrar verá el **Panel de reportes** con el resumen de sus medios magnéticos (total, sin errores, con errores) y el listado de reportes existentes.
 
-## 2. Cargar datos
+## 2. Cargar datos (flujo heredado 1001/1002)
 
-1. En el menú superior, seleccione **Carga de datos**.
-2. Opcional: pulse **Descargar plantilla (.xlsx)** para obtener la plantilla editable del formato.
-3. Arrastre el archivo `.xlsx` a la zona punteada o haga clic para elegirlo.
-4. Indique el **formato** (1001 o 1002) y el **año gravable** (por ejemplo `2025`).
-5. Pulse **Cargar archivo**.
+El flujo clásico de 1001/1002 ya no tiene entrada propia en el menú: el botón **Cargar datos** de **Inicio** redirige a **Contabilidad → Asentar facturación**, que es el flujo preferido. Para alimentar un reporte clásico use `POST /api/mediomagnetico/{empresaId}/cargar` con `formato`, `anioGravable` y `archivo`, o la plantilla descargable desde la API.
+
+Si su entorno conserva la pantalla heredada, el procedimiento es:
+
+1. Abra la pantalla de carga heredada y, si está disponible, pulse **Descargar plantilla (.xlsx)**.
+2. Arrastre el archivo `.xlsx` a la zona punteada o haga clic para elegirlo.
+3. Indique el **formato** (1001 o 1002) y el **año gravable** (por ejemplo `2025`).
+4. Pulse **Cargar archivo**.
 
 - Se permite **un reporte por empresa + formato + año gravable**. Si ya existe información del mismo año, se reemplaza por completo (se borra la anterior).
 - Al terminar verá el número de registros cargados y el botón **Ir a validación**.
@@ -69,7 +75,7 @@ El sistema revisa cada registro y muestra:
 
 ## 5. Presentar en MUISCA
 
-Siga la **Guía MUISCA** disponible en el menú (paso a paso para subir el XML y obtener el acuse de recibo). En resumen:
+Siga la **Guía MUISCA** (ruta directa `/app/guia`, paso a paso para subir el XML y obtener el acuse de recibo). En resumen:
 
 1. Ingrese a [www.muisca.dian.gov.co](https://www.muisca.dian.gov.co).
 2. «Información exógena» → presentación del formato 1001 o 1002 correspondiente.
@@ -141,11 +147,15 @@ Si necesita integrar sus sistemas con MagnetixDIAN:
 4. Pulse **Traer documentos**. Los documentos repetidos por empresa + dirección + CUFE/CUDE se omiten.
 5. En la bandeja puede filtrar y pulsar **Causar**. Después pulse **Asentar** para generar el asiento con el plan de cuentas de la empresa.
 
-## 14. Asientos contables (`/app/contabilidad`)
+## 14. Asientos contables y centro contable (`/app/contabilidad`)
 
-1. En **Contabilidad → Asientos contables** consulte los asientos generados al asentar la facturación o desde una migración.
-2. En **Conciliación** elija el rango de fechas y, si lo desea, la dirección y el tipo de documento.
-3. El resultado muestra las diferencias entre documentos y asientos para que pueda corregir la causación.
+1. En **Asientos** consulte los asientos generados al asentar la facturación o desde una migración, con sus líneas de débito/crédito.
+2. En **PUC** y **Periodos** verá estados informativos: el plan de cuentas se crea al contabilizar y el cierre de periodos existe en el backend, pero todavía no hay consulta HTTP expuesta. No se muestran datos falsos.
+3. En **Libros** elija **Libro diario**, **Libro mayor** o **Auxiliares**; filtre por rango de fechas y, cuando aplique, por código de cuenta.
+4. En **Balances** elija **Balance de comprobación**, **Balance general**, **Estado de resultados** o **Flujo de efectivo**. Los dos últimos exigen rango de fechas; el balance general exige fecha de corte.
+5. En **Impuestos** use la calculadora y consulte tarifas, causaciones, declaraciones, responsabilidades y calendario tributario.
+6. En **Exógena** seleccione el formato, el concepto y el periodo, agregue registros, pulse **Generar XML** y luego **Validar XSD**. El aviso de la pantalla es explícito: la validación es XSD local y **no equivale al prevalidador oficial**.
+7. En **Conciliación** elija el rango de fechas y, si lo desea, la dirección y el tipo de documento. El resultado muestra coincidencias, diferencias y valor en diferencias.
 
 ## 15. Empresa (`/app/empresa`)
 

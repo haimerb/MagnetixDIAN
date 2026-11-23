@@ -7,10 +7,15 @@ import com.magnetixdian.application.ServicioResponsabilidadesFiscales;
 import com.magnetixdian.application.ServicioTarifasImpuesto;
 import com.magnetixdian.interfaces.dto.CalendarioTributarioDto;
 import com.magnetixdian.interfaces.dto.CausacionImpuestoDto;
+import com.magnetixdian.interfaces.dto.CertificadoImpuestoDto;
 import com.magnetixdian.interfaces.dto.DeclaracionImpuestoDto;
+import com.magnetixdian.interfaces.dto.PagoImpuestoDto;
+import com.magnetixdian.interfaces.dto.ResponsabilidadFiscalDto;
 import com.magnetixdian.interfaces.dto.ResultadoCalculoImpuestoDto;
 import com.magnetixdian.interfaces.dto.SolicitudCausacionImpuestoDto;
+import com.magnetixdian.interfaces.dto.SolicitudCertificadoImpuestoDto;
 import com.magnetixdian.interfaces.dto.SolicitudDeclaracionImpuestoDto;
+import com.magnetixdian.interfaces.dto.SolicitudResponsabilidadFiscalDto;
 import com.magnetixdian.interfaces.dto.TarifaImpuestoDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.junit.jupiter.api.BeforeEach;
@@ -152,6 +157,145 @@ class ImpuestosControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("BORRADOR"))
                 .andExpect(jsonPath("$.fechaLimite").isNotEmpty());
+    }
+
+    @Test
+    void registrarResponsabilidadFiscal() throws Exception {
+        when(servicioResponsabilidades.registrar(eq(1L), any(SolicitudResponsabilidadFiscalDto.class)))
+                .thenReturn(new ResponsabilidadFiscalDto(
+                        2L, 1L, 9L, "IVA", "RESPONSABLE IVA",
+                        LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31)));
+
+        mockMvc.perform(post("/api/empresas/1/impuestos/responsabilidades")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "terceroId": 9,
+                                  "impuestoCodigo": "IVA",
+                                  "codigo": "RESPONSABLE IVA",
+                                  "desde": "2026-01-01",
+                                  "hasta": "2026-12-31"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigo").value("RESPONSABLE IVA"));
+    }
+
+    @Test
+    void listarResponsabilidadesFiscales() throws Exception {
+        when(servicioResponsabilidades.listar(1L)).thenReturn(List.of(
+                new ResponsabilidadFiscalDto(2L, 1L, 9L, "IVA", "RESPONSABLE IVA",
+                        LocalDate.of(2026, 1, 1), null)));
+
+        mockMvc.perform(get("/api/empresas/1/impuestos/responsabilidades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].impuestoCodigo").value("IVA"));
+    }
+
+    @Test
+    void listarCausacionesPorTercero() throws Exception {
+        when(servicioCausacion.listarPorTercero(1L, 9L)).thenReturn(List.of(
+                new CausacionImpuestoDto(10L, 1L, "01", "FACTURA", 5L, 9L, "2026-03",
+                        LocalDate.of(2026, 3, 15), null, new BigDecimal("1000000.00"),
+                        new BigDecimal("0.1900"), new BigDecimal("190000.00"),
+                        "CAUSADO", BigDecimal.ZERO, null)));
+
+        mockMvc.perform(get("/api/empresas/1/impuestos/causaciones").param("terceroId", "9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].terceroId").value(9))
+                .andExpect(jsonPath("$[0].estado").value("CAUSADO"));
+    }
+
+    @Test
+    void registrarPagoDeCausacion() throws Exception {
+        when(servicioCausacion.registrarPago(eq(1L), eq(10L), any()))
+                .thenReturn(new PagoImpuestoDto(3L, 10L, LocalDate.of(2026, 3, 20),
+                        new BigDecimal("190000.00"), "COMP-1"));
+
+        mockMvc.perform(post("/api/empresas/1/impuestos/causaciones/10/pagos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fecha": "2026-03-20",
+                                  "valor": 190000.00,
+                                  "comprobante": "COMP-1"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.comprobante").value("COMP-1"));
+    }
+
+    @Test
+    void anularCausacion() throws Exception {
+        when(servicioCausacion.anular(1L, 10L)).thenReturn(new CausacionImpuestoDto(
+                10L, 1L, "01", "FACTURA", 5L, null, "2026-03",
+                LocalDate.of(2026, 3, 15), null, new BigDecimal("1000000.00"),
+                new BigDecimal("0.1900"), BigDecimal.ZERO.setScale(2),
+                "ANULADO", BigDecimal.ZERO, "Anulada por prueba"));
+
+        mockMvc.perform(post("/api/empresas/1/impuestos/causaciones/10/anular"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("ANULADO"));
+    }
+
+    @Test
+    void emitirCertificadoDeImpuesto() throws Exception {
+        when(servicioCertificados.emitir(eq(1L), any(SolicitudCertificadoImpuestoDto.class)))
+                .thenReturn(new CertificadoImpuestoDto(
+                        4L, 1L, 9L, "IVA", 2026, "CERT-1",
+                        new BigDecimal("100.00"), LocalDate.of(2026, 3, 31)));
+
+        mockMvc.perform(post("/api/empresas/1/impuestos/certificados")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "terceroId": 9,
+                                  "impuestoCodigo": "IVA",
+                                  "anio": 2026,
+                                  "numero": "CERT-1",
+                                  "valor": 100.00,
+                                  "fechaEmision": "2026-03-31"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numero").value("CERT-1"));
+    }
+
+    @Test
+    void listarCertificadosDeImpuesto() throws Exception {
+        when(servicioCertificados.listar(1L, 2026)).thenReturn(List.of(
+                new CertificadoImpuestoDto(4L, 1L, 9L, "IVA", 2026, "CERT-1",
+                        new BigDecimal("100.00"), LocalDate.of(2026, 3, 31))));
+
+        mockMvc.perform(get("/api/empresas/1/impuestos/certificados").param("anio", "2026"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].numero").value("CERT-1"));
+    }
+
+    @Test
+    void listarDeclaraciones() throws Exception {
+        when(servicioDeclaraciones.listar(1L, 2026)).thenReturn(List.of(
+                new DeclaracionImpuestoDto(7L, 1L, "IVA", 2026, "2026-03",
+                        LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
+                        LocalDate.of(2026, 4, 20), "BORRADOR",
+                        new BigDecimal("190000.00"), BigDecimal.ZERO, new BigDecimal("190000.00"))));
+
+        mockMvc.perform(get("/api/empresas/1/impuestos/declaraciones").param("anio", "2026"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].periodo").value("2026-03"));
+    }
+
+    @Test
+    void presentarDeclaracion() throws Exception {
+        when(servicioDeclaraciones.marcarPresentada(1L, 7L)).thenReturn(new DeclaracionImpuestoDto(
+                7L, 1L, "IVA", 2026, "2026-03",
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
+                LocalDate.of(2026, 4, 20), "PRESENTADA",
+                new BigDecimal("190000.00"), BigDecimal.ZERO, BigDecimal.ZERO.setScale(2)));
+
+        mockMvc.perform(post("/api/empresas/1/impuestos/declaraciones/7/presentar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("PRESENTADA"));
     }
 
     @Test

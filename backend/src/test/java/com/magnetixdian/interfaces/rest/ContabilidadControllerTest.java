@@ -5,8 +5,11 @@ import com.magnetixdian.application.ServicioConciliacion;
 import com.magnetixdian.application.ServicioContabilizacion;
 import com.magnetixdian.application.ServicioReportesContables;
 import com.magnetixdian.interfaces.dto.AsientoContableDto;
+import com.magnetixdian.interfaces.dto.BalanceComprobacionDto;
 import com.magnetixdian.interfaces.dto.ConciliacionLineaDto;
 import com.magnetixdian.interfaces.dto.EstadoFinancieroDto;
+import com.magnetixdian.interfaces.dto.FlujoEfectivoDto;
+import com.magnetixdian.interfaces.dto.MovimientoContableDto;
 import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoConciliacionDto;
 import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
@@ -145,6 +148,90 @@ class ContabilidadControllerTest {
                         .param("fechaCorte", "2026-03-31"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.titulo").value("Balance general"));
+    }
+
+    @Test
+    void consultarLibroMayor() throws Exception {
+        when(servicioReportes.libroMayor(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
+                "110505", 7L, 9L, 1, 10)).thenReturn(new PaginaDto<>(
+                List.of(new MovimientoContableDto("110505", "Caja", LocalDate.of(2026, 3, 10),
+                        "AS-1-202603-0001", "Causación RADIAN", new BigDecimal("1190.00"),
+                        BigDecimal.ZERO.setScale(2), new BigDecimal("1190.00"), 7L, 9L)),
+                1, 10, 1, 1, false, false));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/reportes/libro-mayor")
+                        .param("fechaDesde", "2026-03-01")
+                        .param("fechaHasta", "2026-03-31")
+                        .param("codigoCuenta", "110505")
+                        .param("centroCostoId", "7")
+                        .param("terceroId", "9")
+                        .param("pagina", "1")
+                        .param("tamano", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].codigoCuenta").value("110505"))
+                .andExpect(jsonPath("$.contenido[0].saldo").value(1190.00));
+    }
+
+    @Test
+    void consultarAuxiliar() throws Exception {
+        when(servicioReportes.auxiliar(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
+                "130505", null, 9L, 0, 20)).thenReturn(new PaginaDto<>(
+                List.of(new MovimientoContableDto("130505", "Clientes", LocalDate.of(2026, 3, 10),
+                        "AS-1-202603-0001", "Causación RADIAN", new BigDecimal("1190.00"),
+                        BigDecimal.ZERO.setScale(2), new BigDecimal("1190.00"), null, 9L)),
+                0, 20, 1, 1, true, true));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/reportes/auxiliares")
+                        .param("fechaDesde", "2026-03-01")
+                        .param("fechaHasta", "2026-03-31")
+                        .param("codigoCuenta", "130505")
+                        .param("terceroId", "9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido[0].nombreCuenta").value("Clientes"));
+    }
+
+    @Test
+    void consultarBalanceComprobacion() throws Exception {
+        when(servicioReportes.balanceComprobacion(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
+                .thenReturn(new BalanceComprobacionDto(List.of(), BigDecimal.ZERO.setScale(2),
+                        BigDecimal.ZERO.setScale(2), BigDecimal.ZERO.setScale(2),
+                        BigDecimal.ZERO.setScale(2)));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/reportes/balance-comprobacion")
+                        .param("fechaDesde", "2026-03-01")
+                        .param("fechaHasta", "2026-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalDebito").value(0));
+    }
+
+    @Test
+    void consultarEstadoDeResultados() throws Exception {
+        when(servicioReportes.estadoResultados(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
+                .thenReturn(new EstadoFinancieroDto("Estado de resultados",
+                        LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), List.of(),
+                        new BigDecimal("800.00")));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/reportes/estado-resultados")
+                        .param("fechaDesde", "2026-03-01")
+                        .param("fechaHasta", "2026-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titulo").value("Estado de resultados"))
+                .andExpect(jsonPath("$.total").value(800.00));
+    }
+
+    @Test
+    void consultarFlujoDeEfectivo() throws Exception {
+        when(servicioReportes.flujoEfectivo(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31)))
+                .thenReturn(new FlujoEfectivoDto(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
+                        List.of(), BigDecimal.ZERO.setScale(2), new BigDecimal("200.00"),
+                        new BigDecimal("-200.00")));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/reportes/flujo-efectivo")
+                        .param("fechaDesde", "2026-03-01")
+                        .param("fechaHasta", "2026-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.salidas").value(200.00))
+                .andExpect(jsonPath("$.neto").value(-200.00));
     }
 
     @Test
