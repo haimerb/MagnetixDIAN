@@ -1,5 +1,6 @@
 package com.magnetixdian.application;
 
+import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
 import com.magnetixdian.infrastructure.persistence.MedioMagneticoJpa;
 import com.magnetixdian.infrastructure.persistence.MedioMagneticoRepository;
 import org.slf4j.Logger;
@@ -21,11 +22,14 @@ public class ServicioGeneracionAutomatica {
 
     private final MedioMagneticoRepository medioRepo;
     private final ServicioMedioMagnetico servicioMedio;
+    private final ServicioGeneracionExogena generacionExogena;
 
     public ServicioGeneracionAutomatica(MedioMagneticoRepository medioRepo,
-                                        ServicioMedioMagnetico servicioMedio) {
+                                        ServicioMedioMagnetico servicioMedio,
+                                        ServicioGeneracionExogena generacionExogena) {
         this.medioRepo = medioRepo;
         this.servicioMedio = servicioMedio;
+        this.generacionExogena = generacionExogena;
     }
 
     /**
@@ -42,7 +46,11 @@ public class ServicioGeneracionAutomatica {
         int generados = 0;
         for (MedioMagneticoJpa medio : validados) {
             try {
-                servicioMedio.generarXml(medio.getId());
+                if (FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS.contains(medio.getFormato())) {
+                    generacionExogena.generarDesdeMedio(medio.getId());
+                } else {
+                    servicioMedio.generarXml(medio.getId());
+                }
                 generados++;
             } catch (RuntimeException ex) {
                 log.warn("No se pudo generar el XML del medio magnético {}: {}",

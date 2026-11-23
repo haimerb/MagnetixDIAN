@@ -32,6 +32,21 @@ public class CuentaContableJpa {
     @Column(nullable = false)
     private boolean activa = true;
 
+    @Column(name = "cuenta_padre_id")
+    private Long cuentaPadreId;
+
+    @Column(nullable = false, length = 10)
+    private String naturaleza = "DEUDORA";
+
+    @Column(nullable = false)
+    private int nivel = 1;
+
+    @Column(name = "version_puc", nullable = false, length = 10)
+    private String versionPuc = "2025";
+
+    @Column(name = "acepta_auxiliar", nullable = false)
+    private boolean aceptaAuxiliar = false;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -81,6 +96,46 @@ public class CuentaContableJpa {
 
     public void setActiva(boolean activa) {
         this.activa = activa;
+    }
+
+    public Long getCuentaPadreId() {
+        return cuentaPadreId;
+    }
+
+    public void setCuentaPadreId(Long cuentaPadreId) {
+        this.cuentaPadreId = cuentaPadreId;
+    }
+
+    public String getNaturaleza() {
+        return naturaleza;
+    }
+
+    public void setNaturaleza(String naturaleza) {
+        this.naturaleza = naturaleza;
+    }
+
+    public int getNivel() {
+        return nivel;
+    }
+
+    public void setNivel(int nivel) {
+        this.nivel = nivel;
+    }
+
+    public String getVersionPuc() {
+        return versionPuc;
+    }
+
+    public void setVersionPuc(String versionPuc) {
+        this.versionPuc = versionPuc;
+    }
+
+    public boolean isAceptaAuxiliar() {
+        return aceptaAuxiliar;
+    }
+
+    public void setAceptaAuxiliar(boolean aceptaAuxiliar) {
+        this.aceptaAuxiliar = aceptaAuxiliar;
     }
 
     public OffsetDateTime getCreatedAt() {

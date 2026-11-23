@@ -14,4 +14,8 @@ public interface CuentaContableRepository extends JpaRepository<CuentaContableJp
     Optional<CuentaContableJpa> findByEmpresaIdAndCodigo(Long empresaId, String codigo);
 
     Optional<CuentaContableJpa> findByEmpresaIdIsNullAndCodigo(String codigo);
+
+    List<CuentaContableJpa> findByEmpresaIdAndVersionPuc(Long empresaId, String versionPuc);
+
+    List<CuentaContableJpa> findByEmpresaIdIsNullAndVersionPuc(String versionPuc);
 }

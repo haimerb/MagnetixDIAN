@@ -1,5 +1,15 @@
 import { finalizarPeticion, iniciarPeticion } from './progreso'
 
+export function descargarTexto(contenido: string, nombre: string, mime = 'application/xml'): void {
+  const blob = new Blob([contenido], { type: mime })
+  const objectUrl = URL.createObjectURL(blob)
+  const a = window.document.createElement('a')
+  a.href = objectUrl
+  a.download = nombre
+  a.click()
+  URL.revokeObjectURL(objectUrl)
+}
+
 export async function descargarArchivo(url: string, nombre: string): Promise<void> {
   const token = localStorage.getItem('magnetixdian_token')
   iniciarPeticion()

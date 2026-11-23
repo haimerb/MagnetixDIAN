@@ -13,6 +13,8 @@ public class FormatoExogenaRegistry {
     public static final String ESTADO_ACTIVO = "ACTIVO";
     public static final String ESTADO_PENDIENTE_XSD = "PENDIENTE_XSD";
     public static final String ESTADO_PENDIENTE_GENERADOR = "PENDIENTE_GENERADOR";
+    public static final List<String> FORMATOS_OFICIALES_ACTIVOS =
+            List.of("1125", "2278", "5253");
 
     private static final List<String> ENCABEZADOS_LEGACY = List.of(
             "TIPO", "NIT", "DV", "CONCEPTO", "VALOR_PAGO", "RET_RENTA",
@@ -60,6 +62,12 @@ public class FormatoExogenaRegistry {
         formatos.put("1002", activo("1002", "Créditos, descuentos, devoluciones y notas", "GeneradorXml1002"));
         CatalogoXsdOficialesDian2025.versiones().forEach((codigo, version) ->
                 formatos.putIfAbsent(codigo, conXsdOficial(codigo, version)));
+        formatos.put("1125", oficial("1125",
+                "Declaración informativa individual de precios de transferencia", "13"));
+        formatos.put("2278", oficial("2278",
+                "Información de la compra de bonos electrónicos", "1"));
+        formatos.put("5253", oficial("5253",
+                "Información de beneficiarios efectivos", "2"));
         return Collections.unmodifiableMap(formatos);
     }
 
@@ -88,6 +96,20 @@ public class FormatoExogenaRegistry {
                 null,
                 null,
                 List.of()
+        );
+    }
+
+    private static FormatoExogena oficial(String codigo, String descripcion, String version) {
+        return new FormatoExogena(
+                codigo,
+                descripcion,
+                ESTADO_ACTIVO,
+                true,
+                version,
+                "xsd/dian/2025/" + codigo + ".xsd",
+                "xsd-local-2025",
+                "GeneradorXmlExogenaOficial",
+                MapeadorExogenaOficial.encabezados(codigo)
         );
     }
 

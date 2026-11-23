@@ -1,5 +1,6 @@
 package com.magnetixdian.application;
 
+import com.magnetixdian.domain.exogena.FormatoExogena;
 import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
 import com.magnetixdian.domain.model.OperacionDatos;
 import com.magnetixdian.domain.model.ResultadoRegla;
@@ -75,8 +76,11 @@ public class ServicioMedioMagnetico {
      * Genera la plantilla Excel descargable del formato indicado.
      */
     public byte[] generarPlantilla(String formato) throws IOException {
-        formatos.validarActivo(formato);
-        return plantillaExcel.generar(formato);
+        FormatoExogena formatoExogena = formatos.validarActivo(formato);
+        if (FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS.contains(formatoExogena.codigo())) {
+            return plantillaExcel.generar(formatoExogena.codigo(), formatoExogena.encabezados());
+        }
+        return plantillaExcel.generar(formatoExogena.codigo());
     }
 
     /**

@@ -921,11 +921,200 @@ export type AsientoContable = {
   lineas: AsientoContableLinea[]
 }
 
+export type ConciliacionLinea = {
+  documentoId: number
+  consecutivo: string
+  asientoId: number | null
+  resultado: string
+  severidad: string
+  campo: string
+  valorDocumento: number
+  valorAsiento: number | null
+  diferencia: number
+  mensaje: string
+}
+
 export type ResultadoConciliacion = {
+  conciliacionId: number
+  empresaId: number
+  fechaDesde: string | null
+  fechaHasta: string | null
+  totalDocumentos: number
   coincidencias: number
   diferencias: number
-  totalDocumentos: number
   documentosSinAsiento: number
+  valorDiferencia: number
+  lineas: ConciliacionLinea[]
+}
+
+export type MovimientoContable = {
+  codigoCuenta: string
+  nombreCuenta: string
+  fecha: string
+  numeroAsiento: string
+  descripcion: string | null
+  debito: number
+  credito: number
+  saldo: number
+  centroCostoId: number | null
+  terceroId: number | null
+}
+
+export type SaldoCuenta = {
+  codigo: string
+  nombre: string
+  tipo: string
+  naturaleza: string
+  saldoInicial: number
+  debito: number
+  credito: number
+  saldoFinal: number
+}
+
+export type BalanceComprobacion = {
+  cuentas: SaldoCuenta[]
+  totalSaldoInicial: number
+  totalDebito: number
+  totalCredito: number
+  totalSaldoFinal: number
+}
+
+export type GrupoEstado = {
+  nombre: string
+  cuentas: SaldoCuenta[]
+  total: number
+}
+
+export type EstadoFinanciero = {
+  titulo: string
+  fechaDesde: string | null
+  fechaHasta: string | null
+  grupos: GrupoEstado[]
+  total: number
+}
+
+export type FlujoEfectivo = {
+  fechaDesde: string | null
+  fechaHasta: string | null
+  movimientos: MovimientoContable[]
+  entradas: number
+  salidas: number
+  neto: number
+}
+
+export type TarifaImpuesto = {
+  id: number
+  impuestoCodigo: string
+  nombre: string
+  anio: number
+  conceptoCodigo: string
+  porcentaje: number
+  baseMinUvt: number
+  baseMaxUvt: number
+  activo: boolean
+}
+
+export type ResponsabilidadFiscal = {
+  id: number
+  empresaId: number
+  terceroId: number | null
+  impuestoCodigo: string
+  codigo: string
+  desde: string
+  hasta: string | null
+}
+
+export type CausacionImpuesto = {
+  id: number
+  empresaId: number
+  impuestoCodigo: string
+  origen: string
+  origenId: number
+  terceroId: number | null
+  periodo: string
+  fecha: string
+  conceptoCodigo: string
+  baseImponible: number
+  tarifa: number
+  valor: number
+  estado: string
+  valorPagado: number
+  observaciones: string | null
+}
+
+export type DeclaracionImpuesto = {
+  id: number
+  empresaId: number
+  impuestoCodigo: string
+  anioGravable: number
+  periodo: string
+  fechaDesde: string
+  fechaHasta: string
+  fechaLimite: string
+  estado: string
+  totalCausado: number
+  totalPagado: number
+  saldo: number
+}
+
+export type CalendarioTributario = {
+  id: number
+  impuestoCodigo: string
+  anioGravable: number
+  periodicidad: string
+  periodo: string
+  fechaLimite: string
+}
+
+export type ResultadoCalculoImpuesto = {
+  impuestoCodigo: string
+  nombreImpuesto: string
+  anio: number
+  conceptoCodigo: string
+  base: number
+  uvt: number
+  baseMinima: number
+  baseMaxima: number
+  baseGravable: number
+  tarifa: number
+  aplica: boolean
+  valor: number
+}
+
+export type ConceptoExogena = {
+  formato: string
+  codigo: string
+  descripcion: string
+  codCpt: number
+}
+
+export type SolicitudGeneracionExogena = {
+  formato?: string
+  anioGravable: number
+  numeroEnvio: number
+  fechaEnvio: string
+  fechaInicial: string
+  fechaFinal: string
+  concepto: string
+  encabezados: string[]
+  filas: Record<string, string>[]
+}
+
+export type ResultadoGeneracionExogena = {
+  formato: string
+  version: string
+  descripcion: string
+  registros: number
+  xml: string
+  validacion: string
+  prevalidacionOficial: boolean
+}
+
+export type ResultadoValidacionExogena = {
+  formato: string
+  valido: boolean
+  mensaje: string
+  prevalidacionOficial: boolean
 }
 
 export type MapeoColumna = {
@@ -1082,9 +1271,179 @@ export async function listarAsientosContables(empresaId: number) {
   return data
 }
 
-export async function conciliarContabilidad(empresaId: number) {
+export type FiltrosConciliacion = {
+  fechaDesde?: string
+  fechaHasta?: string
+  direccion?: string
+  tipoDocumento?: string
+}
+
+export async function conciliarContabilidad(empresaId: number, filtros: FiltrosConciliacion = {}) {
+  const params = new URLSearchParams()
+  Object.entries(filtros).forEach(([clave, valor]) => {
+    if (valor) params.set(clave, valor)
+  })
+  const sufijo = params.size > 0 ? `?${params.toString()}` : ''
   const { data } = await api.post<ResultadoConciliacion>(
-    `/empresas/${empresaId}/contabilidad/conciliacion`,
+    `/empresas/${empresaId}/contabilidad/conciliacion${sufijo}`,
+  )
+  return data
+}
+
+export type FiltrosReporteContable = {
+  fechaDesde?: string
+  fechaHasta?: string
+  codigoCuenta?: string
+  centroCostoId?: number
+  terceroId?: number
+  pagina?: number
+  tamano?: number
+}
+
+function paramsReporte(filtros: FiltrosReporteContable) {
+  const params = new URLSearchParams()
+  Object.entries(filtros).forEach(([clave, valor]) => {
+    if (valor != null && valor !== '') params.set(clave, String(valor))
+  })
+  return params
+}
+
+export async function listarLibroDiario(empresaId: number, filtros: FiltrosReporteContable = {}) {
+  const { data } = await api.get<Pagina<AsientoContable>>(
+    `/empresas/${empresaId}/contabilidad/reportes/libro-diario?${paramsReporte(filtros)}`,
+  )
+  return data
+}
+
+export async function listarLibroMayor(empresaId: number, filtros: FiltrosReporteContable = {}) {
+  const { data } = await api.get<Pagina<MovimientoContable>>(
+    `/empresas/${empresaId}/contabilidad/reportes/libro-mayor?${paramsReporte(filtros)}`,
+  )
+  return data
+}
+
+export async function listarAuxiliaresContables(empresaId: number, filtros: FiltrosReporteContable = {}) {
+  const { data } = await api.get<Pagina<MovimientoContable>>(
+    `/empresas/${empresaId}/contabilidad/reportes/auxiliares?${paramsReporte(filtros)}`,
+  )
+  return data
+}
+
+export async function obtenerBalanceComprobacion(
+  empresaId: number,
+  fechaDesde?: string,
+  fechaHasta?: string,
+) {
+  const filtros: FiltrosReporteContable = { fechaDesde, fechaHasta }
+  const { data } = await api.get<BalanceComprobacion>(
+    `/empresas/${empresaId}/contabilidad/reportes/balance-comprobacion?${paramsReporte(filtros)}`,
+  )
+  return data
+}
+
+export async function obtenerBalanceGeneral(empresaId: number, fechaCorte: string) {
+  const { data } = await api.get<EstadoFinanciero>(
+    `/empresas/${empresaId}/contabilidad/reportes/balance-general?fechaCorte=${fechaCorte}`,
+  )
+  return data
+}
+
+export async function obtenerEstadoResultados(
+  empresaId: number,
+  fechaDesde: string,
+  fechaHasta: string,
+) {
+  const filtros: FiltrosReporteContable = { fechaDesde, fechaHasta }
+  const { data } = await api.get<EstadoFinanciero>(
+    `/empresas/${empresaId}/contabilidad/reportes/estado-resultados?${paramsReporte(filtros)}`,
+  )
+  return data
+}
+
+export async function obtenerFlujoEfectivo(empresaId: number, fechaDesde: string, fechaHasta: string) {
+  const filtros: FiltrosReporteContable = { fechaDesde, fechaHasta }
+  const { data } = await api.get<FlujoEfectivo>(
+    `/empresas/${empresaId}/contabilidad/reportes/flujo-efectivo?${paramsReporte(filtros)}`,
+  )
+  return data
+}
+
+export async function listarTarifasImpuesto(empresaId: number, anio?: number) {
+  const sufijo = anio != null ? `?anio=${anio}` : ''
+  const { data } = await api.get<TarifaImpuesto[]>(`/empresas/${empresaId}/impuestos/tarifas${sufijo}`)
+  return data
+}
+
+export async function listarResponsabilidadesFiscales(empresaId: number) {
+  const { data } = await api.get<ResponsabilidadFiscal[]>(
+    `/empresas/${empresaId}/impuestos/responsabilidades`,
+  )
+  return data
+}
+
+export async function listarCausacionesImpuesto(empresaId: number, periodo?: string) {
+  const sufijo = periodo ? `?periodo=${periodo}` : ''
+  const { data } = await api.get<CausacionImpuesto[]>(
+    `/empresas/${empresaId}/impuestos/causaciones${sufijo}`,
+  )
+  return data
+}
+
+export async function listarDeclaracionesImpuesto(empresaId: number, anio?: number) {
+  const sufijo = anio != null ? `?anio=${anio}` : ''
+  const { data } = await api.get<DeclaracionImpuesto[]>(
+    `/empresas/${empresaId}/impuestos/declaraciones${sufijo}`,
+  )
+  return data
+}
+
+export async function listarCalendarioTributario(empresaId: number, anio?: number) {
+  const sufijo = anio != null ? `?anio=${anio}` : ''
+  const { data } = await api.get<CalendarioTributario[]>(
+    `/empresas/${empresaId}/impuestos/calendario${sufijo}`,
+  )
+  return data
+}
+
+export async function calcularImpuesto(
+  empresaId: number,
+  solicitud: { impuestoCodigo: string; anio: number; conceptoCodigo: string; base: number },
+) {
+  const { data } = await api.post<ResultadoCalculoImpuesto>(
+    `/empresas/${empresaId}/impuestos/calcular`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarFormatosExogena(empresaId: number) {
+  const { data } = await api.get<FormatoExogena[]>(`/empresas/${empresaId}/exogena/formatos`)
+  return data
+}
+
+export async function listarConceptosExogena(empresaId: number, formato: string) {
+  const { data } = await api.get<ConceptoExogena[]>(
+    `/empresas/${empresaId}/exogena/formatos/${encodeURIComponent(formato)}/conceptos`,
+  )
+  return data
+}
+
+export async function generarExogena(
+  empresaId: number,
+  formato: string,
+  solicitud: SolicitudGeneracionExogena,
+) {
+  const { data } = await api.post<ResultadoGeneracionExogena>(
+    `/empresas/${empresaId}/exogena/${encodeURIComponent(formato)}/generar`,
+    solicitud,
+  )
+  return data
+}
+
+export async function validarXmlExogena(empresaId: number, formato: string, xml: string) {
+  const { data } = await api.post<ResultadoValidacionExogena>(
+    `/empresas/${empresaId}/exogena/${encodeURIComponent(formato)}/validar-xml`,
+    { xml },
   )
   return data
 }

@@ -30,7 +30,7 @@ Navegador
 2. En el proyecto, botón **Connect → pestaña "Session pooler"** (necesaria para IPv4, requerida por Render):
    - Host: `aws-0-<REGION>.pooler.supabase.com` · Puerto `5432`
    - User: `postgres.<project-ref>`
-3. No hay que crear tablas: **Flyway migra automáticamente (V1–V23)** al primer arranque del backend.
+3. No hay que crear tablas: **Flyway migra automáticamente (V1–V25)** al primer arranque del backend.
    - La conexión directa (`db.<ref>.supabase.co`) es **solo IPv6** → no funciona desde Render.
    - El schema `public` viene ocupado → la app usa **baseline-on-migrate** (`application.yml`).
 

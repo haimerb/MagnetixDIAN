@@ -2,10 +2,10 @@
 
 Sistema con **seis módulos**:
 
-1. **Medios magnéticos (información exógena DIAN)** — formatos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Flujo: carga de Excel → validación → reporte → XML → marcar presentado + normalización de terceros.
-2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con CUFE/CUDE (SHA-384), UBL 2.1, firma XAdES-EPES, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP).
+1. **Medios magnéticos (información exógena DIAN)** — formatos clásicos **1001 v10** (pagos/abonos y retenciones) y **1002 v10** (créditos, descuentos y notas). Flujo heredado: carga de Excel → validación → reporte → XML → marcar presentado + normalización de terceros.
+2. **Facturación electrónica (FEV v1.9)** — emisión de facturas (01), notas crédito (91) y notas débito (92) con CUFE/CUDE (SHA-384), UBL 2.1, firma XAdES-EPES, PDF, QR y transmisión por canal (simulado / PAC / DIAN SOAP). Los eventos 030–034 se apoyan en la entidad heredada `documento_radian`; **RADIAN es la DIAN**, no un módulo de producto.
 3. **Integraciones y pagos** — sincronización con ERP/contabilidad/e-commerce, webhooks firmados y checkout de suscripciones (simulado / Wompi / MercadoPago).
-4. **Contabilidad** — traer documentos DIAN por token o archivo, causación, asientos y conciliación.
+4. **Núcleo contable `v0.4.0`** — traer documentos DIAN por token o archivo, causación, PUC jerárquico, periodos, asientos con reversión/cierre, libros, balances, impuestos, exógena oficial y conciliación.
 5. **Importación universal y migración contable** — detección de formato, mapeo de columnas y migración desde proveedores.
 6. **Facturación rápida, branding y PWA** — formulario simple, entrega por WhatsApp Click-to-Chat, identidad visual por empresa y app instalable.
 
@@ -33,7 +33,7 @@ Sistema con **seis módulos**:
 
 Se versionan 72 XSD oficiales en `backend/src/main/resources/xsd/dian/2025/`, extraídos sin ejecutar los prevalidadores publicados por la DIAN y de anexos normativos oficiales para los formatos `1125`, `2278` y `5253`. `manifest.json` registra URL oficial, SHA-256, bytes, versión y encoding por archivo. Los XSD de prevalidadores se conservan byte a byte; los tres anexos se transcriben del PDF oficial y se validan con `SchemaFactory` antes de versionarse.
 
-Los XSD `xsd/medio-magnetico-1001.xsd` y `xsd/medio-magnetico-1002.xsd` siguen siendo propios del generador legacy y no se reemplazan: sus namespaces son incompatibles con los esquemas oficiales. La presencia de un XSD oficial no habilita generación ni cobro; los formatos siguen pendientes hasta tener parser, reglas y generador validados.
+Los XSD `xsd/medio-magnetico-1001.xsd` y `xsd/medio-magnetico-1002.xsd` siguen siendo propios del generador legacy y no se reemplazan: sus namespaces son incompatibles con los esquemas oficiales. Los formatos **1125 v13**, **2278 v1** y **5253 v2** ya tienen `MapeadorExogenaOficial`, `GeneradorXmlExogenaOficial` y `ValidadorXsdOficialDian2025`; los otros 69 XSD del manifest quedan como `PENDIENTE_GENERADOR`, inactivos. La validación disponible se identifica como `xsd-local-2025` / `XSD local DIAN 2025 (no prevalidación oficial)` y `prevalidacionOficial=false`, incluido en las respuestas de generación y validación.
 
 **Requerimiento de JDK 17:** el Maven global del sistema usa JDK 8. Todos los builds exigen la variable de entorno:
 
@@ -47,12 +47,13 @@ export PATH="$JAVA_HOME/bin:$PATH"
 ```
 backend/src/main/java/com/magnetixdian/
   interfaces/rest/      Controllers REST (AuthController, MedioMagneticoController,
-                        FacturaController, ConfiguracionFeController, AdminController,
-                        PlanController, ApiKeyController, PagoController,
-                        IntegracionController, IntegracionWebhookController,
-                        RadianController, ContabilidadController,
-                        IntegracionMigracionController, ImportacionUniversalController,
-                        EntregaFacturaController, BrandingController, GlobalExceptionHandler)
+                         FacturaController, ConfiguracionFeController, AdminController,
+                         PlanController, ApiKeyController, PagoController,
+                         IntegracionController, IntegracionWebhookController,
+                         RadianController, TraerDianController, ContabilidadController,
+                         ImpuestosController, ExogenaController,
+                         IntegracionMigracionController, ImportacionUniversalController,
+                         EntregaFacturaController, BrandingController, GlobalExceptionHandler)
   interfaces/dto/       Records de respuesta (NUNCA entidades JPA — open-in-view=false)
                         incluido PaginaDto<T> para listados paginados
   application/          Servicios de caso de uso (AuthService, JwtService, ServicioAdmin,
@@ -64,8 +65,12 @@ backend/src/main/java/com/magnetixdian/
                         AuditoriaService, ProgramadorReintentos, ProgramadorAceptacionTacita,
                         ServicioCausacionRadian, ServicioDocumentosRadian,
                         ServicioContabilizacion, ServicioConciliacion,
-                        ServicioMigracionContable, ServicioMapeoColumnas,
-                        ServicioEntregaFactura, ServicioBranding)
+                         ServicioMigracionContable, ServicioMapeoColumnas,
+                         ServicioEntregaFactura, ServicioBranding,
+                         ServicioPlanCuentas, ServicioAsientos, ServicioReportesContables,
+                         ServicioTarifasImpuesto, ServicioResponsabilidadesFiscales,
+                         ServicioCausacionImpuestos, ServicioCertificadosImpuesto,
+                         ServicioDeclaracionesImpuesto, ServicioGeneracionExogena)
   domain/
     rule/               ReglaValidacion (interfaz), RuleEngine, reglas 1001/1002, CatalogoConceptos
     rule/factura/       Reglas de facturación (ValidadorFactura + ReglaFactura)
@@ -77,8 +82,11 @@ backend/src/main/java/com/magnetixdian/
     apikey/             ClaveApi (generación/hash SHA-256 de claves de API)
     radian/             LectorDocumentosRadian, TipoDocumentoRadian, DireccionDocumento,
                         EstadoCausacion
-    contabilidad/       PlanCuentas, GeneradorAsientoRadian
-    integracion/        ProveedorIntegracion, AdaptadorIntegracion (firma HMAC y reintentos),
+     contabilidad/       PlanCuentas, GeneradorAsientoRadian, MotorAsientos
+     exogena/            FormatoExogenaRegistry, CatalogoXsdOficialesDian2025,
+                         MapeadorExogenaOficial, CabeceraExogena, ConceptoExogena,
+                         DocumentoExogena, RegistroExogena, FormatoExogena
+     integracion/        ProveedorIntegracion, AdaptadorIntegracion (firma HMAC y reintentos),
                         DatosConexionIntegracion, EventoIntegracion, ResultadoIntegracion,
                         SolicitudMigracionContable, MapeoColumnaDto, VistaPreviaImportacionDto
     notificacion/       NotificadorWhatsApp (puerto Click-to-Chat)
@@ -87,8 +95,9 @@ backend/src/main/java/com/magnetixdian/
      model/              OperacionDatos, ResultadoRegla, Severidad
    infrastructure/
      excel/              ImportadorExcel (POI), PlantillaExcelGenerator
-     xml/                GeneradorXml1001/1002, GeneradorUblFactura, GeneradorAttachedDocument,
-                         GeneradorApplicationResponse
+      xml/                GeneradorXml1001/1002, GeneradorXmlExogenaOficial,
+                          ValidadorXsdOficialDian2025, GeneradorUblFactura,
+                          GeneradorAttachedDocument, GeneradorApplicationResponse
      pdf/                GeneradorPdfFactura (OpenPDF)
      transmision/        CanalSimulado, pac/ClientePac, dian/ClienteDianSoap
      pago/               PasarelaSimulada, PasarelaWompi, PasarelaMercadoPago
@@ -142,6 +151,8 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 | `V21__mapeo_archivos.sql` | `mapeo_archivo`, `importacion_staging`, únicos por empresa/formato/cabecera y por archivo/tipo/external_id |
 | `V22__empresa_branding.sql` | `empresa_branding` (slug público, colores, tipografía, pie de factura y WhatsApp/PWA) |
 | `V23__seguridad_auditoria.sql` | `evento_auditoria.empresa_id`, `credencial_auditoria` e índices |
+| `V24__nucleo_contable_base.sql` | `periodo_contable`, `centro_costo`, `tercero_contable`; PUC jerárquico 2025; `asiento_contable`/`asiento_contable_linea` ampliados con periodo, origen, tercero, centro de costo, reversión y base/impuesto; periodos del año corriente |
+| `V25__modulo_impuestos.sql` | `impuesto_tarifa`, `responsabilidad_fiscal`, `impuesto_causacion`, `impuesto_pago`, `certificado_impuesto`, `declaracion_impuesto`, `calendario_tributario` y seeds de tarifas/calendario |
 
 **Tablas de medios magnéticos:** `empresa`, `tercero`, `medio_magnetico`, `operacion`, `uvt_vigencia`, `regla`, `validacion` / `detalle_error`, `calendario_dian`, `notificacion`, `role` / `usuario` / `usuario_role`.
 
@@ -171,14 +182,21 @@ Migraciones Flyway en `backend/src/main/resources/db/migration/`:
 |---|---|
 | `documento_radian` | Documento importado (dirección, tipo, CUFE/CUDE, proveedor, totales, estado de causación) |
 | `documento_radian_linea` | Líneas del documento RADIAN |
-| `cuenta_contable` | Plan de cuentas por empresa (código, nombre, naturaleza) |
-| `asiento_contable` | Asientos generados desde RADIAN o migración (referencia, fecha, total, estado) |
+| `cuenta_contable` | Plan de cuentas por empresa/versión (código, nombre, naturaleza, padre, nivel) |
+| `asiento_contable` | Asientos de cualquier origen (referencia, fecha, total, estado, periodo, reversión) |
+| `asiento_contable_linea` | Líneas con centro de costo, tercero, base imponible e impuesto |
+| `periodo_contable` | Periodos mensuales por empresa con estado `ABIERTO`/`CERRADO` |
+| `centro_costo` / `tercero_contable` | Catálogos por empresa usados por asientos y reportes |
 | `migracion_contable` | Cabecera de migración por empresa/proveedor con conteo de aciertos y errores |
 | `migracion_contable_detalle` | Detalle por registro externo (estado, error, external_id) |
 | `mapeo_archivo` | Mapeo guardado por empresa/formato/cabecera detectada |
 | `importacion_staging` | Filas normalizadas de la vista previa antes de confirmar |
 | `empresa_branding` | Identidad visual por empresa (colores, fuente, pie de factura, WhatsApp y PWA) |
 | `credencial_auditoria` | Credenciales y eventos de seguridad con ámbito de empresa (V23) |
+| `impuesto_tarifa` / `calendario_tributario` | Tarifas vigentes por impuesto/año y fechas límite |
+| `responsabilidad_fiscal` | Responsabilidades por empresa/tercero/impuesto con vigencia |
+| `impuesto_causacion` / `impuesto_pago` | Causaciones por origen con pagos y estado `CAUSADO`/`PAGADO`/`ANULADO` |
+| `certificado_impuesto` / `declaracion_impuesto` | Certificados emitidos y declaraciones `BORRADOR`/`PRESENTADA` |
 
 **Estados de `medio_magnetico`:** `BORRADOR` → `CARGADO` → `VALIDADO` | `VALIDADO_CON_ERRORES` → `XML_GENERADO` → `PRESENTADO`. Solo se permite `PRESENTADO` desde `VALIDADO`/`VALIDADO_CON_ERRORES`/`XML_GENERADO`.
 
@@ -278,11 +296,12 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/mediomagnetico/plantilla?formato=` | Descarga la plantilla Excel (1001/1002) |
+| GET | `/api/mediomagnetico/formatos` | Catálogo unificado de formatos (clásicos y oficiales) |
+| GET | `/api/mediomagnetico/plantilla?formato=` | Descarga la plantilla Excel (1001/1002 o formato oficial activo) |
 | POST | `/api/mediomagnetico/{empresaId}/cargar` | Multipart: `formato`, `anioGravable`, `archivo` (Excel) |
 | POST | `/api/mediomagnetico/{id}/validar?anioGravable=` | Ejecuta validación → `ValidacionProcesoDto` |
 | GET | `/api/mediomagnetico/{id}/reporte` | Última corrida de validación |
-| POST | `/api/mediomagnetico/{id}/generar-xml` | Genera XML (1001 o 1002 según el formato) |
+| POST | `/api/mediomagnetico/{id}/generar-xml` | Genera XML clásico (1001/1002) o deriva al generador oficial |
 | GET | `/api/mediomagnetico/{id}/xml` | Descarga el XML (attachment) |
 | POST | `/api/mediomagnetico/{id}/presentar` | Marca como presentado (solo si validado) |
 | GET | `/api/mediomagnetico/{id}/terceros` | Resumen de terceros + sugerencias de DV |
@@ -350,6 +369,50 @@ Base: `/api`. Swagger: `http://localhost:8080/swagger-ui.html`.
 | GET | `/api/empresas/{empresaId}/contabilidad/asientos` | Lista de asientos contables |
 | POST | `/api/empresas/{empresaId}/contabilidad/conciliacion` | Conciliación contable (filtros opcionales) |
 
+### Núcleo contable (`v0.4.0`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/empresas/{empresaId}/contabilidad/asientos` | Crea asiento manual/ajuste/reversión/cierre/apertura |
+| POST | `/api/empresas/{empresaId}/contabilidad/asientos/{asientoId}/reversar` | Revierte un asiento |
+| POST | `/api/empresas/{empresaId}/contabilidad/periodos/{periodoId}/cerrar` | Cierra un periodo contable |
+| GET | `/api/empresas/{empresaId}/contabilidad/reportes/libro-diario` | Libro diario paginado |
+| GET | `/api/empresas/{empresaId}/contabilidad/reportes/libro-mayor` | Libro mayor paginado (`codigoCuenta`) |
+| GET | `/api/empresas/{empresaId}/contabilidad/reportes/auxiliares` | Auxiliares paginados (`codigoCuenta`) |
+| GET | `/api/empresas/{empresaId}/contabilidad/reportes/balance-comprobacion` | Balance de comprobación |
+| GET | `/api/empresas/{empresaId}/contabilidad/reportes/balance-general` | Balance general (`fechaCorte` obligatoria) |
+| GET | `/api/empresas/{empresaId}/contabilidad/reportes/estado-resultados` | Estado de resultados (`fechaDesde`/`fechaHasta`) |
+| GET | `/api/empresas/{empresaId}/contabilidad/reportes/flujo-efectivo` | Flujo de efectivo (`fechaDesde`/`fechaHasta`) |
+
+No hay endpoints REST de consulta de PUC/periodos: `ServicioPlanCuentas.listar()` y los repositorios de periodo no están expuestos; la UI muestra estados vacíos informativos.
+
+### Impuestos (`v0.4.0`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/empresas/{empresaId}/impuestos/tarifas` | Tarifas por `impuestoCodigo`/`anio` |
+| POST | `/api/empresas/{empresaId}/impuestos/calcular` | Calcula impuesto aplicando tarifa y mínimo en UVT |
+| GET/POST | `/api/empresas/{empresaId}/impuestos/responsabilidades` | Consulta/registra responsabilidades fiscales |
+| POST | `/api/empresas/{empresaId}/impuestos/causaciones` | Causa un impuesto por origen |
+| GET | `/api/empresas/{empresaId}/impuestos/causaciones` | Lista por `periodo` o `terceroId` |
+| POST | `/api/empresas/{empresaId}/impuestos/causaciones/{causacionId}/pagos` | Registra un pago |
+| POST | `/api/empresas/{empresaId}/impuestos/causaciones/{causacionId}/anular` | Anula una causación |
+| GET/POST | `/api/empresas/{empresaId}/impuestos/certificados` | Consulta/emite certificados (`anio`) |
+| GET/POST | `/api/empresas/{empresaId}/impuestos/declaraciones` | Consulta/genera borradores (`anio`) |
+| POST | `/api/empresas/{empresaId}/impuestos/declaraciones/{declaracionId}/presentar` | Marca la declaración como presentada |
+| GET | `/api/empresas/{empresaId}/impuestos/calendario` | Calendario tributario (`anio`) |
+
+### Exógena oficial (`v0.4.0`)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/empresas/{empresaId}/exogena/formatos` | Catálogo de formatos (`1001`, `1002`, `1125`, `2278`, `5253`, …) |
+| GET | `/api/empresas/{empresaId}/exogena/formatos/{formato}/conceptos` | Conceptos del formato oficial |
+| POST | `/api/empresas/{empresaId}/exogena/{formato}/generar` | Genera XML; descarga `exogena-<formato>.xml` |
+| POST | `/api/empresas/{empresaId}/exogena/{formato}/validar-xml` | Valida contra XSD local DIAN 2025 (`prevalidacionOficial=false`) |
+
+`GET /api/mediomagnetico/formatos` expone `codigo`, `descripcion`, `estado`, `activo`, `version`, `xsd`, `validacion`, `generadorXml` y `encabezados`. La carga de plantilla y `generar-xml`/`xml` derivan los formatos oficiales a `ServicioGeneracionExogena`.
+
 ### Migración contable e importación universal
 
 | Método | Ruta | Descripción |
@@ -411,6 +474,7 @@ cd frontend
 pnpm run lint       # ESLint (0 errores, 0 warnings)
 pnpm run test       # Vitest
 pnpm run build      # tsc -b + vite build
+pnpm exec playwright test --list
 pnpm run test:e2e   # Playwright (requiere backend + preview)
 
 # Regenerar los Excel de prueba (desde backend/)
@@ -528,7 +592,7 @@ como respaldo cada 10 minutos. Es una **mitigación, no un SLA** (detalles en `d
 
 ## 12. Pruebas y smoke test
 
-Suite JUnit en `backend/src/test/java/` (rule engine, reglas de facturación, CUFE/QR/CUDE, importador Excel, seguridad, generador automático, suscripciones, claves de API y pasarelas), ampliada con `CifradorAesTest`, `ServicioBrandingTest`, `ServicioEntregaFacturaTest`, `ServicioDocumentosRadianTest`, `ServicioCausacionRadianTest`, `ServicioContabilizacionTest`, `ServicioConciliacionTest`, `ServicioMigracionContableTest`, `ServicioMapeoColumnasTest`, `MapperColumnasInteligenteTest`, `RadianControllerTest`, `ContabilidadControllerTest`, `ImportacionUniversalControllerTest` y `GeneradorPdfFacturaBrandingTest`. Suite Vitest en `frontend/src/**/*.test.tsx` (átomos, ErrorBoundary, notificaciones, tema). Suite E2E Playwright en `frontend/e2e/`.
+Suite JUnit en `backend/src/test/java/` (rule engine, reglas de facturación, CUFE/QR/CUDE, importador Excel, seguridad, generador automático, suscripciones, claves de API y pasarelas), ampliada con `CifradorAesTest`, `ServicioBrandingTest`, `ServicioEntregaFacturaTest`, `ServicioDocumentosRadianTest`, `ServicioCausacionRadianTest`, `ServicioContabilizacionTest`, `ServicioConciliacionTest`, `ServicioMigracionContableTest`, `ServicioMapeoColumnasTest`, `MapperColumnasInteligenteTest`, `RadianControllerTest`, `ContabilidadControllerTest`, `ImportacionUniversalControllerTest` y `GeneradorPdfFacturaBrandingTest`. El cierre `v0.4.0` añade `ServicioPlanCuentasTest`, `ServicioCertificadosImpuestoTest`, `ServicioDeclaracionesImpuestoTest`, `ServicioResponsabilidadesFiscalesTest`, `PlantillaExcelGeneratorTest` y amplía `ContabilidadControllerTest`, `ImpuestosControllerTest` y `ExogenaControllerTest`. Suite Vitest en `frontend/src/**/*.test.tsx` (átomos, ErrorBoundary, notificaciones, tema). Suite E2E Playwright en `frontend/e2e/`.
 
 ```bash
 # Backend con tests
@@ -700,3 +764,13 @@ intactos.
 La auditoría de V23 añade `empresa_id` a `evento_auditoria` y crea `credencial_auditoria`,
 de forma que login, cambios de clave, CRUD admin, emisión/rechazo y entrega WhatsApp quedan
 trazables por empresa.
+
+### 14.5 Núcleo contable, impuestos y exógena oficial (`v0.4.0`)
+
+`ServicioPlanCuentas.asegurar` copia el PUC global `2025` a la empresa al contabilizar; `obtener` prefiere la cuenta propia sobre la global. `ServicioAsientos.crear` valida periodo abierto, tipos `MANUAL/AJUSTE/REVERSION/CIERRE/APERTURA`, balance débito=crédito y numera `AS-{empresa}-{YYYYMM}-{0001}`. `ServicioAsientos.reversar` y `cerrarPeriodo` completan el ciclo; `MotorAsientos` construye asientos desde documentos DIAN heredados.
+
+`ServicioReportesContables` genera libro diario, libro mayor, auxiliares, balance de comprobación, balance general, estado de resultados y flujo de efectivo sobre asientos `CONTABILIZADO/APROBADO/CERRADO`. Los listados paginados usan `PaginaDto<T>`; los libros en memoria tienen tope de `200` filas por página.
+
+El módulo de impuestos separa `ServicioTarifasImpuesto` (tarifa vigente y mínimo UVT), `ServicioResponsabilidadesFiscales` (vigencia `desde/hasta`), `ServicioCausacionImpuestos` (causar/pagar/anular), `ServicioCertificadosImpuesto`, `ServicioDeclaracionesImpuesto` (borrador, saldo y fecha límite con fallback día 20) y `ServicioDeclaracionesImpuesto.listarCalendario`. No requieren variables de entorno nuevas.
+
+`FormatoExogenaRegistry` mantiene 74 entradas (2 clásicas + 72 del manifest) y 5 activas: `1001`, `1002`, `1125`, `2278` y `5253`. Para los formatos oficiales, `MapeadorExogenaOficial` normaliza alias y requisitos, `GeneradorXmlExogenaOficial` produce `<mas><Cab>...` en ISO-8859-1 y `ValidadorXsdOficialDian2025` valida contra `/xsd/dian/2025/{formato}.xsd` con `FEATURE_SECURE_PROCESSING`, sin DTD ni esquemas externos. `ServicioGeneracionExogena` audita `GENERAR_EXOGENA` y devuelve `prevalidacionOficial=false` en todas las respuestas.
