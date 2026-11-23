@@ -3,8 +3,11 @@ package com.magnetixdian.interfaces.rest;
 import com.magnetixdian.application.ServicioAsientos;
 import com.magnetixdian.application.ServicioConciliacion;
 import com.magnetixdian.application.ServicioContabilizacion;
+import com.magnetixdian.application.ServicioReportesContables;
 import com.magnetixdian.interfaces.dto.AsientoContableDto;
 import com.magnetixdian.interfaces.dto.ConciliacionLineaDto;
+import com.magnetixdian.interfaces.dto.EstadoFinancieroDto;
+import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoConciliacionDto;
 import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
@@ -43,6 +46,8 @@ class ContabilidadControllerTest {
     @Mock
     private ServicioAsientos servicioAsientos;
     @Mock
+    private ServicioReportesContables servicioReportes;
+    @Mock
     private AutorizacionEmpresa autorizacion;
 
     private MockMvc mockMvc;
@@ -50,7 +55,7 @@ class ContabilidadControllerTest {
     @BeforeEach
     void setUp() {
         ContabilidadController controller = new ContabilidadController(
-                servicioContabilizacion, servicioConciliacion, servicioAsientos, autorizacion);
+                servicioContabilizacion, servicioConciliacion, servicioAsientos, servicioReportes, autorizacion);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -114,6 +119,32 @@ class ContabilidadControllerTest {
                 .andExpect(jsonPath("$.numero").value("AS-1-202603-0001"));
 
         verify(servicioAsientos).cerrarPeriodo(1L, 3L);
+    }
+
+    @Test
+    void listarLibroDiarioPaginado() throws Exception {
+        when(servicioReportes.libroDiario(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31),
+                null, null, 0, 20)).thenReturn(
+                new PaginaDto<>(List.of(asientoDto()), 0, 20, 1, 1, true, true));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/reportes/libro-diario")
+                        .param("fechaDesde", "2026-03-01")
+                        .param("fechaHasta", "2026-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.contenido[0].numero").value("AS-1-202603-0001"));
+    }
+
+    @Test
+    void consultarBalanceGeneral() throws Exception {
+        when(servicioReportes.balanceGeneral(1L, LocalDate.of(2026, 3, 31)))
+                .thenReturn(new EstadoFinancieroDto("Balance general", null,
+                        LocalDate.of(2026, 3, 31), List.of(), BigDecimal.ZERO.setScale(2)));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/reportes/balance-general")
+                        .param("fechaCorte", "2026-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.titulo").value("Balance general"));
     }
 
     @Test
