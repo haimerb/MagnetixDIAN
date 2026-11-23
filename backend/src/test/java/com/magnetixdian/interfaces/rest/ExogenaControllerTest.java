@@ -2,6 +2,7 @@ package com.magnetixdian.interfaces.rest;
 
 import com.magnetixdian.application.ServicioGeneracionExogena;
 import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
+import com.magnetixdian.interfaces.dto.ConceptoExogenaDto;
 import com.magnetixdian.interfaces.dto.ResultadoGeneracionExogenaDto;
 import com.magnetixdian.interfaces.dto.ResultadoValidacionExogenaDto;
 import com.magnetixdian.interfaces.dto.SolicitudGeneracionExogenaDto;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -58,6 +61,19 @@ class ExogenaControllerTest {
     }
 
     @Test
+    void listarConceptosDelFormato() throws Exception {
+        when(servicio.conceptos("1125")).thenReturn(List.of(
+                new ConceptoExogenaDto("1125", "1001", "Información de terceros", 1001)));
+
+        mockMvc.perform(get("/api/empresas/1/exogena/formatos/1125/conceptos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].formato").value("1125"))
+                .andExpect(jsonPath("$[0].codigo").value("1001"));
+
+        verify(servicio).conceptos("1125");
+    }
+
+    @Test
     void generarXmlUsaElFormatoDeLaRuta() throws Exception {
         when(servicio.generar(eq(1L), any())).thenReturn(new ResultadoGeneracionExogenaDto(
                 "1125", "13", "Formato 1125", 1, "<xml/>", "XSD local", false));
@@ -72,6 +88,8 @@ class ExogenaControllerTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=exogena-1125.xml"))
                 .andExpect(jsonPath("$.formato").value("1125"))
                 .andExpect(jsonPath("$.prevalidacionOficial").value(false));
 
