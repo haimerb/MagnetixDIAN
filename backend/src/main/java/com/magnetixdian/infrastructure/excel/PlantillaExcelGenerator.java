@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Genera la plantilla Excel editable del formato 1001/1002: una hoja listada
@@ -50,6 +51,30 @@ public class PlantillaExcelGenerator {
 
             ejemplos(sheet);
 
+            wb.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    public byte[] generar(String formato, List<String> encabezados) throws IOException {
+        if (encabezados == null || encabezados.isEmpty()) {
+            return generar(formato);
+        }
+        try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet(formato);
+            for (int c = 0; c < encabezados.size(); c++) {
+                sheet.setColumnWidth(c, 20);
+            }
+            Row titulo = sheet.createRow(0);
+            titulo.createCell(0).setCellValue("MagnetixDIAN — Plantilla oficial formato " + formato
+                    + " (información exógena DIAN)");
+            Row header = sheet.createRow(1);
+            CellStyle estiloHeader = headerStyle(wb);
+            for (int c = 0; c < encabezados.size(); c++) {
+                var cell = header.createCell(c);
+                cell.setCellValue(encabezados.get(c));
+                cell.setCellStyle(estiloHeader);
+            }
             wb.write(out);
             return out.toByteArray();
         }

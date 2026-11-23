@@ -1,0 +1,14 @@
+{
+  "anioGravable": 2025,
+  "filas": [
+    {
+      "TIPO_DOCUMENTO_BENEFICIARIO": "31",
+      "NIT": "900123456",
+      "PRIMER_APELLIDO": "LOPEZ",
+      "PRIMER_NOMBRE": "JUAN",
+      "PAIS": "1",
+      "CLASE_BONO": "1",
+      "VALOR_TOTAL": "250000"
+    }
+  ]
+}

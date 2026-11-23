@@ -1,5 +1,6 @@
 package com.magnetixdian.interfaces.rest;
 
+import com.magnetixdian.application.ServicioGeneracionExogena;
 import com.magnetixdian.application.ServicioImportacionExogena;
 import com.magnetixdian.application.ServicioMedioMagnetico;
 import com.magnetixdian.application.ServicioMedioMagnetico.CargaResultado;
@@ -38,17 +39,25 @@ public class MedioMagneticoController {
     private final FormatoExogenaRegistry formatos;
     private final ServicioImportacionExogena importacionExogena;
     private final ServicioValidacionDatosJson validacionDatosJson;
+    private final ServicioGeneracionExogena generacionExogena;
 
     public MedioMagneticoController(ServicioMedioMagnetico servicio, AutorizacionEmpresa autorizacion,
-                                    FormatoExogenaRegistry formatos,
-                                    ServicioImportacionExogena importacionExogena,
-                                    ServicioValidacionDatosJson validacionDatosJson) {
+                                     FormatoExogenaRegistry formatos,
+                                     ServicioImportacionExogena importacionExogena,
+                                     ServicioValidacionDatosJson validacionDatosJson,
+                                     ServicioGeneracionExogena generacionExogena) {
         this.servicio = servicio;
         this.autorizacion = autorizacion;
         this.formatos = formatos;
         this.importacionExogena = importacionExogena;
         this.validacionDatosJson = validacionDatosJson;
+        this.generacionExogena = generacionExogena;
     }
+
+    private boolean esFormatoOficial(String formato) {
+        return FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS.contains(formato);
+    }
+
 
     private void verificarPorMedio(Long medioMagneticoId, Authentication authentication) {
         autorizacion.verificar(servicio.empresaDe(medioMagneticoId), authentication);
@@ -119,7 +128,9 @@ public class MedioMagneticoController {
     @PostMapping("/{medioMagneticoId}/generar-xml")
     public ResponseEntity<String> generarXml(@PathVariable Long medioMagneticoId, Authentication authentication) {
         verificarPorMedio(medioMagneticoId, authentication);
-        String xml = servicio.generarXml(medioMagneticoId);
+        String xml = esFormatoOficial(servicio.formatoDe(medioMagneticoId))
+                ? generacionExogena.generarDesdeMedio(medioMagneticoId)
+                : servicio.generarXml(medioMagneticoId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_XML)
                 .body(xml);
@@ -147,8 +158,10 @@ public class MedioMagneticoController {
     @GetMapping("/{medioMagneticoId}/xml")
     public ResponseEntity<byte[]> descargarXml(@PathVariable Long medioMagneticoId, Authentication authentication) {
         verificarPorMedio(medioMagneticoId, authentication);
-        String xml = servicio.generarXml(medioMagneticoId);
         String formato = servicio.formatoDe(medioMagneticoId);
+        String xml = esFormatoOficial(formato)
+                ? generacionExogena.generarDesdeMedio(medioMagneticoId)
+                : servicio.generarXml(medioMagneticoId);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=medio-magnetico-" + formato + ".xml")

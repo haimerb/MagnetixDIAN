@@ -20,18 +20,25 @@ class ServicioGeneracionAutomaticaTest {
 
     private MedioMagneticoRepository medioRepo;
     private ServicioMedioMagnetico servicioMedio;
+    private ServicioGeneracionExogena generacionExogena;
     private ServicioGeneracionAutomatica servicio;
 
     @BeforeEach
     void setUp() {
         medioRepo = mock(MedioMagneticoRepository.class);
         servicioMedio = mock(ServicioMedioMagnetico.class);
-        servicio = new ServicioGeneracionAutomatica(medioRepo, servicioMedio);
+        generacionExogena = mock(ServicioGeneracionExogena.class);
+        servicio = new ServicioGeneracionAutomatica(medioRepo, servicioMedio, generacionExogena);
     }
 
     private MedioMagneticoJpa medio(long id) {
+        return medio(id, "1001");
+    }
+
+    private MedioMagneticoJpa medio(long id, String formato) {
         MedioMagneticoJpa m = mock(MedioMagneticoJpa.class);
         when(m.getId()).thenReturn(id);
+        when(m.getFormato()).thenReturn(formato);
         return m;
     }
 
@@ -61,5 +68,17 @@ class ServicioGeneracionAutomaticaTest {
         assertEquals(1, servicio.generarPendientes());
         verify(servicioMedio, times(1)).generarXml(1L);
         verify(servicioMedio, times(1)).generarXml(2L);
+    }
+
+    @Test
+    void generaFormatosOficialesConElServicioDeExogena() {
+        MedioMagneticoJpa oficial = medio(3, "1125");
+        MedioMagneticoJpa legado = medio(4, "1001");
+        when(medioRepo.findByEstadoIn(List.of("VALIDADO"))).thenReturn(List.of(oficial, legado));
+
+        assertEquals(2, servicio.generarPendientes());
+
+        verify(generacionExogena).generarDesdeMedio(3L);
+        verify(servicioMedio).generarXml(4L);
     }
 }
