@@ -109,6 +109,25 @@ test.describe('Contabilidad', () => {
     await stubAutenticacion(page)
   })
 
+  test('el menú de Contabilidad lleva a Asentar facturación y desde allí a Asientos contables', async ({ page }) => {
+    await page.route('**/api/empresas/1/radian/documentos*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }),
+    )
+    await page.route('**/api/empresas/1/contabilidad/asientos*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([ASIENTO]) }),
+    )
+
+    await loginAdmin(page)
+    await page.getByRole('button', { name: 'Contabilidad' }).click()
+    await expect(page).toHaveURL(/\/app\/contabilidad\/asentar-facturacion$/)
+    await expect(page.getByRole('heading', { name: 'Asentar la facturación' })).toBeVisible()
+
+    await page.getByRole('link', { name: 'Asientos contables' }).click()
+    await expect(page).toHaveURL(/\/app\/contabilidad(?:\?.*)?$/)
+    await expect(page.getByRole('heading', { name: 'Asientos contables' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Exógena' })).toBeVisible()
+  })
+
   test('lista asientos y muestra la conciliación detallada', async ({ page }) => {
     let conciliado = false
     await page.route('**/api/empresas/1/contabilidad/asientos', (route) =>
