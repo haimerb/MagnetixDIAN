@@ -55,11 +55,11 @@ La URL del frontend es `https://magnetixdian.<cuenta>.workers.dev` (o
 
 - `/api/*` se proxya a `BACKEND_ORIGIN` (Render).
 - Rutas cliente devuelven `index.html` (`not_found_handling = single-page-application`).
-- `run_worker_first` garantiza cabeceras propias para `/manifest.webmanifest`, `/sw.js` e `/icon.svg`.
+- `run_worker_first` garantiza cabeceras propias para `/manifest.webmanifest`, `/sw.js`, `/sw-*.js` e `/icon.svg`.
 
 | Ruta | Content-Type | Cache-Control |
 | --- | --- | --- |
-| `/sw.js` | `application/javascript; charset=utf-8` | `no-cache, no-store, must-revalidate` + `Service-Worker-Allowed: /` |
+| `/sw.js`, `/sw-*.js` | `application/javascript; charset=utf-8` | `no-cache, no-store, must-revalidate` + `Service-Worker-Allowed: /` |
 | `/manifest.webmanifest` | `application/manifest+json; charset=utf-8` | `public, max-age=3600` |
 | `/icon.svg` | `image/svg+xml` | `public, max-age=86400` |
 

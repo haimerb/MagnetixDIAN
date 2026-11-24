@@ -4,7 +4,7 @@ compatibility_date = "2026-01-01"
 
 # Sirve el build de producción del frontend (React SPA).
 # not_found_handling: cualquier ruta cliente (ej. /validacion) devuelve index.html.
-assets = { directory = "frontend/dist", binding = "ASSETS", not_found_handling = "single-page-application", run_worker_first = ["/api/*", "/manifest.webmanifest", "/sw.js", "/icon.svg"] }
+assets = { directory = "frontend/dist", binding = "ASSETS", not_found_handling = "single-page-application", run_worker_first = ["/api/*", "/manifest.webmanifest", "/sw.js", "/sw-*.js", "/icon.svg"] }
 
 # Se ejecuta automáticamente antes de `npx wrangler deploy` (comando por defecto de Cloudflare).
 # Compila Vite → frontend/dist; sin esto Cloudflare no puede subir los assets.
