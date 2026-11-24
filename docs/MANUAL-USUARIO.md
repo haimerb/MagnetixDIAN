@@ -51,6 +51,27 @@ En **Empresa → Configuración FE / Asistente DIAN**:
 
 No es necesario tramitar un PT para los modos `PROPIO_INTERNO` o `ADQUIRIDO_CLIENTE`.
 
+### Checklist para desbloquear la emisión
+
+La emisión solo se permite cuando el estado de habilitación de la empresa es `PRODUCCION`.
+Si aparece `Emisión bloqueada: se requiere TEST_SET_APROBADO y switchover a producción.`,
+revise en este orden:
+
+1. **Modo:** en **Empresa → Habilitación DIAN** confirme `ADQUIRIDO_CLIENTE`, salvo que un PT
+   autorizado sea el titular de la habilitación.
+2. **Resolución:** número, fecha, prefijo y rangos autorizados vigentes.
+3. **Certificado:** PKCS#12 y contraseña cargados; se guardan cifrados por empresa.
+4. **Identificadores:** registre `softwareId` y `testSetId` del entorno de habilitación.
+5. **TEST SET:** envíe los 10 documentos y consulte el resultado por `trackId` hasta obtener
+   `TEST_SET_APROBADO`. Si hay rechazos, corrija y reenvíe.
+6. **Switchover:** escriba `APRUEBO_SWITCHOVER`, confirme el número de resolución y envíe.
+   La operación queda registrada en auditoría como `SWITCHOVER_PRODUCCION`.
+7. **Verificación:** vuelva a **Facturación → Nueva factura**; el aviso debe decir
+   `Habilitación en producción activa: emisión permitida.`
+
+Sin `TEST_SET_APROBADO` no se habilita el botón de switchover. Sin switchover el estado no
+pasa a `PRODUCCION` y la emisión sigue bloqueada, aunque el modo ya esté configurado.
+
 ## 4. Primera factura
 
 1. **Facturación → Factura rápida** (o **Nueva factura**): cliente, ítems, impuestos y forma de pago.
