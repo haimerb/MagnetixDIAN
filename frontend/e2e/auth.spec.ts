@@ -4,7 +4,7 @@ import { loginAdmin } from './helpers'
 test.describe('Autenticación', () => {
   test('muestra la landing pública con acceso al registro', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Información exógena DIAN sin fricción' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'De la venta a la factura, sin fricción' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Crear cuenta gratis' }).first()).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Planes simples' })).toBeVisible()
   })

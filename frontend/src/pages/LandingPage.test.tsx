@@ -55,7 +55,7 @@ describe('LandingPage', () => {
   it('muestra la propuesta de valor y el enlace de registro', async () => {
     renderPage()
 
-    expect(screen.getByRole('heading', { name: 'Información exógena DIAN sin fricción' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'De la venta a la factura, sin fricción' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'Crear cuenta gratis' }).length).toBeGreaterThan(0)
     expect(await screen.findByText('Profesional')).toBeInTheDocument()
     expect(screen.getAllByText('Gratis').length).toBeGreaterThan(0)
