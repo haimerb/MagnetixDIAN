@@ -15,6 +15,8 @@ cwd = "frontend"
 [vars]
 # El worker reenvía /api/* a este backend (Render). Ajustar si cambia el servicio.
 BACKEND_ORIGIN = "https://magnetixdian-backend.onrender.com"
+# CI sobrescribe este valor con el SHA del commit: se inyecta en sw.js para invalidar su caché.
+SW_VERSION = "dev"
 
 [triggers]
 crons = ["*/5 * * * *"]

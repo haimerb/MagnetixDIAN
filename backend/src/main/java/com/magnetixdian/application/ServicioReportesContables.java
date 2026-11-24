@@ -12,7 +12,10 @@ import com.magnetixdian.interfaces.dto.FlujoEfectivoDto;
 import com.magnetixdian.interfaces.dto.GrupoEstadoDto;
 import com.magnetixdian.interfaces.dto.MovimientoContableDto;
 import com.magnetixdian.interfaces.dto.PaginaDto;
+import com.magnetixdian.interfaces.dto.ResumenContableDto;
 import com.magnetixdian.interfaces.dto.SaldoCuentaDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,11 +39,70 @@ public class ServicioReportesContables {
 
     private final AsientoContableRepository asientoRepository;
     private final ServicioPlanCuentas servicioPlanCuentas;
+    private JdbcTemplate jdbc;
 
     public ServicioReportesContables(AsientoContableRepository asientoRepository,
                                      ServicioPlanCuentas servicioPlanCuentas) {
         this.asientoRepository = asientoRepository;
         this.servicioPlanCuentas = servicioPlanCuentas;
+    }
+
+    @Autowired(required = false)
+    public void setJdbc(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    public List<ResumenContableDto> resumenPorCuenta(Long empresaId, LocalDate fechaDesde,
+                                                     LocalDate fechaHasta) {
+        if (jdbc == null) {
+            throw new IllegalStateException("El reporte SQL requiere acceso a base de datos");
+        }
+        return jdbc.query("""
+                SELECT cc.codigo, cc.nombre,
+                       SUM(COALESCE(l.debito, 0)) AS debito,
+                       SUM(COALESCE(l.credito, 0)) AS credito,
+                       SUM(CASE WHEN cc.naturaleza = 'ACREEDORA'
+                                THEN COALESCE(l.credito, 0) - COALESCE(l.debito, 0)
+                                ELSE COALESCE(l.debito, 0) - COALESCE(l.credito, 0) END) AS saldo,
+                       COUNT(DISTINCT a.id) AS cantidad
+                FROM asiento_contable_linea l
+                JOIN asiento_contable a ON a.id = l.asiento_contable_id
+                JOIN cuenta_contable cc ON cc.id = l.cuenta_contable_id
+                WHERE a.empresa_id = ? AND a.estado IN ('CONTABILIZADO', 'APROBADO', 'CERRADO')
+                  AND (CAST(? AS DATE) IS NULL OR a.fecha >= CAST(? AS DATE))
+                  AND (CAST(? AS DATE) IS NULL OR a.fecha <= CAST(? AS DATE))
+                GROUP BY cc.codigo, cc.nombre, cc.naturaleza
+                ORDER BY cc.codigo
+                """, (rs, fila) -> new ResumenContableDto(
+                rs.getString("codigo"), rs.getString("nombre"), rs.getBigDecimal("debito"),
+                rs.getBigDecimal("credito"), rs.getBigDecimal("saldo"), rs.getInt("cantidad")),
+                empresaId, fechaDesde, fechaDesde, fechaHasta, fechaHasta);
+    }
+
+    public List<ResumenContableDto> resumenPorTercero(Long empresaId, LocalDate fechaDesde,
+                                                      LocalDate fechaHasta) {
+        if (jdbc == null) {
+            throw new IllegalStateException("El reporte SQL requiere acceso a base de datos");
+        }
+        return jdbc.query("""
+                SELECT COALESCE(tc.numero_documento, 'SIN_TERCERO') AS codigo,
+                       COALESCE(tc.nombre, 'Sin tercero') AS nombre,
+                       SUM(COALESCE(l.debito, 0)) AS debito,
+                       SUM(COALESCE(l.credito, 0)) AS credito,
+                       SUM(COALESCE(l.debito, 0) - COALESCE(l.credito, 0)) AS saldo,
+                       COUNT(DISTINCT a.id) AS cantidad
+                FROM asiento_contable_linea l
+                JOIN asiento_contable a ON a.id = l.asiento_contable_id
+                LEFT JOIN tercero_contable tc ON tc.id = l.tercero_id
+                WHERE a.empresa_id = ? AND a.estado IN ('CONTABILIZADO', 'APROBADO', 'CERRADO')
+                  AND (CAST(? AS DATE) IS NULL OR a.fecha >= CAST(? AS DATE))
+                  AND (CAST(? AS DATE) IS NULL OR a.fecha <= CAST(? AS DATE))
+                GROUP BY tc.numero_documento, tc.nombre
+                ORDER BY COALESCE(tc.numero_documento, 'SIN_TERCERO')
+                """, (rs, fila) -> new ResumenContableDto(
+                rs.getString("codigo"), rs.getString("nombre"), rs.getBigDecimal("debito"),
+                rs.getBigDecimal("credito"), rs.getBigDecimal("saldo"), rs.getInt("cantidad")),
+                empresaId, fechaDesde, fechaDesde, fechaHasta, fechaHasta);
     }
 
     public PaginaDto<AsientoContableDto> libroDiario(Long empresaId, LocalDate fechaDesde, LocalDate fechaHasta,

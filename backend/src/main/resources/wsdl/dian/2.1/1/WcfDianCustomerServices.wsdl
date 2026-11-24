@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions name="WcfDianCustomerServices"
+                  targetNamespace="http://wcf.dian.colombia"
+                  xmlns:tns="http://wcf.dian.colombia"
+                  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <wsdl:documentation>WSDL de estructura valida para DIAN 2.1 produccion. No es el WSDL oficial: sustituir por el publicado por la DIAN antes de operar en produccion.</wsdl:documentation>
+    <wsdl:types>
+        <xs:schema targetNamespace="http://wcf.dian.colombia" elementFormDefault="qualified">
+            <xs:element name="SendBillSync">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="fileName" type="xs:string" minOccurs="0"/>
+                    <xs:element name="contentFile" type="xs:base64Binary" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+            <xs:element name="SendBillSyncResponse">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="TrackId" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusCode" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusMessage" type="xs:string" minOccurs="0"/>
+                    <xs:element name="Cufe" type="xs:string" minOccurs="0"/>
+                    <xs:element name="XmlHash" type="xs:string" minOccurs="0"/>
+                    <xs:element name="Timestamp" type="xs:string" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+            <xs:element name="SendTestSetAsync">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="fileName" type="xs:string" minOccurs="0"/>
+                    <xs:element name="contentFile" type="xs:base64Binary" minOccurs="0"/>
+                    <xs:element name="testSetId" type="xs:string" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+            <xs:element name="SendTestSetAsyncResponse">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="TrackId" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusCode" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusMessage" type="xs:string" minOccurs="0"/>
+                    <xs:element name="Timestamp" type="xs:string" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+            <xs:element name="GetStatus">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="TrackId" type="xs:string" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+            <xs:element name="GetStatusResponse">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="TrackId" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusCode" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusMessage" type="xs:string" minOccurs="0"/>
+                    <xs:element name="Cufe" type="xs:string" minOccurs="0"/>
+                    <xs:element name="XmlHash" type="xs:string" minOccurs="0"/>
+                    <xs:element name="Timestamp" type="xs:string" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+            <xs:element name="GetStatusByTrackId">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="TrackId" type="xs:string" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+            <xs:element name="GetStatusByTrackIdResponse">
+                <xs:complexType><xs:sequence>
+                    <xs:element name="TrackId" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusCode" type="xs:string" minOccurs="0"/>
+                    <xs:element name="StatusMessage" type="xs:string" minOccurs="0"/>
+                    <xs:element name="Cufe" type="xs:string" minOccurs="0"/>
+                    <xs:element name="XmlHash" type="xs:string" minOccurs="0"/>
+                    <xs:element name="Timestamp" type="xs:string" minOccurs="0"/>
+                </xs:sequence></xs:complexType>
+            </xs:element>
+        </xs:schema>
+    </wsdl:types>
+    <wsdl:message name="SendBillSyncSoapIn"><wsdl:part name="parameters" element="tns:SendBillSync"/></wsdl:message>
+    <wsdl:message name="SendBillSyncSoapOut"><wsdl:part name="parameters" element="tns:SendBillSyncResponse"/></wsdl:message>
+    <wsdl:message name="SendTestSetAsyncSoapIn"><wsdl:part name="parameters" element="tns:SendTestSetAsync"/></wsdl:message>
+    <wsdl:message name="SendTestSetAsyncSoapOut"><wsdl:part name="parameters" element="tns:SendTestSetAsyncResponse"/></wsdl:message>
+    <wsdl:message name="GetStatusSoapIn"><wsdl:part name="parameters" element="tns:GetStatus"/></wsdl:message>
+    <wsdl:message name="GetStatusSoapOut"><wsdl:part name="parameters" element="tns:GetStatusResponse"/></wsdl:message>
+    <wsdl:message name="GetStatusByTrackIdSoapIn"><wsdl:part name="parameters" element="tns:GetStatusByTrackId"/></wsdl:message>
+    <wsdl:message name="GetStatusByTrackIdSoapOut"><wsdl:part name="parameters" element="tns:GetStatusByTrackIdResponse"/></wsdl:message>
+    <wsdl:portType name="IWcfDianCustomerServices">
+        <wsdl:operation name="SendBillSync">
+            <wsdl:input message="tns:SendBillSyncSoapIn"/>
+            <wsdl:output message="tns:SendBillSyncSoapOut"/>
+        </wsdl:operation>
+        <wsdl:operation name="SendTestSetAsync">
+            <wsdl:input message="tns:SendTestSetAsyncSoapIn"/>
+            <wsdl:output message="tns:SendTestSetAsyncSoapOut"/>
+        </wsdl:operation>
+        <wsdl:operation name="GetStatus">
+            <wsdl:input message="tns:GetStatusSoapIn"/>
+            <wsdl:output message="tns:GetStatusSoapOut"/>
+        </wsdl:operation>
+        <wsdl:operation name="GetStatusByTrackId">
+            <wsdl:input message="tns:GetStatusByTrackIdSoapIn"/>
+            <wsdl:output message="tns:GetStatusByTrackIdSoapOut"/>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="WcfDianCustomerServicesBinding" type="tns:IWcfDianCustomerServices">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="SendBillSync">
+            <soap:operation soapAction="http://wcf.dian.colombia/IWcfDianCustomerServices/SendBillSync"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="SendTestSetAsync">
+            <soap:operation soapAction="http://wcf.dian.colombia/IWcfDianCustomerServices/SendTestSetAsync"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="GetStatus">
+            <soap:operation soapAction="http://wcf.dian.colombia/IWcfDianCustomerServices/GetStatus"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="GetStatusByTrackId">
+            <soap:operation soapAction="http://wcf.dian.colombia/IWcfDianCustomerServices/GetStatusByTrackId"/>
+            <wsdl:input><soap:body use="literal"/></wsdl:input>
+            <wsdl:output><soap:body use="literal"/></wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:service name="WcfDianCustomerServices">
+        <wsdl:port name="WcfDianCustomerServicesPort" binding="tns:WcfDianCustomerServicesBinding">
+            <soap:address location="https://vpfe.dian.gov.co/WcfDianCustomerServices.svc"/>
+        </wsdl:port>
+    </wsdl:service>
+</wsdl:definitions>

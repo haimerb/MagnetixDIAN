@@ -25,7 +25,7 @@ services:
       DB_URL: jdbc:postgresql://db:5432/magnetixdian
       DB_USER: magnetixdian
       DB_PASSWORD: magnetixdian
-      JWT_SECRET: bWFnbmV0aXhkaWFuLXN1cGVyLXNlY3JldC1rZXktZm9yLWp3dC1zaWduaW5nLTIwMjYtcGt6ZDEyM2ZiYQ==
+      JWT_SECRET: ${JWT_SECRET:?Definir JWT_SECRET en el entorno}
     ports:
       - "8080:8080"
     depends_on:

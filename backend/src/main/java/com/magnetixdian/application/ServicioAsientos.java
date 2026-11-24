@@ -11,6 +11,9 @@ import com.magnetixdian.infrastructure.persistence.PeriodoContableRepository;
 import com.magnetixdian.interfaces.dto.AsientoContableDto;
 import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
 import com.magnetixdian.interfaces.dto.SolicitudLineaAsientoDto;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +42,7 @@ public class ServicioAsientos {
     private final AsientoContableRepository asientoRepository;
     private final PeriodoContableRepository periodoRepository;
     private final ServicioPlanCuentas servicioPlanCuentas;
+    private EntityManager entityManager;
 
     public ServicioAsientos(AsientoContableRepository asientoRepository,
                             PeriodoContableRepository periodoRepository,
@@ -46,6 +50,11 @@ public class ServicioAsientos {
         this.asientoRepository = asientoRepository;
         this.periodoRepository = periodoRepository;
         this.servicioPlanCuentas = servicioPlanCuentas;
+    }
+
+    @Autowired(required = false)
+    public void setEntityManager(EntityManager entityManager) {
+        this.entityManager = entityManager;
     }
 
     public AsientoContableDto crear(Long empresaId, SolicitudAsientoDto solicitud) {
@@ -251,6 +260,9 @@ public class ServicioAsientos {
     }
 
     private String siguienteNumero(Long empresaId, Long periodoId, LocalDate fecha) {
+        if (entityManager != null) {
+            entityManager.find(PeriodoContableJpa.class, periodoId, LockModeType.PESSIMISTIC_WRITE);
+        }
         long secuencial = asientoRepository.findByEmpresaIdAndPeriodoIdOrderByNumeroAsc(empresaId, periodoId).size() + 1L;
         return String.format(Locale.ROOT, "AS-%d-%04d%02d-%04d",
                 empresaId, fecha.getYear(), fecha.getMonthValue(), secuencial);

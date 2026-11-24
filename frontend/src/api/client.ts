@@ -1534,3 +1534,342 @@ export async function obtenerBrandingPublico(publicSlug: string) {
   })
   return data
 }
+
+export type ModoOperacionDian =
+  | 'PROPIO_INTERNO'
+  | 'ADQUIRIDO_CLIENTE'
+  | 'PT_MAGNETIXDIAN'
+  | 'PT_EXTERNO'
+
+export type EstadoHabilitacionDian =
+  | 'BORRADOR'
+  | 'TEST_SET_EN_CURSO'
+  | 'TEST_SET_APROBADO'
+  | 'PRODUCCION'
+  | 'RECHAZADO'
+
+export type AuditoriaDian = {
+  id: number
+  accion: string
+  detalle: string
+  usuario: string | null
+  createdAt: string
+}
+
+export type HabilitacionDian = {
+  empresaId: number
+  modo: ModoOperacionDian
+  estado: EstadoHabilitacionDian
+  resolucionNumero: string | null
+  resolucionFecha: string | null
+  prefijo: string | null
+  rangoDesde: number | null
+  rangoHasta: number | null
+  testSetId: string | null
+  softwareId: string | null
+  notificarAdquirente: boolean
+  certificadoNombre: string | null
+  switchoverEn: string | null
+  aprobadoEn: string | null
+  auditoria: AuditoriaDian[]
+}
+
+export type SolicitudHabilitacionDian = {
+  modo: ModoOperacionDian
+  resolucionNumero: string
+  resolucionFecha: string
+  prefijo: string
+  rangoDesde: number | null
+  rangoHasta: number | null
+  testSetId: string
+  softwareId: string
+  notificarAdquirente: boolean
+}
+
+export type DocumentoTestDian = {
+  trackId: string
+  tipoDocumento: string
+  descripcion: string
+  estado: 'PENDIENTE' | 'ENVIADO' | 'APROBADO' | 'RECHAZADO'
+  mensaje: string | null
+}
+
+export type ResultadoTestSetDian = {
+  testSetId: string
+  estado: EstadoHabilitacionDian
+  total: number
+  aprobados: number
+  rechazados: number
+  documentos: DocumentoTestDian[]
+}
+
+export type SolicitudSwitchoverDian = {
+  confirmacion: 'APRUEBO_SWITCHOVER'
+  testSetId: string
+  resolucionNumero: string
+  observaciones?: string
+}
+
+export type PagoCheckoutRequest = {
+  planCodigo: string
+  proveedor: string
+  metodo: MetodoPago
+  empresaId?: number
+  email?: string
+}
+
+export type EstadoWebhookPago = {
+  referencia: string
+  proveedor: string
+  estado: string
+  firmado: boolean
+  eventId: string | null
+  procesadoEn: string | null
+  mensaje: string | null
+}
+
+export type VerificacionEmail = {
+  verificada: boolean
+  email: string | null
+  mensaje: string
+}
+
+export type Invitacion = {
+  id: number
+  email: string
+  empresaId: number
+  rol: string
+  estado: string
+  expiraEn: string | null
+}
+
+export type CuentaPuc = {
+  codigo: string
+  nombre: string
+  naturaleza: 'DEBITO' | 'CREDITO'
+  tipo: string
+  activa: boolean
+}
+
+export type PeriodoContable = {
+  id: number
+  anio: number
+  mes: number
+  estado: 'ABIERTO' | 'CERRADO'
+  fechaCierre: string | null
+}
+
+export type AsientoFacturaRequest = {
+  facturaId: number
+  nota: string | null
+}
+
+export type DetalleValidacionExogena = {
+  formato: string
+  campo: string
+  mensaje: string
+  severidad: 'ERROR' | 'ADVERTENCIA' | 'INFO'
+}
+
+export type ResultadoFormatoExogena = {
+  formato: string
+  descripcion: string
+  registros: number
+  xml: string
+  excel: string | null
+  validacion: string
+  errores: DetalleValidacionExogena[]
+  prevalidacionOficial: false
+}
+
+export type SolicitudGenerarTodoExogena = {
+  anioGravable: number
+  numeroEnvio: number
+  fechaEnvio: string
+  fechaInicial: string
+  fechaFinal: string
+  formatos: string[]
+}
+
+export type ResultadoGenerarTodoExogena = {
+  anioGravable: number
+  totalFormatos: number
+  resultados: ResultadoFormatoExogena[]
+  prevalidacionOficial: false
+}
+
+export type PedidoErp = {
+  id: number
+  consecutivo: string
+  cliente: string
+  estado: string
+  total: number
+  fecha: string
+}
+
+export type CompraErp = {
+  id: number
+  consecutivo: string
+  proveedor: string
+  estado: string
+  total: number
+  fecha: string
+}
+
+export type MovimientoInventarioErp = {
+  id: number
+  producto: string
+  bodega: string
+  tipo: string
+  cantidad: number
+  saldo: number
+  fecha: string
+}
+
+export type MovimientoTesoreriaErp = {
+  id: number
+  cuenta: string
+  descripcion: string
+  tipo: 'INGRESO' | 'EGRESO'
+  valor: number
+  saldo: number
+  fecha: string
+}
+
+export async function crearCheckoutEmpresa(empresaId: number, solicitud: PagoCheckoutRequest) {
+  const { data } = await api.post<Pago>(`/empresas/${empresaId}/pagos/checkout`, solicitud, {
+    skipGlobalError: true,
+  })
+  return data
+}
+
+export async function estadoWebhookPago(empresaId: number, referencia: string) {
+  const { data } = await api.get<EstadoWebhookPago>(
+    `/empresas/${empresaId}/pagos/${encodeURIComponent(referencia)}/webhook-estado`,
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function verificarEmail(token: string) {
+  const { data } = await api.post<VerificacionEmail>('/auth/verificar-email', { token }, {
+    skipGlobalError: true,
+  })
+  return data
+}
+
+export async function reenviarVerificacionEmail(email: string) {
+  const { data } = await api.post<{ mensaje: string }>(
+    '/auth/verificar-email/reenviar',
+    { email },
+    { skipGlobalError: true },
+  )
+  return data
+}
+
+export async function listarInvitaciones(empresaId: number) {
+  const { data } = await api.get<Invitacion[]>(`/empresas/${empresaId}/invitaciones`)
+  return data
+}
+
+export async function obtenerConfigFeEmpresa(empresaId: number) {
+  const { data } = await api.get<ConfigFe>(`/facturacion/config/${empresaId}`)
+  return data
+}
+
+export async function guardarConfigFeEmpresa(empresaId: number, solicitud: ConfigFe) {
+  const { data } = await api.put<ConfigFe>(`/facturacion/config/${empresaId}`, solicitud)
+  return data
+}
+
+export async function obtenerHabilitacionDian(empresaId: number) {
+  const { data } = await api.get<HabilitacionDian>(`/empresas/${empresaId}/dian/habilitacion`)
+  return data
+}
+
+export async function guardarHabilitacionDian(empresaId: number, solicitud: SolicitudHabilitacionDian) {
+  const { data } = await api.put<HabilitacionDian>(
+    `/empresas/${empresaId}/dian/habilitacion`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarDocumentosTestDian(empresaId: number) {
+  const { data } = await api.get<DocumentoTestDian[]>(`/empresas/${empresaId}/dian/test-set/documentos`)
+  return data
+}
+
+export async function enviarDocumentosTestSet(empresaId: number, documentos: DocumentoTestDian[]) {
+  const { data } = await api.post<ResultadoTestSetDian>(
+    `/empresas/${empresaId}/dian/test-set/documentos`,
+    { documentos },
+  )
+  return data
+}
+
+export async function consultarEstadoTestSet(empresaId: number, testSetId: string) {
+  const { data } = await api.get<ResultadoTestSetDian>(
+    `/empresas/${empresaId}/dian/test-set/${encodeURIComponent(testSetId)}`,
+  )
+  return data
+}
+
+export async function switchoverProduccion(empresaId: number, solicitud: SolicitudSwitchoverDian) {
+  const { data } = await api.post<HabilitacionDian>(
+    `/empresas/${empresaId}/dian/switchover`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarAuditoriaDian(empresaId: number) {
+  const { data } = await api.get<AuditoriaDian[]>(`/empresas/${empresaId}/dian/auditoria`)
+  return data
+}
+
+export async function listarCuentasPuc(empresaId: number) {
+  const { data } = await api.get<CuentaPuc[]>(`/empresas/${empresaId}/contabilidad/puc`)
+  return data
+}
+
+export async function listarPeriodosContables(empresaId: number) {
+  const { data } = await api.get<PeriodoContable[]>(`/empresas/${empresaId}/contabilidad/periodos`)
+  return data
+}
+
+export async function asentarFactura(empresaId: number, solicitud: AsientoFacturaRequest) {
+  const { data } = await api.post<AsientoContable>(
+    `/empresas/${empresaId}/contabilidad/asientos`,
+    solicitud,
+  )
+  return data
+}
+
+export async function generarTodoExogena(empresaId: number, solicitud: SolicitudGenerarTodoExogena) {
+  const { data } = await api.post<ResultadoGenerarTodoExogena>(
+    `/empresas/${empresaId}/exogena/generar`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarPedidosErp(empresaId: number) {
+  const { data } = await api.get<PedidoErp[]>(`/empresas/${empresaId}/erp/pedidos`)
+  return data
+}
+
+export async function listarComprasErp(empresaId: number) {
+  const { data } = await api.get<CompraErp[]>(`/empresas/${empresaId}/erp/compras`)
+  return data
+}
+
+export async function listarInventarioErp(empresaId: number) {
+  const { data } = await api.get<MovimientoInventarioErp[]>(`/empresas/${empresaId}/erp/inventario`)
+  return data
+}
+
+export async function listarTesoreriaErp(empresaId: number) {
+  const { data } = await api.get<MovimientoTesoreriaErp[]>(`/empresas/${empresaId}/erp/tesoreria`)
+  return data
+}

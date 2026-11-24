@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:ex="urn:magnetixdian:exogena:1001"
+           targetNamespace="urn:magnetixdian:exogena:1001"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+  <xs:element name="Exogena1001">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Declarante" minOccurs="1" maxOccurs="1">
+          <xs:complexType>
+            <xs:attribute name="nit" type="xs:string" use="required"/>
+            <xs:attribute name="dv" type="xs:string" use="optional"/>
+            <xs:attribute name="razonSocial" type="xs:string" use="required"/>
+            <xs:attribute name="tipoDocumento" type="xs:string" use="required"/>
+            <xs:attribute name="municipio" type="xs:string" use="optional"/>
+            <xs:attribute name="pais" type="xs:string" use="optional"/>
+            <xs:attribute name="regimen" type="xs:string" use="optional"/>
+            <xs:attribute name="regimenNiif" type="xs:string" use="optional"/>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Renglones" minOccurs="1" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Renglon" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="consecutivo" type="xs:int" use="required"/>
+                  <xs:attribute name="tipoDocumento" type="xs:string" use="required"/>
+                  <xs:attribute name="numeroDocumento" type="xs:string" use="required"/>
+                  <xs:attribute name="dv" type="xs:string" use="optional"/>
+                  <xs:attribute name="razonSocial" type="xs:string" use="optional"/>
+                  <xs:attribute name="municipio" type="xs:string" use="optional"/>
+                  <xs:attribute name="pais" type="xs:string" use="optional"/>
+                  <xs:attribute name="concepto" type="xs:string" use="required"/>
+                  <xs:attribute name="descripcionConcepto" type="xs:string" use="optional"/>
+                  <xs:attribute name="valor" type="xs:decimal" use="required"/>
+                  <xs:attribute name="cantidadMovimientos" type="xs:int" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Control" minOccurs="1" maxOccurs="1">
+          <xs:complexType>
+            <xs:attribute name="totalRenglones" type="xs:int" use="required"/>
+            <xs:attribute name="totalValor" type="xs:decimal" use="required"/>
+            <xs:attribute name="prevalidacionOficial" type="xs:boolean" use="required" fixed="false"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="ano" type="xs:int" use="required"/>
+      <xs:attribute name="formato" type="xs:string" use="required" fixed="1001"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
