@@ -1,5 +1,6 @@
 const HEALTH_TIMEOUT_MS = 90_000
 const SW_PLACEHOLDER = '__CACHE_VERSION__'
+const RUTA_SW_VERSIONADO = /^\/sw-[a-zA-Z0-9_-]+\.js$/
 
 const PWA_ASSETS = new Map([
   ['/manifest.webmanifest', {
@@ -44,9 +45,18 @@ async function versionDelBundle(request, env) {
   return 'sin-version'
 }
 
+function esRutaServiceWorker(ruta) {
+  return ruta === '/sw.js' || RUTA_SW_VERSIONADO.test(ruta)
+}
+
+function cabecerasPwa(ruta) {
+  if (esRutaServiceWorker(ruta)) return PWA_ASSETS.get('/sw.js')
+  return PWA_ASSETS.get(ruta)
+}
+
 async function servirServiceWorker(request, env, cabeceras) {
   const [asset, version] = await Promise.all([
-    env.ASSETS.fetch(request),
+    env.ASSETS.fetch(new Request(new URL('/sw.js', request.url).toString(), request)),
     versionDelBundle(request, env),
   ])
   const cuerpo = (await asset.text()).replaceAll(SW_PLACEHOLDER, version)
@@ -91,9 +101,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url)
 
-    const pwaHeaders = PWA_ASSETS.get(url.pathname)
+    const pwaHeaders = cabecerasPwa(url.pathname)
     if (pwaHeaders) {
-      if (url.pathname === '/sw.js') {
+      if (esRutaServiceWorker(url.pathname)) {
         return servirServiceWorker(request, env, pwaHeaders)
       }
       const asset = await env.ASSETS.fetch(request)
