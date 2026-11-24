@@ -18,14 +18,10 @@ public class ServicioCentrosCosto {
         this.jdbc = jdbc;
     }
 
-    @Transactional(readOnly = true)
-    public List<CentroCostoDto> listar(Long empresaId) {
-        return jdbc.query("""
-                SELECT id, codigo, nombre, activo FROM centro_costo
-                WHERE empresa_id = ? ORDER BY codigo
-                """, (rs, fila) -> new CentroCostoDto(rs.getLong("id"), rs.getString("codigo"),
+    String sql = "SELECT id, codigo, nombre, activo FROM centro_costo WHERE empresa_id = ? ORDER BY codigo";
+List<CentroCostoDto> lista = jdbc.query(sql, (rs, fila) -> new CentroCostoDto(rs.getLong("id"), rs.getString("codigo"),
                 rs.getString("nombre"), rs.getBoolean("activo")), empresaId);
-    }
+return lista;
 
     public CentroCostoDto crear(Long empresaId, SolicitudCentroCostoDto solicitud) {
         if (solicitud == null || solicitud.codigo() == null || solicitud.codigo().isBlank()
@@ -33,16 +29,10 @@ public class ServicioCentrosCosto {
             throw new IllegalArgumentException("Código y nombre del centro de costo son obligatorios");
         }
         boolean activo = solicitud.activo() == null || solicitud.activo();
-        jdbc.update("""
-                INSERT INTO centro_costo (empresa_id, codigo, nombre, activo)
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT (empresa_id, codigo) DO UPDATE
-                SET nombre = EXCLUDED.nombre, activo = EXCLUDED.activo
-                """, empresaId, solicitud.codigo().trim(), solicitud.nombre().trim(), activo);
-        return jdbc.queryForObject("""
-                SELECT id, codigo, nombre, activo FROM centro_costo
-                WHERE empresa_id = ? AND codigo = ?
-                """, (rs, fila) -> new CentroCostoDto(rs.getLong("id"), rs.getString("codigo"),
+        String sqlInsert = "INSERT INTO centro_costo (empresa_id, codigo, nombre, activo) VALUES (?, ?, ?, ?)";
+        jdbc.update(sqlInsert, empresaId, solicitud.codigo().trim(), solicitud.nombre().trim(), activo);
+        String sqlQuery = "SELECT id, codigo, nombre, activo FROM centro_costo WHERE empresa_id = ? AND codigo = ?";
+        return jdbc.queryForObject(sqlQuery, (rs, fila) -> new CentroCostoDto(rs.getLong("id"), rs.getString("codigo"),
                 rs.getString("nombre"), rs.getBoolean("activo")), empresaId, solicitud.codigo().trim());
     }
 }
