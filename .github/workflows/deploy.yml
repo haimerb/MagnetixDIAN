@@ -68,23 +68,27 @@ jobs:
           workingDirectory: .
         env:
           SW_VERSION: ${{ github.sha }}
-      - name: Verificar SW_VERSION publicado
+      - name: Verificar SW versionado publicado
         env:
           WORKER_URL: https://magnetixdian.hbarbetti-ing.workers.dev
-          SW_VERSION: ${{ github.sha }}
         run: |
+          bundle=$(curl -fsS -m 30 "$WORKER_URL/" | python3 -c "import re,sys; m=re.search(r'index-([A-Za-z0-9_-]+)\\.js', sys.stdin.read()); print(m.group(1) if m else '')")
+          if [ -z "$bundle" ]; then
+            echo "::error::No se pudo detectar el bundle index-<hash>.js en la página publicada."
+            exit 1
+          fi
           for i in $(seq 1 12); do
-            sw=$(curl -fsS -m 30 "$WORKER_URL/sw.js" 2>/dev/null || true)
+            sw=$(curl -fsS -m 30 "$WORKER_URL/sw-$bundle.js" 2>/dev/null || true)
             case "$sw" in
-              *"magnetixdian-$SW_VERSION"*)
-                echo "SW_VERSION publicado: $SW_VERSION"
+              *"magnetixdian-$bundle"*)
+                echo "SW versionado publicado: magnetixdian-$bundle"
                 exit 0
                 ;;
             esac
-            echo "Intento $i: SW_VERSION aún no visible; reintentando en 10s..."
+            echo "Intento $i: SW versionado aún no visible; reintentando en 10s..."
             sleep 10
           done
-          echo "::error::El Worker no publicó SW_VERSION=$SW_VERSION en /sw.js."
+          echo "::error::El Worker no publicó magnetixdian-$bundle en /sw-$bundle.js."
           exit 1
 
   backend:

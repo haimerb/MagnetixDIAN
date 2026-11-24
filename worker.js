@@ -26,6 +26,11 @@ function sanitizarVersion(valor) {
     .slice(0, 48)
 }
 
+function versionDeRutaServiceWorker(url) {
+  const coincidencia = url.pathname.match(/^\/sw-([a-zA-Z0-9_-]+)\.js$/)
+  return coincidencia ? sanitizarVersion(coincidencia[1]) : null
+}
+
 async function versionDelBundle(request, env) {
   if (env.SW_VERSION && env.SW_VERSION !== 'dev') {
     return sanitizarVersion(env.SW_VERSION)
@@ -55,16 +60,16 @@ function cabecerasPwa(ruta) {
 }
 
 async function servirServiceWorker(request, env, cabeceras) {
-  const [asset, version] = await Promise.all([
-    env.ASSETS.fetch(new Request(new URL('/sw.js', request.url).toString(), request)),
-    versionDelBundle(request, env),
-  ])
+  const url = new URL(request.url)
+  const version = versionDeRutaServiceWorker(url) || (await versionDelBundle(request, env))
+  const asset = await env.ASSETS.fetch(new Request(new URL('/sw.js', request.url).toString(), request))
   const cuerpo = (await asset.text()).replaceAll(SW_PLACEHOLDER, version)
   const headers = new Headers(asset.headers)
   for (const [nombre, valor] of Object.entries(cabeceras)) {
     headers.set(nombre, valor)
   }
   headers.set('X-Content-Type-Options', 'nosniff')
+  headers.set('X-SW-Version', version)
   return new Response(cuerpo, {
     status: asset.status,
     statusText: asset.statusText,
