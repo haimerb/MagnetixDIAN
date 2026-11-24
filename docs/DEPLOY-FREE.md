@@ -66,8 +66,10 @@ La URL del frontend es `https://magnetixdian.<cuenta>.workers.dev` (o
 ### Invalidación del service worker
 
 - `frontend/public/sw.js` usa `const CACHE = 'magnetixdian-__CACHE_VERSION__'`.
-- En cada deploy, `deploy.yml` ejecuta
-  `wrangler deploy --var SW_VERSION:${{ github.sha }}`.
+- En cada deploy, `deploy.yml` usa `cloudflare/wrangler-action@v4` con Wrangler 4
+  y la entrada `vars: SW_VERSION`, enlazada al SHA del commit; equivale a
+  `wrangler deploy --var SW_VERSION:<sha>`.
+- El workflow verifica que `/sw.js` devuelva `magnetixdian-<sha>` antes de marcar el deploy como verde.
 - `worker.js` sustituye el placeholder por ese SHA (o, si no está, por el ETag de
   `index.html`, que cambia con el hash del bundle) y responde sin cachear el SW.
 - Al activarse, el SW elimina las cachés `magnetixdian-*` anteriores y toma el control.
