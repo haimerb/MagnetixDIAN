@@ -31,10 +31,15 @@ async function versionDelBundle(request, env) {
   }
   try {
     const index = await env.ASSETS.fetch(new Request(new URL('/index.html', request.url).toString(), request))
-    const etag = index.headers.get('etag')
-    if (etag) return sanitizarVersion(etag)
+    if (index.ok) {
+      const etag = index.headers.get('etag')
+      if (etag) return sanitizarVersion(etag)
+      const html = await index.text()
+      const coincidencia = html.match(/assets\/index-([a-zA-Z0-9_-]+)\.js/)
+      if (coincidencia) return sanitizarVersion(coincidencia[1])
+    }
   } catch {
-    // Sin ETag disponible se usa una versión estable; el deploy inyecta SW_VERSION.
+    // Sin versión disponible se usa un valor estable; el deploy inyecta SW_VERSION.
   }
   return 'sin-version'
 }
