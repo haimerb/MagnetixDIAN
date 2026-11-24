@@ -126,6 +126,14 @@ sleep del plan free; **no es un SLA**.
 5. Plan con soporte para facturación a terceros (`PT_MAGNETIXDIAN` / `PT_EXTERNO`).
 6. Webhooks de pago con firma activa y secretos presentes antes de habilitar el cobro.
 
+### Desbloqueo de emisión en producción
+
+- `TEST_SET_APROBADO` habilita el switchover; solo `PRODUCCION` permite emitir.
+- El switchover se confirma con `APRUEBO_SWITCHOVER` y queda en `evento_auditoria`.
+- Con `SEGURIDAD_FAIL_FAST=true`, no se permite canal `SIMULADO`: exija certificado DIAN,
+  WSDL oficiales y URLs reales de habilitación/producción.
+- Paso a paso para el usuario: [MANUAL-USUARIO.md](MANUAL-USUARIO.md#checklist-para-desbloquear-la-emisión).
+
 ## 7. Límites honestos
 
 - La exógena se valida con **XSD local**; no se ofrece prevalidación oficial de la DIAN.

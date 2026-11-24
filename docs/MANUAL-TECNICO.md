@@ -183,6 +183,23 @@ Ver [`DEPLOY-FREE.md`](DEPLOY-FREE.md). Resumen:
 Los tokens DIAN, certificados y credenciales de integraciones **no** son variables de entorno:
 se guardan cifrados por empresa. Plantilla: [`.env.example`](../.env.example).
 
+### Desbloqueo de emisión (estado `PRODUCCION`)
+
+1. Guardar modo, resolución, prefijo, rangos, `softwareId` y `testSetId` desde el asistente.
+2. Enviar el TEST SET con `POST /api/facturacion/config/{empresaId}/test-set`: 10 XML
+   (8 facturas, 1 nota débito y 1 nota crédito, máximo 5 MB cada uno).
+3. Consultar `GET /api/facturacion/config/{empresaId}/estado?trackId=...` hasta recibir
+   `TEST_SET_APROBADO`.
+4. Ejecutar `PATCH /api/facturacion/config/{empresaId}/switchover?trackId=...` con
+   `confirmacion=APRUEBO_SWITCHOVER`, `testSetId` y `resolucionNumero`.
+5. Verificar en `evento_auditoria` los eventos `TEST_SET_APROBADO` y
+   `SWITCHOVER_PRODUCCION`. Un `CAMBIO_PRODUCCION_BLOQUEADO` indica que faltó alguno.
+6. Con `SEGURIDAD_FAIL_FAST=true`, producción exige certificado DIAN, canales reales y WSDL
+   oficiales; el canal `SIMULADO` se rechaza.
+
+`estadoPermiteEmitir` solo acepta `PRODUCCION`; `TEST_SET_APROBADO` habilita el switchover,
+no la emisión.
+
 ## 10. Checklist de habilitación PT
 
 1. Resolución vigente, prefijo y rangos aprobados.
