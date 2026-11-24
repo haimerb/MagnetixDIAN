@@ -36,7 +36,7 @@ type HabilitacionMock = {
 
 const TRACK_IDS = [
   'TEST-01', 'TEST-02', 'TEST-03', 'TEST-04', 'TEST-05',
-  'TEST-06', 'TEST-07', 'TEST-08', 'TEST-91', 'TEST-05-SOP',
+  'TEST-06', 'TEST-07', 'TEST-08', 'TEST-09-ND', 'TEST-10-NC',
 ]
 
 function token(empresaId: number): string {
