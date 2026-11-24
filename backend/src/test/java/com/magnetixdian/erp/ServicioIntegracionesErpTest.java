@@ -31,8 +31,7 @@ class ServicioIntegracionesErpTest {
     void guardaCredencialesCifradasYSimulaSinCredenciales() {
         CifradorAes cifrador = new CifradorAes("test-key-erp");
         ObjectMapper mapper = new ObjectMapper();
-        ServicioIntegracionesErp servicio = new ServicioIntegracionesErp(configs, cifrador, mapper, List.of());
-        servicio = new ServicioIntegracionesErp(configs, cifrador, mapper, List.of(new AdaptadorSiigoErp(servicio)));
+        ServicioIntegracionesErp servicio = new ServicioIntegracionesErp(configs, cifrador, mapper, List.of(new AdaptadorSiigoErp()));
 
         when(configs.findByEmpresaIdAndProveedorAndTipo(1L, "SIIGO", "ERP")).thenReturn(Optional.empty());
         when(configs.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -50,8 +49,7 @@ class ServicioIntegracionesErpTest {
     void fallaSinCredencialesRequeridasCuandoHayConfigParcial() {
         CifradorAes cifrador = new CifradorAes("test-key-erp");
         ObjectMapper mapper = new ObjectMapper();
-        ServicioIntegracionesErp servicioBase = new ServicioIntegracionesErp(configs, cifrador, mapper, List.of());
-        ServicioIntegracionesErp servicio = new ServicioIntegracionesErp(configs, cifrador, mapper, List.of(new AdaptadorSiigoErp(servicioBase)));
+        ServicioIntegracionesErp servicio = new ServicioIntegracionesErp(configs, cifrador, mapper, List.of(new AdaptadorSiigoErp()));
 
         ErpIntegracionConfigJpa cfg = new ErpIntegracionConfigJpa();
         cfg.setEmpresaId(1L);

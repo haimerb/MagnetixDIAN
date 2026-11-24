@@ -68,7 +68,7 @@ public class ServicioIntegracionesErp {
         ErpIntegracionConfigJpa config = configs.findByEmpresaIdAndProveedorAndTipo(empresaId, proveedor.name(), "ERP").orElse(null);
         ResultadoSincronizacionErp res;
         try {
-            res = adaptador.sincronizar(empresaId, tipo == null ? "GENERAL" : tipo.trim().toUpperCase());
+            res = adaptador.sincronizar(empresaId, tipo == null ? "GENERAL" : tipo.trim().toUpperCase(), credenciales(empresaId, proveedor));
         } catch (RuntimeException ex) {
             res = ResultadoSincronizacionErp.fallo(proveedor.name(), tipo, "Error de sincronización");
         }
