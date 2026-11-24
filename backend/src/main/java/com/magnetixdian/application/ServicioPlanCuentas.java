@@ -121,6 +121,11 @@ public class ServicioPlanCuentas {
             jdbc.update("UPDATE empresa SET regimen_niif = ?, updated_at = now() WHERE id = ?", valor, empresaId);
         }
         asegurar(empresaId);
+        // Actualizar version_puc para todas las cuentas de la empresa para que coincida con el nuevo régimen
+        String nuevaVersion = versionPuc(valor);
+        if (jdbc != null) {
+            jdbc.update("UPDATE cuenta_contable SET version_puc = ? WHERE empresa_id = ?", nuevaVersion, empresaId);
+        }
         return regimen(empresaId);
     }
 

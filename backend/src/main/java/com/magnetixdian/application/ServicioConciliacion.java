@@ -74,17 +74,16 @@ public class ServicioConciliacion {
         LocalDate hasta = banco.stream().map(MovimientoTesoreriaDto::fecha)
                 .filter(fecha -> fecha != null).max(LocalDate::compareTo).orElseThrow();
         Map<String, MovimientoTesoreriaDto> libros = new LinkedHashMap<>();
-        jdbc.query("""
-                SELECT a.fecha, cc.codigo AS cuenta_codigo, a.documento_tipo, a.documento_id,
-                       l.descripcion, COALESCE(l.debito, 0) - COALESCE(l.credito, 0) AS valor
-                FROM asiento_contable_linea l
-                JOIN asiento_contable a ON a.id = l.asiento_contable_id
-                JOIN cuenta_contable cc ON cc.id = l.cuenta_contable_id
-                WHERE a.empresa_id = ? AND a.estado = 'CONTABILIZADO'
-                  AND a.fecha BETWEEN ? AND ?
-                  AND cc.codigo IN ('110505', '110510')
-                ORDER BY a.fecha, l.id
-                """, rs -> {
+        String sql = "SELECT a.fecha, cc.codigo AS cuenta_codigo, a.documento_tipo, a.documento_id,\n"
+        + "       l.descripcion, COALESCE(l.debito, 0) - COALESCE(l.credito, 0) AS valor\n"
+        + "FROM asiento_contable_linea l\n"
+        + "JOIN asiento_contable a ON a.id = l.asiento_contable_id\n"
+        + "JOIN cuenta_contable cc ON cc.id = l.cuenta_contable_id\n"
+        + "WHERE a.empresa_id = ? AND a.estado = 'CONTABILIZADO'\n"
+        + "  AND a.fecha BETWEEN ? AND ?\n"
+        + "  AND cc.codigo IN ('110505', '110510')\n"
+        + "ORDER BY a.fecha, l.id";
+jdbc.query(sql, rs -> {
             LocalDate fecha = rs.getDate("fecha").toLocalDate();
             String cuenta = rs.getString("cuenta_codigo");
             String referencia = rs.getString("documento_tipo") + "-" + rs.getLong("documento_id");
