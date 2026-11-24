@@ -84,9 +84,11 @@ CREATE TABLE IF NOT EXISTS dian_cuenta_concepto (
     cuenta_codigo VARCHAR(10)   NOT NULL,
     concepto_id   BIGINT        NOT NULL REFERENCES dian_concepto(id) ON DELETE CASCADE,
     activo        BOOLEAN       NOT NULL DEFAULT TRUE,
-    created_at    TIMESTAMPTZ   NOT NULL DEFAULT now(),
-    UNIQUE (COALESCE(empresa_id, 0), ano, cuenta_codigo, concepto_id)
+    created_at    TIMESTAMPTZ   NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dian_cuenta_concepto_global
+    ON dian_cuenta_concepto (COALESCE(empresa_id, 0), ano, cuenta_codigo, concepto_id);
 
 CREATE INDEX IF NOT EXISTS idx_dian_cuenta_concepto_cuenta ON dian_cuenta_concepto(ano, cuenta_codigo);
 
