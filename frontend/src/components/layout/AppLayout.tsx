@@ -284,7 +284,7 @@ export default function AppLayout() {
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              MagnetixDIAN · Información exógena DIAN · Resolución Única 000227 de 2025
+              MagnetixDIAN · ERP contable y facturación electrónica · Exógena DIAN
             </Typography>
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Typography component="a" href="/terminos" variant="caption" color="text.secondary">

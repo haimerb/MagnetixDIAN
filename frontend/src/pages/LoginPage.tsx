@@ -11,10 +11,10 @@ import Logo from '../components/ui/Logo'
 import { useAuth } from '../features/auth/useAuth'
 
 const BENEFICIOS = [
-  'Validación con reglas DIAN: NIT, UVT y catálogo de conceptos.',
-  'Generación del XML formato 1001 listo para presentar.',
   'Facturación electrónica multi-tenant integrada.',
-  'Guía paso a paso para la presentación en MUISCA.',
+  'Asientos contables automáticos desde cada factura.',
+  'Exógena DIAN 1001 con validación y XML listo para MUISCA.',
+  'Checkout, pago y activación automática del tenant.',
 ]
 
 export default function LoginPage() {
@@ -65,10 +65,10 @@ export default function LoginPage() {
         <Logo size={40} variant="onDark" />
         <Box sx={{ maxWidth: 460 }}>
           <Typography variant="h3" sx={{ color: (t) => t.palette.common.white, mb: 2 }}>
-            Información exógena DIAN sin fricción
+            De la venta a la factura, sin fricción
           </Typography>
           <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.82)' }}>
-            Cargue, valide y presente sus medios magnéticos con confianza.
+            Facture, contabilice y cumpla con la DIAN desde un solo lugar.
           </Typography>
           <Box component="ul" sx={{ mt: 4, display: 'grid', gap: 1.5, pl: 0, listStyle: 'none' }}>
             {BENEFICIOS.map((b) => (
@@ -95,7 +95,7 @@ export default function LoginPage() {
           </Box>
         </Box>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-          Resolución Única 000227 de 2025
+          ERP contable · Facturación electrónica · Exógena DIAN
         </Typography>
       </Box>
 

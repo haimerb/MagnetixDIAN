@@ -3,7 +3,7 @@ import { expect, test } from './fixtures'
 test.describe('Registro self-service', () => {
   test('la landing lleva al registro', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Información exógena DIAN sin fricción' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'De la venta a la factura, sin fricción' })).toBeVisible()
     await page.getByRole('link', { name: 'Crear cuenta gratis' }).first().click()
     await expect(page).toHaveURL(/\/registro$/)
   })
