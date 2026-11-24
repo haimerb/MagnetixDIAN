@@ -26,6 +26,17 @@ const SuscripcionPage = lazy(() => import('./pages/SuscripcionPage'))
 const RadianPage = lazy(() => import('./pages/RadianPage'))
 const ContabilidadPage = lazy(() => import('./pages/ContabilidadPage'))
 const FacturaRapidaPage = lazy(() => import('./pages/FacturaRapidaPage'))
+const CheckoutPage = lazy(() => import('./pages/erp/CheckoutPage'))
+const VerificarEmailPage = lazy(() => import('./pages/erp/VerificarEmailPage'))
+const HabilitacionDianWizard = lazy(() => import('./pages/erp/HabilitacionDianWizard'))
+const FacturaEditorPage = lazy(() => import('./pages/erp/FacturaEditorPage'))
+const NominaPage = lazy(() => import('./pages/erp/NominaPage'))
+const DocumentoSoportePage = lazy(() => import('./pages/erp/DocumentoSoportePage'))
+const ExogenaPage = lazy(() => import('./pages/erp/ExogenaPage'))
+const ComprasPage = lazy(() => import('./pages/erp/ComprasPage'))
+const InventarioPage = lazy(() => import('./pages/erp/InventarioPage'))
+const TesoreriaPage = lazy(() => import('./pages/erp/TesoreriaPage'))
+const IntegracionesPage = lazy(() => import('./pages/erp/IntegracionesPage'))
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -48,6 +59,8 @@ export default function App() {
             <Route path="/recuperar" element={<RecuperarPasswordPage />} />
             <Route path="/restablecer" element={<RecuperarPasswordPage />} />
             <Route path="/activar" element={<ActivarCuentaPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/verificar-email" element={<VerificarEmailPage />} />
             <Route
               path="/app"
               element={
@@ -65,12 +78,22 @@ export default function App() {
               <Route path="contabilidad" element={<ContabilidadPage />} />
               <Route path="migracion-contable" element={<Navigate to="/app/contabilidad/asentar-facturacion" replace />} />
               <Route path="factura-rapida" element={<FacturaRapidaPage />} />
+              <Route path="habilitacion-dian" element={<HabilitacionDianWizard />} />
+              <Route path="exogena" element={<Navigate to="/app/erp/exogena" replace />} />
+              <Route path="erp/nomina" element={<NominaPage />} />
+              <Route path="erp/documentos-soporte" element={<DocumentoSoportePage />} />
+              <Route path="erp/exogena" element={<ExogenaPage />} />
+              <Route path="erp/compras" element={<ComprasPage />} />
+              <Route path="erp/inventario" element={<InventarioPage />} />
+              <Route path="erp/tesoreria" element={<TesoreriaPage />} />
+              <Route path="erp/integraciones" element={<IntegracionesPage />} />
               <Route path="branding" element={<Navigate to="/app/empresa" replace />} />
               <Route path="validacion/:medioId?" element={<ValidacionPage />} />
               <Route path="reporte/:medioId?" element={<ReportePage />} />
               <Route path="guia" element={<GuiaMuiscaPage />} />
               <Route path="facturacion" element={<FacturacionPage />} />
               <Route path="facturacion/config" element={<ConfigFePage />} />
+              <Route path="facturacion/nueva" element={<FacturaEditorPage />} />
               <Route path="facturacion/:id" element={<FacturaDetallePage />} />
               <Route path="suscripcion" element={<SuscripcionPage />} />
               <Route path="integraciones" element={<Navigate to="/app/empresa" replace />} />

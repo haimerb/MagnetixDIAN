@@ -4,7 +4,8 @@ public enum TipoDocumentoRadian {
     FACTURA("01"),
     NOTA_CREDITO("91"),
     NOTA_DEBITO("92"),
-    DOCUMENTO_SOPORTE("05");
+    DOCUMENTO_SOPORTE("05"),
+    NOMINA("31");
 
     private final String codigo;
 

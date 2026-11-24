@@ -9,9 +9,33 @@ concurrency:
   group: deploy-main
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
+  verificar-secretos:
+    name: verificar-secretos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Secrets de GitHub requeridos
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          faltantes=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || faltantes="$faltantes CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || faltantes="$faltantes CLOUDFLARE_ACCOUNT_ID"
+          [ -n "$RENDER_DEPLOY_HOOK" ] || faltantes="$faltantes RENDER_DEPLOY_HOOK"
+          if [ -n "$faltantes" ]; then
+            echo "::error::Faltan secrets de deploy:$faltantes. El deploy se aborta (no se publica verde)."
+            exit 1
+          fi
+          echo "Secrets de deploy presentes; se verifica el health del backend tras publicar."
+
   frontend:
     name: Deploy frontend (Cloudflare Worker)
+    needs: verificar-secretos
     runs-on: ubuntu-latest
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -20,59 +44,49 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 12
-      - uses: actions/setup-node@v7
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Build frontend
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
         run: pnpm install --frozen-lockfile && pnpm run build
-      - name: Deploy Worker
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
-        uses: cloudflare/wrangler-action@v4
+      - name: Deploy Worker (SW_VERSION derivado del commit)
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          command: deploy --var SW_VERSION:${{ github.sha }}
           workingDirectory: .
-      - name: Aviso (secrets no configurados)
-        if: ${{ env.CLOUDFLARE_API_TOKEN == '' }}
-        run: echo "::notice::CLOUDFLARE_API_TOKEN no configurado; se omite el deploy del frontend."
 
   backend:
     name: Deploy backend (Render)
+    needs: verificar-secretos
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
       BACKEND_URL: https://magnetixdian-backend.onrender.com
     steps:
       - name: Trigger Render deploy
-        if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
         run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
       - name: Esperar a que el backend esté saludable
-        if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
         run: |
           echo "Esperando a $BACKEND_URL/actuator/health ..."
-          for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' -m 30 "$BACKEND_URL/actuator/health" || true)
-            if [ "$code" = "200" ]; then
-              echo "Backend saludable (intento $i):"
-              curl -s "$BACKEND_URL/actuator/health"
-              exit 0
-            fi
-            echo "Intento $i: HTTP $code; reintentando en 20s..."
+          for i in $(seq 1 40); do
+            respuesta=$(curl -fsS -m 30 "$BACKEND_URL/actuator/health" 2>/dev/null || true)
+            case "$respuesta" in
+              *'"status":"UP"'*)
+                echo "Backend saludable (intento $i)."
+                exit 0
+                ;;
+            esac
+            echo "Intento $i: backend no saludable; reintentando en 20s..."
             sleep 20
           done
-          echo "::error::El backend no respondió saludablemente a tiempo."
+          echo "::error::El backend no respondió UP a tiempo. Render debe tener SEGURIDAD_FAIL_FAST=true y todos los secretos configurados."
           exit 1
-      - name: Aviso (secrets no configurados)
-        if: ${{ env.RENDER_DEPLOY_HOOK == '' }}
-        run: echo "::notice::RENDER_DEPLOY_HOOK no configurado; el backend no se desplegará."

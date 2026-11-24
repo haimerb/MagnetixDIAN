@@ -1,8 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
-import { loginAdmin } from './helpers'
+import { type Page } from '@playwright/test'
+import { expect, test } from './fixtures'
+import { loginAdmin, token } from './helpers'
 
-const TOKEN =
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsInJvbGVzIjpbIlJPTEVfQURNSU4iXSwiZW1wcmVzYUlkIjoxfQ==.firma'
+const TOKEN = token()
 
 const PERFIL = {
   id: 1,

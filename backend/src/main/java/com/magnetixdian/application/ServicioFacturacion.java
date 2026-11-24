@@ -1,5 +1,7 @@
 package com.magnetixdian.application;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.magnetixdian.domain.cufe.CufeCalculator;
 import com.magnetixdian.domain.cufe.QrUrlGenerator;
 import com.magnetixdian.domain.factura.DatosAdquirente;
@@ -22,6 +24,10 @@ import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigJpa;
 import com.magnetixdian.infrastructure.persistence.EmpresaFeConfigRepository;
 import com.magnetixdian.infrastructure.persistence.EmpresaJpa;
 import com.magnetixdian.infrastructure.persistence.EmpresaRepository;
+import com.magnetixdian.infrastructure.persistence.DocumentoRadianRepository;
+import com.magnetixdian.infrastructure.persistence.ImpuestoPagoRepository;
+import com.magnetixdian.infrastructure.persistence.PagoRepository;
+import com.magnetixdian.infrastructure.persistence.TerceroContableRepository;
 import com.magnetixdian.infrastructure.persistence.FacturaEventoJpa;
 import com.magnetixdian.infrastructure.persistence.FacturaEventoRepository;
 import com.magnetixdian.infrastructure.persistence.FacturaImpuestoJpa;
@@ -33,17 +39,22 @@ import com.magnetixdian.infrastructure.xml.GeneradorAttachedDocument;
 import com.magnetixdian.infrastructure.xml.GeneradorUblFactura;
 import com.magnetixdian.interfaces.dto.AdquirenteRequest;
 import com.magnetixdian.interfaces.dto.ErrorValidacionDto;
+import com.magnetixdian.interfaces.dto.FacturaEmitidaEvent;
 import com.magnetixdian.interfaces.dto.FacturaDetalleDto;
 import com.magnetixdian.interfaces.dto.FacturaEventoDto;
 import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.FacturaResumenDto;
 import com.magnetixdian.interfaces.dto.LineaFacturaRequest;
+import com.magnetixdian.interfaces.dto.MovimientoTributarioDto;
+import com.magnetixdian.interfaces.dto.RetencionDianDto;
+import com.magnetixdian.interfaces.dto.SolicitudEmisionDianDto;
 import com.magnetixdian.interfaces.dto.BrandingDto;
 import com.magnetixdian.interfaces.dto.PaginaDto;
 import com.magnetixdian.interfaces.dto.ResultadoEmisionDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -51,9 +62,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -62,6 +77,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Servicio principal de facturación electrónica: valida, numera, genera el UBL,
@@ -72,6 +89,9 @@ import java.util.Optional;
 public class ServicioFacturacion {
 
     private static final Logger log = LoggerFactory.getLogger(ServicioFacturacion.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Pattern PATRON_TRACK = Pattern.compile(
+            "\"(?:trackId|track_id|TrackId|zipKey|ZipKey|ZIPKey)\"\\s*:\\s*\"([^\"]+)\"");
 
     private static final String COD_IVA = CufeCalculator.IVA;
     private static final String COD_INC = CufeCalculator.INC;
@@ -94,6 +114,11 @@ public class ServicioFacturacion {
     private final ServicioSuscripciones suscripciones;
     private final ServicioBranding branding;
     private final List<HookEntregaFactura> hooksEntrega;
+    private final DocumentoRadianRepository documentoRadianRepository;
+    private final PagoRepository pagoRepository;
+    private final ImpuestoPagoRepository impuestoPagoRepository;
+    private final TerceroContableRepository terceroRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @FunctionalInterface
     public interface HookEntregaFactura {
@@ -121,7 +146,6 @@ public class ServicioFacturacion {
                 auditoria, envios, suscripciones, null, List.of());
     }
 
-    @Autowired
     public ServicioFacturacion(EmpresaRepository empresaRepository,
                                EmpresaFeConfigRepository configRepository,
                                FacturaRepository facturaRepository,
@@ -140,6 +164,35 @@ public class ServicioFacturacion {
                                ServicioSuscripciones suscripciones,
                                ServicioBranding branding,
                                List<HookEntregaFactura> hooksEntrega) {
+        this(empresaRepository, configRepository, facturaRepository, eventoRepository, numeracion, validador,
+                generadorUbl, generadorAttached, generadorPdf, firma, transmision, notificador, generadorEvento,
+                auditoria, envios, suscripciones, branding, hooksEntrega, null, null, null, null, null);
+    }
+
+    @Autowired
+    public ServicioFacturacion(EmpresaRepository empresaRepository,
+                               EmpresaFeConfigRepository configRepository,
+                               FacturaRepository facturaRepository,
+                               FacturaEventoRepository eventoRepository,
+                               ServicioNumeracion numeracion,
+                               ValidadorFactura validador,
+                               GeneradorUblFactura generadorUbl,
+                               GeneradorAttachedDocument generadorAttached,
+                               GeneradorPdfFactura generadorPdf,
+                               ServicioFirma firma,
+                               ServicioTransmision transmision,
+                               NotificadorEmail notificador,
+                               GeneradorApplicationResponse generadorEvento,
+                               AuditoriaService auditoria,
+                               ServicioEnvios envios,
+                               ServicioSuscripciones suscripciones,
+                               ServicioBranding branding,
+                               List<HookEntregaFactura> hooksEntrega,
+                               DocumentoRadianRepository documentoRadianRepository,
+                               PagoRepository pagoRepository,
+                               ImpuestoPagoRepository impuestoPagoRepository,
+                               TerceroContableRepository terceroRepository,
+                               ApplicationEventPublisher eventPublisher) {
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -158,6 +211,11 @@ public class ServicioFacturacion {
         this.suscripciones = suscripciones;
         this.branding = branding;
         this.hooksEntrega = hooksEntrega == null ? List.of() : hooksEntrega;
+        this.documentoRadianRepository = documentoRadianRepository;
+        this.pagoRepository = pagoRepository;
+        this.impuestoPagoRepository = impuestoPagoRepository;
+        this.terceroRepository = terceroRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -170,8 +228,15 @@ public class ServicioFacturacion {
                 .toList();
     }
 
-    @Transactional
     public ResultadoEmisionDto emitir(Long empresaId, Long usuarioId, FacturaRequest req) {
+        return emitirSolicitud(empresaId, usuarioId, SolicitudEmisionDianDto.desde(req));
+    }
+
+    @Transactional
+    public ResultadoEmisionDto emitirSolicitud(Long empresaId, Long usuarioId, SolicitudEmisionDianDto req) {
+        if (req == null) {
+            throw new IllegalArgumentException("La solicitud de emisión es obligatoria.");
+        }
         suscripciones.verificarLimiteDocumentos(empresaId);
         EmpresaJpa empresa = empresa(empresaId);
         EmpresaFeConfigJpa config = config(empresaId);
@@ -182,7 +247,7 @@ public class ServicioFacturacion {
         if (validador.tieneErrores(resultados)) {
             auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_RECHAZADA_VALIDACION", "empresa",
                     empresaId, req.tipoDocumento());
-            return new ResultadoEmisionDto(false, null, null, null, "RECHAZADO", null,
+            return new ResultadoEmisionDto(false, null, null, null, "RECHAZADA", null,
                     "El documento tiene errores de validación", resultados.stream().filter(x -> !x.valida())
                     .map(this::aError).toList());
         }
@@ -193,30 +258,115 @@ public class ServicioFacturacion {
 
         String cufe = CufeCalculator.calcular(datos);
         String qrUrl = QrUrlGenerator.generar(cufe, datos.ambiente());
-        String xml = generadorUbl.generar(datos, cufe);
+        String xml = "31".equals(req.tipoDocumento())
+                ? generadorUbl.generarNomina(datos, req.nomina(), cufe)
+                : generadorUbl.generar(datos, cufe);
         String xmlFirmado = firma.firmar(xml, config);
 
         ResultadoTransmision transmisionResultado = transmision.enviar(xmlFirmado, cufe, DatosEnvio.de(datos), config);
+        String trackId = extraerTrackId(transmisionResultado.respuestaCruda(), cufe);
 
         FacturaJpa factura = persistir(empresa, usuarioId, config, datos, cufe, qrUrl, xml, xmlFirmado,
-                transmisionResultado);
+                transmisionResultado, req.tipoDocumento());
+        guardarPdf(factura, datos, cufe, qrUrl);
 
         FacturaEventoJpa evento = new FacturaEventoJpa();
         evento.setFactura(factura);
         evento.setTipoEvento("EMISION");
         evento.setEstado(transmisionResultado.exitoso() ? "ACEPTADO" : "RECHAZADO");
         evento.setXml(xmlFirmado);
-        evento.setRespuesta(transmisionResultado.respuestaCruda());
+        evento.setRespuesta("trackId=" + trackId + ";" + nvl(transmisionResultado.respuestaCruda()));
         eventoRepository.save(evento);
         envios.registrarIntento(factura, config, cufe, transmisionResultado);
 
-        notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
-        auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_EMITIDA", "factura", factura.getId(),
-                numeroCompleto + " · " + factura.getEstado());
-        notificarEntrega(empresaId, factura.getId(), numeroCompleto);
+        String motivo = transmisionResultado.exitoso() ? null : motivoTransmision(transmisionResultado);
+        publicarEvento(factura, datos, trackId, motivo);
 
-        return new ResultadoEmisionDto(true, factura.getId(), numeroCompleto, cufe, factura.getEstado(),
-                qrUrl, transmisionResultado.mensaje(), List.of());
+        if (transmisionResultado.exitoso()) {
+            notificarAdquirente(empresa, config, factura, datos, xmlFirmado, numeroCompleto);
+            auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_EMITIDA", "factura", factura.getId(),
+                    numeroCompleto + " · " + factura.getEstado());
+            notificarEntrega(empresaId, factura.getId(), numeroCompleto);
+        } else {
+            auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_RECHAZADA_TRANSMISION", "factura",
+                    factura.getId(), numeroCompleto + " · " + motivo);
+        }
+
+        return new ResultadoEmisionDto(transmisionResultado.exitoso(), factura.getId(), numeroCompleto, cufe,
+                factura.getEstado(), qrUrl, transmisionResultado.exitoso() ? transmisionResultado.mensaje() : motivo,
+                List.of());
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovimientoTributarioDto> movimientosParaExogena(Long empresaId, Integer ano) {
+        if (empresaId == null) {
+            throw new IllegalArgumentException("La empresa es obligatoria.");
+        }
+        int anio = ano == null ? LocalDate.now().getYear() : ano;
+        LocalDate desde = LocalDate.of(anio, 1, 1);
+        LocalDate hasta = LocalDate.of(anio, 12, 31);
+        List<MovimientoTributarioDto> movimientos = new ArrayList<>();
+
+        for (FacturaJpa factura : facturaRepository.findByEmpresaIdOrderByCreatedAtDesc(empresaId)) {
+            LocalDate fecha = factura.getFechaEmision();
+            if (fecha == null || fecha.isBefore(desde) || fecha.isAfter(hasta) ||estaRechazada(factura.getEstado())) {
+                continue;
+            }
+            String tipo = nvl(factura.getTipoDocumento());
+            String concepto = "31".equals(tipo) ? "NOMINA" : "FACTURA";
+            movimientos.add(new MovimientoTributarioDto(empresaId, terceroId(empresaId,
+                    factura.getAdquirenteTipoDoc(), factura.getAdquirenteNumDoc()), concepto,
+                    nz(factura.getTotal()), fecha, tipo));
+            if (factura.getImpuestos() != null) {
+                for (FacturaImpuestoJpa impuesto : factura.getImpuestos()) {
+                    if (esRetencion(impuesto.getTipo())) {
+                        movimientos.add(new MovimientoTributarioDto(empresaId, terceroId(empresaId,
+                                factura.getAdquirenteTipoDoc(), factura.getAdquirenteNumDoc()), "RETENCION",
+                                nz(impuesto.getValor()), fecha, impuesto.getTipo()));
+                    }
+                }
+            }
+        }
+
+        if (documentoRadianRepository != null) {
+            for (var documento : documentoRadianRepository.findByEmpresaIdOrderByFechaDescIdDesc(empresaId)) {
+                LocalDate fecha = documento.getFecha();
+                if (fecha == null || fecha.isBefore(desde) || fecha.isAfter(hasta)) {
+                    continue;
+                }
+                if ("RECIBIDO".equalsIgnoreCase(nvl(documento.getDireccion()))) {
+                    movimientos.add(new MovimientoTributarioDto(empresaId, null, "COMPRA",
+                            nz(documento.getTotal()), fecha, nvl(documento.getTipoDocumento())));
+                }
+                if (nz(documento.getRetenciones()).signum() > 0) {
+                    movimientos.add(new MovimientoTributarioDto(empresaId, null, "RETENCION",
+                            nz(documento.getRetenciones()), fecha, nvl(documento.getTipoDocumento())));
+                }
+            }
+        }
+
+        if (pagoRepository != null) {
+            for (var pago : pagoRepository.findByEmpresaIdOrderByCreatedAtDesc(empresaId)) {
+                LocalDate fecha = pago.getCreatedAt() == null ? null : pago.getCreatedAt().toLocalDate();
+                if (fecha == null || fecha.isBefore(desde) || fecha.isAfter(hasta)) {
+                    continue;
+                }
+                movimientos.add(new MovimientoTributarioDto(empresaId, null, "PAGO", nz(pago.getMonto()),
+                        fecha, nvl(pago.getReferencia())));
+            }
+        }
+
+        if (impuestoPagoRepository != null) {
+            for (String codigo : new String[]{"01", "04", "05", "06", "07"}) {
+                BigDecimal valor = impuestoPagoRepository.sumarPorEmpresaImpuestoPeriodo(empresaId, codigo,
+                        desde, hasta);
+                if (valor != null && valor.signum() > 0) {
+                    movimientos.add(new MovimientoTributarioDto(empresaId, null, "PAGO_IMPUESTO", valor,
+                            hasta, codigo));
+                }
+            }
+        }
+        return movimientos;
     }
 
     public void notificarEntrega(Long empresaId, Long facturaId, String numeroCompleto) {
@@ -451,11 +601,11 @@ public class ServicioFacturacion {
     }
 
     private FacturaJpa persistir(EmpresaJpa empresa, Long usuarioId, EmpresaFeConfigJpa config, FacturaDatos d,
-                                 String cufe, String qrUrl, String xml, String xmlFirmado,
-                                 ResultadoTransmision resultado) {
+                                  String cufe, String qrUrl, String xml, String xmlFirmado,
+                                  ResultadoTransmision resultado, String tipoDocumento) {
         FacturaJpa f = new FacturaJpa();
         f.setEmpresa(empresa);
-        f.setTipoDocumento(d.tipo().getCodigo());
+        f.setTipoDocumento(tipoDocumento == null ? d.tipo().getCodigo() : tipoDocumento);
         f.setPrefijo(d.prefijo());
         f.setNumero(d.numero());
         f.setNumeroCompleto(d.numeroCompleto());
@@ -487,7 +637,7 @@ public class ServicioFacturacion {
         f.setTotal(d.total());
         f.setTotalPagar(d.totalPagar());
         f.setObservaciones(d.observaciones());
-        f.setEstado(resultado.exitoso() ? "ACEPTADO" : "RECHAZADO");
+        f.setEstado(resultado.exitoso() ? "ACEPTADO" : "RECHAZADA");
         f.setXmlGenerado(xml);
         f.setXmlFirmado(xmlFirmado);
         f.setQrUrl(qrUrl);
@@ -531,7 +681,12 @@ public class ServicioFacturacion {
     }
 
     private FacturaDatos construirDatos(EmpresaJpa empresa, EmpresaFeConfigJpa config, FacturaRequest req,
-                                        long numero, String numeroCompleto) {
+                                         long numero, String numeroCompleto) {
+        return construirDatos(empresa, config, SolicitudEmisionDianDto.desde(req), numero, numeroCompleto);
+    }
+
+    private FacturaDatos construirDatos(EmpresaJpa empresa, EmpresaFeConfigJpa config, SolicitudEmisionDianDto req,
+                                         long numero, String numeroCompleto) {
         TipoDocumento tipo = TipoDocumento.porCodigo(req.tipoDocumento());
         LocalDate hoy = LocalDate.now();
         LocalTime ahora = LocalTime.now().withNano(0);
@@ -585,6 +740,22 @@ public class ServicioFacturacion {
         if (totalInc.compareTo(BigDecimal.ZERO) > 0) {
             impuestos.add(new ImpuestoFactura(COD_INC, "INC", baseInc, BigDecimal.ZERO, totalInc));
         }
+        if (req.retenciones() != null) {
+            for (RetencionDianDto retencion : req.retenciones()) {
+                BigDecimal base = nz(retencion.base(), subtotal);
+                BigDecimal valor = nz(retencion.valor(), BigDecimal.ZERO);
+                if (valor.signum() == 0 && retencion.porcentaje() != null) {
+                    valor = base.multiply(retencion.porcentaje())
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                }
+                impuestos.add(new ImpuestoFactura(codigoRetencion(retencion.codigo()),
+                        retencion.nombre() == null ? "Retención" : retencion.nombre(), base,
+                        nz(retencion.porcentaje(), BigDecimal.ZERO), valor));
+                totalRetenciones = totalRetenciones.add(valor);
+            }
+        }
+        totalRetenciones = totalRetenciones.setScale(2, RoundingMode.HALF_UP);
+        totalPagar = total.subtract(totalRetenciones).setScale(2, RoundingMode.HALF_UP);
 
         DatosEmisor emisor = new DatosEmisor(mapearTipoDocumento(empresa.getTipoDocumento()), empresa.getNit(),
                 NitDigitoVerificacionRegla.calcularDv(empresa.getNit()), empresa.getRazonSocial(), empresa.getRegimen(),
@@ -603,13 +774,18 @@ public class ServicioFacturacion {
                 ar == null || ar.regimen() == null ? "ORDINARIO" : ar.regimen(),
                 ar == null || ar.responsabilidadFiscal() == null ? "R-99-PN" : ar.responsabilidadFiscal());
 
+        String observaciones = req.observaciones();
+        if (req.motivo() != null && !req.motivo().isBlank()) {
+            observaciones = nvl(observaciones).isEmpty() ? "Motivo: " + req.motivo()
+                    : nvl(observaciones) + " | Motivo: " + req.motivo();
+        }
         return new FacturaDatos(tipo, numeroCompleto, nvl(config.getPrefijo()), numero, hoy, ahora,
                 req.fechaVencimiento(), config.getAmbiente(), "COP",
                 req.formaPago() == null ? "1" : req.formaPago(),
                 req.medioPago() == null ? "10" : req.medioPago(),
                 req.tipoOperacion() == null ? "10" : req.tipoOperacion(),
                 emisor, adquirente, lineas, impuestos, subtotal, totalImpuestos, totalRetenciones, total, totalPagar,
-                req.observaciones(), req.cufeReferencia(), req.numeroReferencia(), softwareId, softwarePin,
+                observaciones, req.cufeReferencia(), req.numeroReferencia(), softwareId, softwarePin,
                 securityCode, config.getTestSetId(), config.getResolucionNumero(), config.getResolucionFecha(),
                 config.getRangoVigenciaDesde(), config.getRangoVigenciaHasta(),
                 config.getRangoDesde() == null ? 0 : config.getRangoDesde(),
@@ -648,6 +824,104 @@ public class ServicioFacturacion {
     private ErrorValidacionDto aError(ResultadoRegla r) {
         return new ErrorValidacionDto(r.codigoRegla(), r.severidad() == null ? null : r.severidad().name(),
                 r.mensaje(), r.linea(), r.campo(), r.valorEsperado(), r.valorEncontrado());
+    }
+
+    private void guardarPdf(FacturaJpa factura, FacturaDatos datos, String cufe, String qrUrl) {
+        try {
+            byte[] pdf = generadorPdf.generar(datos, cufe, qrUrl);
+            String base = System.getProperty("magnetixdian.upload.dir", "./uploads");
+            Path directorio = Paths.get(base, "facturas", String.valueOf(factura.getEmpresa().getId()));
+            Files.createDirectories(directorio);
+            String nombre = nvl(factura.getNumeroCompleto()).replaceAll("[^A-Za-z0-9_-]", "_") + ".pdf";
+            Path archivo = directorio.resolve(nombre);
+            Files.write(archivo, pdf);
+            factura.setPdfPath(archivo.toAbsolutePath().toString());
+            facturaRepository.save(factura);
+        } catch (Exception ex) {
+            log.warn("No se pudo persistir el PDF de la factura {}: {}", factura.getNumeroCompleto(), ex.getMessage());
+        }
+    }
+
+    private String extraerTrackId(String respuesta, String cufeRespaldo) {
+        if (respuesta != null && !respuesta.isBlank()) {
+            try {
+                JsonNode raiz = MAPPER.readTree(respuesta);
+                for (String clave : List.of("trackId", "track_id", "TrackId", "zipKey", "ZipKey", "ZIPKey")) {
+                    JsonNode valor = raiz.findValue(clave);
+                    if (valor != null && !valor.isNull() && !valor.asText().isBlank()) {
+                        return valor.asText();
+                    }
+                }
+            } catch (IOException ignored) {
+            }
+            Matcher matcher = PATRON_TRACK.matcher(respuesta);
+            if (matcher.find()) {
+                return matcher.group(1);
+            }
+        }
+        return cufeRespaldo;
+    }
+
+    private String motivoTransmision(ResultadoTransmision resultado) {
+        if (resultado == null) {
+            return "La transmisión no devolvió resultado.";
+        }
+        if (resultado.mensaje() != null && !resultado.mensaje().isBlank()) {
+            return resultado.mensaje();
+        }
+        if (resultado.respuestaCruda() != null && !resultado.respuestaCruda().isBlank()) {
+            return resultado.respuestaCruda();
+        }
+        return "La DIAN rechazó el documento.";
+    }
+
+    private void publicarEvento(FacturaJpa factura, FacturaDatos datos, String trackId, String motivo) {
+        if (eventPublisher == null) {
+            return;
+        }
+        eventPublisher.publishEvent(new FacturaEmitidaEvent(
+                factura.getEmpresa().getId(), factura.getId(), factura.getNumeroCompleto(),
+                factura.getTipoDocumento(), factura.getCufe(), factura.getCude(), trackId, factura.getQrUrl(),
+                factura.getEstado(), factura.getFechaEmision(), datos.nitAdquirente(),
+                terceroId(factura.getEmpresa().getId(), factura.getAdquirenteTipoDoc(),
+                        factura.getAdquirenteNumDoc()),
+                factura.getSubtotal(), factura.getTotalImpuestos(), factura.getTotalRetenciones(),
+                factura.getTotal(), factura.getTotalPagar(), motivo));
+    }
+
+    private boolean estaRechazada(String estado) {
+        return estado != null && (estado.equalsIgnoreCase("RECHAZADO") || estado.equalsIgnoreCase("RECHAZADA"));
+    }
+
+    private boolean esRetencion(String codigo) {
+        return "05".equals(codigo) || "06".equals(codigo) || "07".equals(codigo);
+    }
+
+    private String codigoRetencion(String codigo) {
+        if (codigo != null && !codigo.isBlank()) {
+            String normalizado = codigo.trim();
+            if (esRetencion(normalizado)) {
+                return normalizado;
+            }
+            if (normalizado.toUpperCase().contains("RETE")) {
+                return "05";
+            }
+        }
+        return "05";
+    }
+
+    private Long terceroId(Long empresaId, String tipoDocumento, String numeroDocumento) {
+        if (terceroRepository == null || numeroDocumento == null || numeroDocumento.isBlank()) {
+            return null;
+        }
+        return terceroRepository.findByEmpresaIdAndTipoDocumentoAndNumeroDocumento(
+                        empresaId, tipoDocumento, numeroDocumento)
+                .map(tercero -> tercero.getId())
+                .orElse(null);
+    }
+
+    private BigDecimal nz(BigDecimal v) {
+        return nz(v, BigDecimal.ZERO);
     }
 
     private BigDecimal nz(BigDecimal v, BigDecimal def) {

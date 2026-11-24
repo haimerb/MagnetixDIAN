@@ -5,6 +5,8 @@ import com.magnetixdian.domain.factura.DatosEmisor;
 import com.magnetixdian.domain.factura.FacturaDatos;
 import com.magnetixdian.domain.factura.ImpuestoFactura;
 import com.magnetixdian.domain.factura.LineaFactura;
+import com.magnetixdian.domain.factura.TipoDocumento;
+import com.magnetixdian.interfaces.dto.NominaElectronicaDto;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -20,8 +22,13 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Genera documentos UBL 2.1 (Invoice / CreditNote / DebitNote) conforme al
@@ -47,8 +54,86 @@ public class GeneradorUblFactura {
      * Construye el XML UBL del documento (sin firma).
      */
     public String generar(FacturaDatos f, String cufe) {
+        String root = f.tipo().getUblRoot();
+        return generarConEncabezado(f, cufe, root, f.tipo().getCodigo(), f.tipo().getProfileId(),
+                tipoCodeTag(root));
+    }
+
+    public byte[] construirDocumentoPrueba(String tipo, String testSetId, int secuencia) {
+        TipoDocumento tipoDocumento = tipoPrueba(tipo);
+        long numero = secuencia <= 0 ? 1 : secuencia;
+        String prefijo = "TST";
+        String numeroCompleto = prefijo + tipoDocumento.getCodigo() + String.format(Locale.ROOT, "%03d", numero);
+        String semilla = tipoDocumento.getCodigo() + "|" + nvl(testSetId) + "|" + numeroCompleto;
+        BigDecimal subtotal = new BigDecimal("1000.00");
+        BigDecimal iva = new BigDecimal("190.00");
+        LineaFactura linea = LineaFactura.of(1, "Documento de prueba " + tipoDocumento.name(), BigDecimal.ONE,
+                subtotal, BigDecimal.valueOf(19), BigDecimal.ZERO, "94", null);
+        FacturaDatos datos = new FacturaDatos(tipoDocumento, numeroCompleto, prefijo, numero,
+                java.time.LocalDate.now(), java.time.LocalTime.now().withNano(0), null, 2, "COP", "1", "10", "10",
+                new DatosEmisor("31", "900123456", 4, "MAGNETIXDIAN SAS", "ORDINARIO", "R-99-PN",
+                        "Calle 1", "Bogota", "Bogota", "facturacion@magnetixdian.com", false),
+                new DatosAdquirente("31", "800197268", null, "DIAN", "facturacion@magnetixdian.com",
+                        "Cra 7", "Bogota", "ORDINARIO", "R-99-PN"),
+                List.of(linea), List.of(new ImpuestoFactura("01", "IVA", subtotal, BigDecimal.valueOf(19), iva)),
+                subtotal, iva, BigDecimal.ZERO, subtotal.add(iva), subtotal.add(iva),
+                "Documento de prueba - testSetId " + nvl(testSetId), null, null,
+                "TEST-SOFTWARE", "TEST-PIN", hashHex("SECURITY|" + semilla), nvl(testSetId),
+                "RES-TEST", java.time.LocalDate.now(), java.time.LocalDate.now().minusMonths(1),
+                java.time.LocalDate.now().plusYears(1), numero, numero);
+        String cufe = hashHex("CUFE|" + semilla);
+        return generar(datos, cufe).getBytes(StandardCharsets.UTF_8);
+    }
+
+    public String generarNomina(FacturaDatos f, NominaElectronicaDto nomina, String cufe) {
+        if (nomina == null) {
+            throw new IllegalArgumentException("La nómina electrónica es obligatoria.");
+        }
+        List<LineaFactura> lineas = new ArrayList<>();
+        BigDecimal subtotal = BigDecimal.ZERO;
+        int n = 1;
+        if (nomina.devengados() != null) {
+            for (NominaElectronicaDto.ConceptoDto concepto : nomina.devengados()) {
+                BigDecimal valor = concepto.valor() == null ? BigDecimal.ZERO : concepto.valor();
+                lineas.add(new LineaFactura(n++, concepto.codigo(), concepto.descripcion(), BigDecimal.ONE,
+                        "94", valor, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                        BigDecimal.ZERO, valor, null));
+                subtotal = subtotal.add(valor);
+            }
+        }
+        BigDecimal deducciones = BigDecimal.ZERO;
+        if (nomina.deducciones() != null) {
+            for (NominaElectronicaDto.ConceptoDto concepto : nomina.deducciones()) {
+                deducciones = deducciones.add(concepto.valor() == null ? BigDecimal.ZERO : concepto.valor());
+            }
+        }
+        subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
+        deducciones = deducciones.setScale(2, RoundingMode.HALF_UP);
+        List<ImpuestoFactura> impuestos = new ArrayList<>();
+        if (deducciones.signum() > 0) {
+            impuestos.add(new ImpuestoFactura("05", "Deducciones de nómina", subtotal, BigDecimal.ZERO,
+                    deducciones));
+        }
+        String observaciones = nvl(f.observaciones());
+        if (!observaciones.isEmpty()) {
+            observaciones += " | ";
+        }
+        observaciones += "Trabajador " + nvl(nomina.trabajadorNumeroDocumento()) + " - "
+                + nvl(nomina.trabajadorNombre()) + " | Periodo " + nvl(nomina.periodo());
+        FacturaDatos datosNomina = new FacturaDatos(f.tipo(), f.numeroCompleto(), f.prefijo(), f.numero(),
+                f.fechaEmision(), f.horaEmision(), nomina.fechaPago(), f.ambiente(), f.moneda(), f.formaPago(),
+                f.medioPago(), f.tipoOperacion(), f.emisor(), f.adquirente(), lineas, impuestos, subtotal,
+                BigDecimal.ZERO, deducciones, subtotal, subtotal.subtract(deducciones), observaciones,
+                f.cufeReferencia(), f.numeroReferencia(), f.softwareId(), f.softwarePin(),
+                f.softwareSecurityCode(), f.testSetId(), f.resolucionNumero(), f.resolucionFecha(),
+                f.rangoVigenciaDesde(), f.rangoVigenciaHasta(), f.rangoDesde(), f.rangoHasta());
+        return generarConEncabezado(datosNomina, cufe, "Invoice", "31",
+                "DIAN 2.1: Nomina Electronica", "cbc:InvoiceTypeCode");
+    }
+
+    private String generarConEncabezado(FacturaDatos f, String cufe, String root, String codigo,
+                                        String profileId, String tipoCode) {
         try {
-            String root = f.tipo().getUblRoot();
             String rootNs = switch (root) {
                 case "CreditNote" -> NS_CREDIT;
                 case "DebitNote" -> NS_DEBIT;
@@ -67,7 +152,7 @@ public class GeneradorUblFactura {
 
             cbc(doc, raiz, "UBLVersionID", "UBL 2.1");
             cbc(doc, raiz, "CustomizationID", f.tipoOperacion());
-            cbc(doc, raiz, "ProfileID", f.tipo().getProfileId());
+            cbc(doc, raiz, "ProfileID", profileId);
             cbc(doc, raiz, "ProfileExecutionID", String.valueOf(f.ambiente()));
             cbc(doc, raiz, "ID", f.numeroCompleto());
             Element uuid = cbc(doc, raiz, "UUID", cufe);
@@ -75,7 +160,7 @@ public class GeneradorUblFactura {
             uuid.setAttribute("schemeID", String.valueOf(f.ambiente()));
             cbc(doc, raiz, "IssueDate", f.fechaEmision().format(FECHA));
             cbc(doc, raiz, "IssueTime", f.horaEmision().format(HORA));
-            cbc(doc, raiz, tipoCodeTag(f.tipo().getUblRoot()), f.tipo().getCodigo());
+            cbc(doc, raiz, tipoCode, codigo);
             if (f.observaciones() != null && !f.observaciones().isBlank()) {
                 cbc(doc, raiz, "Note", f.observaciones());
             }
@@ -88,18 +173,15 @@ public class GeneradorUblFactura {
 
             raiz.appendChild(proveedor(doc, f.emisor()));
             raiz.appendChild(adquirente(doc, f.adquirente()));
-
             raiz.appendChild(paymentMeans(doc, f));
             raiz.appendChild(paymentTerms(doc, f));
 
-            // Impuestos (IVA / INC)
             for (String tributo : new String[]{"01", "04"}) {
                 BigDecimal valor = sumar(f.impuestos(), tributo);
                 if (valor.signum() > 0) {
                     raiz.appendChild(taxTotal(doc, f, tributo, valor));
                 }
             }
-            // Retenciones
             BigDecimal ret = sumar(f.impuestos(), "05")
                     .add(sumar(f.impuestos(), "06"))
                     .add(sumar(f.impuestos(), "07"));
@@ -113,10 +195,35 @@ public class GeneradorUblFactura {
             for (LineaFactura l : f.lineas()) {
                 raiz.appendChild(linea(doc, f, l, n++));
             }
-
             return serializar(doc);
         } catch (ParserConfigurationException e) {
             throw new IllegalStateException("No se pudo inicializar el generador UBL", e);
+        }
+    }
+
+    private TipoDocumento tipoPrueba(String tipo) {
+        if (tipo == null) {
+            throw new IllegalArgumentException("El tipo de documento de prueba es obligatorio.");
+        }
+        String normalizado = tipo.toUpperCase(Locale.ROOT).replaceAll("[^A-Z0-9]", "");
+        return switch (normalizado) {
+            case "FACTURA", "FACTURAVENTA", "01" -> TipoDocumento.FACTURA_VENTA;
+            case "NOTADEBITO", "DEBITNOTE", "92" -> TipoDocumento.NOTA_DEBITO;
+            case "NOTACREDITO", "CREDITNOTE", "91" -> TipoDocumento.NOTA_CREDITO;
+            default -> throw new IllegalArgumentException("Tipo de documento de prueba no soportado: " + tipo);
+        };
+    }
+
+    private String hashHex(String valor) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(valor.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format(Locale.ROOT, "%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("No se pudo calcular el identificador de prueba", e);
         }
     }
 
@@ -161,6 +268,7 @@ public class GeneradorUblFactura {
 
         // SoftwareSecurityCode
         sts(doc, dian, "sts:SoftwareSecurityCode", nvl(f.softwareSecurityCode()));
+        sts(doc, dian, "sts:TestSetId", nvl(f.testSetId()));
 
         // AuthorizationProvider
         Element authProvider = el(doc, NS_STS, "sts:AuthorizationProvider");
