@@ -70,8 +70,9 @@ La URL del frontend es `https://magnetixdian.<cuenta>.workers.dev` (o
   y la entrada `vars: SW_VERSION`, enlazada al SHA del commit; equivale a
   `wrangler deploy --var SW_VERSION:<sha>`.
 - El workflow verifica que `/sw.js` devuelva `magnetixdian-<sha>` antes de marcar el deploy como verde.
-- `worker.js` sustituye el placeholder por ese SHA (o, si no está, por el ETag de
-  `index.html`, que cambia con el hash del bundle) y responde sin cachear el SW.
+- `worker.js` sustituye el placeholder por ese SHA; si no está disponible, usa el
+  ETag de `index.html` o el hash `index-<hash>.js` del bundle, que cambia en cada
+  build, y responde sin cachear el SW.
 - Al activarse, el SW elimina las cachés `magnetixdian-*` anteriores y toma el control.
 
 ## 4. Variables de entorno
