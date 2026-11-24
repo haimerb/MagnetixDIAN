@@ -15,20 +15,20 @@ import { listarPlanes, type Plan } from '../api/client'
 
 const BENEFICIOS = [
   {
-    titulo: 'Carga sin errores',
-    texto: 'Importe sus Excel 1001 y detecte inconsistencias antes de presentar.',
-  },
-  {
-    titulo: 'Reglas DIAN actualizadas',
-    texto: 'Validación de NIT, UVT, catálogo de conceptos y calendario de vencimientos.',
-  },
-  {
-    titulo: 'XML listo para MUISCA',
-    texto: 'Genere el archivo 1001 con el formato exigido por la resolución vigente.',
-  },
-  {
     titulo: 'Facturación electrónica',
-    texto: 'Emisión, envío y reintentos con trazabilidad en un solo lugar.',
+    texto: 'Emita, envíe y haga seguimiento de facturas y notas DIAN.',
+  },
+  {
+    titulo: 'Contabilidad integrada',
+    texto: 'Cause documentos y genere asientos automáticos desde cada factura.',
+  },
+  {
+    titulo: 'Exógena DIAN',
+    texto: 'Valide el formato 1001 y genere el XML listo para MUISCA.',
+  },
+  {
+    titulo: 'Cobro y activación',
+    texto: 'Checkout, firma de webhook verificada y tenant listo para facturar.',
   },
   {
     titulo: 'Multiempresa',
@@ -42,9 +42,9 @@ const BENEFICIOS = [
 
 const PASOS = [
   'Cree su cuenta y registre su empresa.',
-  'Cargue el archivo o capture sus facturas.',
-  'Valide, corrija y genere el XML.',
-  'Presente y haga seguimiento desde el panel.',
+  'Pague y active su tenant automáticamente.',
+  'Habilite su PAC o configure el modo cliente DIAN.',
+  'Facture, contabilice y genere su exógena.',
 ]
 
 const PLANES_FALLBACK: Plan[] = [
@@ -111,15 +111,15 @@ export default function LandingPage() {
           <Grid container spacing={4} sx={{ py: { xs: 6, md: 10 } }} alignItems="center">
             <Grid size={{ xs: 12, md: 7 }}>
               <Chip
-                label="Resolución Única 000227 de 2025"
+                label="ERP contable + facturación electrónica + exógena DIAN"
                 sx={{ mb: 3, bgcolor: (t) => alpha(t.palette.common.white, 0.16), color: 'common.white' }}
               />
               <Typography variant="h2" component="h1" sx={{ color: 'common.white', mb: 2 }}>
-                Información exógena DIAN sin fricción
+                De la venta a la factura, sin fricción
               </Typography>
               <Typography variant="h6" sx={{ color: 'common.white', opacity: 0.86, mb: 4, maxWidth: 620 }}>
-                Cargue, valide y presente sus medios magnéticos con confianza. Un solo lugar para el
-                cumplimiento tributario y la facturación electrónica de su empresa.
+                Facture, cause y contabilice en un solo lugar. Cumpla con la DIAN y cierre su mes sin
+                hojas de cálculo ni reprocesos.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button component={RouterLink} to="/registro" variant="contained" color="secondary" size="large">
@@ -154,10 +154,10 @@ export default function LandingPage() {
 
       <Container maxWidth="lg" sx={{ py: { xs: 6, md: 9 } }}>
         <Typography variant="h4" component="h2" align="center" gutterBottom>
-          Todo lo que su cierre tributario necesita
+          Todo lo que su operación necesita para facturar y cerrar
         </Typography>
         <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 6 }}>
-          Diseñado para empresas colombianas que deben presentar información exógena y emitir factura electrónica.
+          Diseñado para empresas colombianas que venden, facturan y deben cumplir con la DIAN.
         </Typography>
         <Grid container spacing={3}>
           {BENEFICIOS.map((beneficio) => (
@@ -222,7 +222,7 @@ export default function LandingPage() {
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
             <Typography variant="caption" color="text.secondary">
-              MagnetixDIAN · Información exógena DIAN · Resolución Única 000227 de 2025
+              MagnetixDIAN · ERP contable y facturación electrónica · Exógena DIAN
             </Typography>
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Link component={RouterLink} to="/terminos" variant="caption">
