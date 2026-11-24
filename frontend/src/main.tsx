@@ -26,7 +26,10 @@ if (sentryDsn) {
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => undefined)
+    const scriptBundle = document.querySelector<HTMLScriptElement>('script[type="module"][src*="/assets/index-"]')
+    const versionBundle = scriptBundle?.src.match(/index-([a-zA-Z0-9_-]+)\.js/)?.[1]
+    const rutaSw = versionBundle ? `/sw-${versionBundle}.js` : '/sw.js'
+    navigator.serviceWorker.register(rutaSw).catch(() => undefined)
   })
 }
 
