@@ -1,0 +1,9 @@
+title = "MagnetixDIAN"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+targetRules = ["generic-api-key"]
+description = "Declaracion de tipo PrivateKey no es un secreto"
+paths = ['''backend/src/main/java/com/magnetixdian/infrastructure/dian/ClienteDianSoap\.java''']
