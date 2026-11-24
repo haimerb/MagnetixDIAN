@@ -15,7 +15,7 @@ export default function DocumentoSoportePage() {
         subtitle="Gestión del documento soporte de pago a no obligados a facturar."
       />
       <Alert severity="info">
-        Use el TEST-05-SOP del TEST SET DIAN para validar este tipo de documento antes de producirlo.
+        El TEST SET DIAN valida facturas, nota débito y nota crédito; el documento soporte se prueba por separado.
       </Alert>
       <SectionCard title="Documentos soporte registrados">
         <EmptyState

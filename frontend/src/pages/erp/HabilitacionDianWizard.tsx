@@ -336,7 +336,7 @@ export default function HabilitacionDianWizard() {
       {paso === 2 && (
         <SectionCard
           title="Paso 3 · TEST SET"
-          subtitle="8 facturas, 1 nota crédito y 1 documento soporte con estado por trackId."
+          subtitle="8 facturas, 1 nota débito y 1 nota crédito con estado por trackId."
         >
           <Alert severity="info" sx={{ mb: 2 }}>
             El TEST SET tiene {DOCUMENTOS_TEST_SET.length} documentos: 8 + 1 + 1.
