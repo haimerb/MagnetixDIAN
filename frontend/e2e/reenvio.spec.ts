@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { loginAdmin } from './helpers'
 
 const FACTURA = {
@@ -46,6 +46,8 @@ test.describe('Reenvío de facturas', () => {
   test('reenvía la factura por correo con la pasarela simulada', async ({ page }) => {
     let reenvioRecibido = false
 
+    await loginAdmin(page)
+
     await page.route(/\/api\/facturacion\/\d+\/999(?:\/|$)/, async (route) => {
       if (route.request().method() === 'POST') {
         reenvioRecibido = true
@@ -63,7 +65,6 @@ test.describe('Reenvío de facturas', () => {
       })
     })
 
-    await loginAdmin(page)
     await page.goto('/app/facturacion/999')
     await expect(page.getByRole('heading', { name: 'FE 999' })).toBeVisible()
 

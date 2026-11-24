@@ -8,7 +8,12 @@ import com.magnetixdian.infrastructure.persistence.ConciliacionRepository;
 import com.magnetixdian.infrastructure.persistence.DocumentoRadianJpa;
 import com.magnetixdian.infrastructure.persistence.DocumentoRadianRepository;
 import com.magnetixdian.interfaces.dto.ConciliacionLineaDto;
+import com.magnetixdian.interfaces.dto.LineaConciliacionTesoreriaDto;
+import com.magnetixdian.interfaces.dto.MovimientoTesoreriaDto;
 import com.magnetixdian.interfaces.dto.ResultadoConciliacionDto;
+import com.magnetixdian.interfaces.dto.ResultadoConciliacionTesoreriaDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,8 +22,12 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -35,6 +44,7 @@ public class ServicioConciliacion {
     private final DocumentoRadianRepository documentoRepository;
     private final AsientoContableRepository asientoRepository;
     private final ConciliacionRepository conciliacionRepository;
+    private JdbcTemplate jdbc;
 
     public ServicioConciliacion(DocumentoRadianRepository documentoRepository,
                                 AsientoContableRepository asientoRepository,
@@ -42,6 +52,105 @@ public class ServicioConciliacion {
         this.documentoRepository = documentoRepository;
         this.asientoRepository = asientoRepository;
         this.conciliacionRepository = conciliacionRepository;
+    }
+
+    @Autowired(required = false)
+    public void setJdbc(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    @Transactional(readOnly = true)
+    public ResultadoConciliacionTesoreriaDto conciliarTesoreria(
+            Long empresaId, List<MovimientoTesoreriaDto> movimientosBanco) {
+        if (jdbc == null) {
+            throw new IllegalStateException("La conciliación de tesorería requiere acceso a base de datos");
+        }
+        List<MovimientoTesoreriaDto> banco = movimientosBanco == null ? List.of() : movimientosBanco;
+        if (banco.isEmpty()) {
+            return new ResultadoConciliacionTesoreriaDto(CERO, CERO, CERO, 0, List.of());
+        }
+        LocalDate desde = banco.stream().map(MovimientoTesoreriaDto::fecha)
+                .filter(fecha -> fecha != null).min(LocalDate::compareTo).orElseThrow();
+        LocalDate hasta = banco.stream().map(MovimientoTesoreriaDto::fecha)
+                .filter(fecha -> fecha != null).max(LocalDate::compareTo).orElseThrow();
+        Map<String, MovimientoTesoreriaDto> libros = new LinkedHashMap<>();
+        jdbc.query("""
+                SELECT a.fecha, cc.codigo AS cuenta_codigo, a.documento_tipo, a.documento_id,
+                       l.descripcion, COALESCE(l.debito, 0) - COALESCE(l.credito, 0) AS valor
+                FROM asiento_contable_linea l
+                JOIN asiento_contable a ON a.id = l.asiento_contable_id
+                JOIN cuenta_contable cc ON cc.id = l.cuenta_contable_id
+                WHERE a.empresa_id = ? AND a.estado = 'CONTABILIZADO'
+                  AND a.fecha BETWEEN ? AND ?
+                  AND cc.codigo IN ('110505', '110510')
+                ORDER BY a.fecha, l.id
+                """, rs -> {
+            LocalDate fecha = rs.getDate("fecha").toLocalDate();
+            String cuenta = rs.getString("cuenta_codigo");
+            String referencia = rs.getString("documento_tipo") + "-" + rs.getLong("documento_id");
+            String clave = clave(fecha, referencia, cuenta);
+            libros.merge(clave, new MovimientoTesoreriaDto(fecha, cuenta, null, referencia,
+                    rs.getString("descripcion"), "DEBITO", rs.getBigDecimal("valor")),
+                    (actual, nuevo) -> new MovimientoTesoreriaDto(actual.fecha(), actual.cuentaCodigo(),
+                            actual.terceroDocumento(), actual.referencia(), actual.descripcion(),
+                            "DEBITO", actual.valor().add(nuevo.valor())));
+        }, empresaId, java.sql.Date.valueOf(desde), java.sql.Date.valueOf(hasta));
+
+        Map<String, MovimientoTesoreriaDto> bancoPorClave = new LinkedHashMap<>();
+        for (MovimientoTesoreriaDto movimiento : banco) {
+            if (movimiento == null || movimiento.fecha() == null) {
+                continue;
+            }
+            String cuenta = movimiento.cuentaCodigo() == null ? "" : movimiento.cuentaCodigo();
+            String referencia = movimiento.referencia() == null ? "" : movimiento.referencia().trim();
+            String clave = clave(movimiento.fecha(), referencia, cuenta);
+            BigDecimal valor = escala(movimiento.valor() == null ? CERO : movimiento.valor());
+            if ("CREDITO".equalsIgnoreCase(movimiento.naturaleza())) {
+                valor = valor.negate();
+            }
+            bancoPorClave.merge(clave, new MovimientoTesoreriaDto(movimiento.fecha(), cuenta,
+                    movimiento.terceroDocumento(), referencia, movimiento.descripcion(),
+                    movimiento.naturaleza(), valor),
+                    (actual, nuevo) -> new MovimientoTesoreriaDto(actual.fecha(), actual.cuentaCodigo(),
+                            actual.terceroDocumento(), actual.referencia(), actual.descripcion(),
+                            actual.naturaleza(), actual.valor().add(nuevo.valor())));
+        }
+
+        Set<String> claves = new LinkedHashSet<>();
+        claves.addAll(libros.keySet());
+        claves.addAll(bancoPorClave.keySet());
+        List<LineaConciliacionTesoreriaDto> lineas = new ArrayList<>();
+        int coincidencias = 0;
+        BigDecimal totalLibro = CERO;
+        BigDecimal totalBanco = CERO;
+        for (String clave : claves) {
+            MovimientoTesoreriaDto libro = libros.get(clave);
+            MovimientoTesoreriaDto extracto = bancoPorClave.get(clave);
+            BigDecimal valorLibro = libro == null ? CERO : escala(libro.valor());
+            BigDecimal valorBanco = extracto == null ? CERO : escala(extracto.valor());
+            totalLibro = totalLibro.add(valorLibro);
+            totalBanco = totalBanco.add(valorBanco);
+            String estado;
+            if (libro != null && extracto != null) {
+                boolean coincide = valorLibro.compareTo(valorBanco) == 0;
+                estado = coincide ? COINCIDE : DIFERENCIA;
+                if (coincide) {
+                    coincidencias++;
+                }
+            } else {
+                estado = libro == null ? "SIN_ASIENTO" : "SIN_EXTRACTO";
+            }
+            MovimientoTesoreriaDto referencia = libro == null ? extracto : libro;
+            lineas.add(new LineaConciliacionTesoreriaDto(referencia.fecha(), referencia.referencia(),
+                    referencia.cuentaCodigo(), referencia.descripcion(), valorLibro, valorBanco, estado));
+        }
+        return new ResultadoConciliacionTesoreriaDto(totalLibro, totalBanco,
+                totalLibro.subtract(totalBanco), coincidencias, lineas);
+    }
+
+    private static String clave(LocalDate fecha, String referencia, String cuenta) {
+        return fecha + "|" + (referencia == null ? "" : referencia.trim().toUpperCase(Locale.ROOT))
+                + "|" + (cuenta == null ? "" : cuenta.trim());
     }
 
     public ResultadoConciliacionDto conciliar(Long empresaId, LocalDate fechaDesde, LocalDate fechaHasta,

@@ -1,4 +1,5 @@
 const HEALTH_TIMEOUT_MS = 90_000
+const SW_PLACEHOLDER = '__CACHE_VERSION__'
 
 const PWA_ASSETS = new Map([
   ['/manifest.webmanifest', {
@@ -7,7 +8,7 @@ const PWA_ASSETS = new Map([
   }],
   ['/sw.js', {
     'Content-Type': 'application/javascript; charset=utf-8',
-    'Cache-Control': 'no-cache',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Service-Worker-Allowed': '/',
   }],
   ['/icon.svg', {
@@ -15,6 +16,46 @@ const PWA_ASSETS = new Map([
     'Cache-Control': 'public, max-age=86400',
   }],
 ])
+
+function sanitizarVersion(valor) {
+  return String(valor || '')
+    .replace(/^W\//, '')
+    .replace(/"/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '')
+    .slice(0, 48)
+}
+
+async function versionDelBundle(request, env) {
+  if (env.SW_VERSION && env.SW_VERSION !== 'dev') {
+    return sanitizarVersion(env.SW_VERSION)
+  }
+  try {
+    const index = await env.ASSETS.fetch(new Request(new URL('/index.html', request.url).toString(), request))
+    const etag = index.headers.get('etag')
+    if (etag) return sanitizarVersion(etag)
+  } catch {
+    // Sin ETag disponible se usa una versión estable; el deploy inyecta SW_VERSION.
+  }
+  return 'sin-version'
+}
+
+async function servirServiceWorker(request, env, cabeceras) {
+  const [asset, version] = await Promise.all([
+    env.ASSETS.fetch(request),
+    versionDelBundle(request, env),
+  ])
+  const cuerpo = (await asset.text()).replaceAll(SW_PLACEHOLDER, version)
+  const headers = new Headers(asset.headers)
+  for (const [nombre, valor] of Object.entries(cabeceras)) {
+    headers.set(nombre, valor)
+  }
+  headers.set('X-Content-Type-Options', 'nosniff')
+  return new Response(cuerpo, {
+    status: asset.status,
+    statusText: asset.statusText,
+    headers,
+  })
+}
 
 async function pingBackend(env) {
   const backend = env.BACKEND_ORIGIN || 'https://magnetixdian-backend.onrender.com'
@@ -47,6 +88,9 @@ export default {
 
     const pwaHeaders = PWA_ASSETS.get(url.pathname)
     if (pwaHeaders) {
+      if (url.pathname === '/sw.js') {
+        return servirServiceWorker(request, env, pwaHeaders)
+      }
       const asset = await env.ASSETS.fetch(request)
       const headers = new Headers(asset.headers)
       for (const [name, value] of Object.entries(pwaHeaders)) {

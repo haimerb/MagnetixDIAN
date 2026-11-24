@@ -8,6 +8,7 @@ import com.magnetixdian.infrastructure.persistence.UsuarioJpa;
 import com.magnetixdian.infrastructure.persistence.UsuarioRepository;
 import com.magnetixdian.interfaces.dto.RegistroEmpresaRequest;
 import com.magnetixdian.interfaces.dto.RegistroEmpresaResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,8 @@ public class ServicioRegistro {
     private final PasswordEncoder passwordEncoder;
     private final ServicioSuscripciones suscripciones;
     private final AuditoriaService auditoria;
+    private final ServicioOnboarding onboarding;
+    private final ServicioVerificacionEmail verificacion;
 
     public ServicioRegistro(EmpresaRepository empresaRepo,
                             UsuarioRepository usuarioRepo,
@@ -30,16 +33,39 @@ public class ServicioRegistro {
                             PasswordEncoder passwordEncoder,
                             ServicioSuscripciones suscripciones,
                             AuditoriaService auditoria) {
+        this(empresaRepo, usuarioRepo, roleRepo, passwordEncoder, suscripciones, auditoria, null, null);
+    }
+
+    @Autowired
+    public ServicioRegistro(EmpresaRepository empresaRepo,
+                            UsuarioRepository usuarioRepo,
+                            RoleRepository roleRepo,
+                            PasswordEncoder passwordEncoder,
+                            ServicioSuscripciones suscripciones,
+                            AuditoriaService auditoria,
+                            ServicioOnboarding onboarding,
+                            ServicioVerificacionEmail verificacion) {
         this.empresaRepo = empresaRepo;
         this.usuarioRepo = usuarioRepo;
         this.roleRepo = roleRepo;
         this.passwordEncoder = passwordEncoder;
         this.suscripciones = suscripciones;
         this.auditoria = auditoria;
+        this.onboarding = onboarding;
+        this.verificacion = verificacion;
     }
 
     @Transactional
     public RegistroEmpresaResponse registrar(RegistroEmpresaRequest request) {
+        if (onboarding == null || verificacion == null) {
+            return registrarLegado(request);
+        }
+        RegistroEmpresaResponse respuesta = onboarding.crearTenant(request);
+        verificacion.enviarTokenVerificacion(respuesta.empresaId(), request.email());
+        return respuesta;
+    }
+
+    private RegistroEmpresaResponse registrarLegado(RegistroEmpresaRequest request) {
         if (request.website() != null && !request.website().isBlank()) {
             throw new IllegalArgumentException("No se pudo completar el registro.");
         }

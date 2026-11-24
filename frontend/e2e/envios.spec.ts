@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import { loginAdmin } from './helpers'
 
 test.describe('Reintentos de transmisión', () => {

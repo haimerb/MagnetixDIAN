@@ -3,15 +3,19 @@ package com.magnetixdian.interfaces.rest;
 import com.magnetixdian.application.ServicioCausacionImpuestos;
 import com.magnetixdian.application.ServicioCertificadosImpuesto;
 import com.magnetixdian.application.ServicioDeclaracionesImpuesto;
+import com.magnetixdian.application.ServicioImpuestos;
 import com.magnetixdian.application.ServicioResponsabilidadesFiscales;
 import com.magnetixdian.application.ServicioTarifasImpuesto;
 import com.magnetixdian.interfaces.dto.CalendarioTributarioDto;
+import com.magnetixdian.interfaces.dto.CatalogoImpuestoDto;
 import com.magnetixdian.interfaces.dto.CausacionImpuestoDto;
 import com.magnetixdian.interfaces.dto.CertificadoImpuestoDto;
+import com.magnetixdian.interfaces.dto.DeclaracionAsientoDto;
 import com.magnetixdian.interfaces.dto.DeclaracionImpuestoDto;
 import com.magnetixdian.interfaces.dto.PagoImpuestoDto;
 import com.magnetixdian.interfaces.dto.ResponsabilidadFiscalDto;
 import com.magnetixdian.interfaces.dto.ResultadoCalculoImpuestoDto;
+import com.magnetixdian.interfaces.dto.ResumenImpuestoAsientoDto;
 import com.magnetixdian.interfaces.dto.SolicitudCalculoImpuestoDto;
 import com.magnetixdian.interfaces.dto.SolicitudCausacionImpuestoDto;
 import com.magnetixdian.interfaces.dto.SolicitudCertificadoImpuestoDto;
@@ -20,6 +24,8 @@ import com.magnetixdian.interfaces.dto.SolicitudPagoImpuestoDto;
 import com.magnetixdian.interfaces.dto.SolicitudResponsabilidadFiscalDto;
 import com.magnetixdian.interfaces.dto.TarifaImpuestoDto;
 import com.magnetixdian.security.AutorizacionEmpresa;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -43,6 +50,7 @@ public class ImpuestosController {
     private final ServicioCertificadosImpuesto servicioCertificados;
     private final ServicioDeclaracionesImpuesto servicioDeclaraciones;
     private final AutorizacionEmpresa autorizacion;
+    private ServicioImpuestos servicioImpuestos;
 
     public ImpuestosController(ServicioTarifasImpuesto servicioTarifas,
                                ServicioResponsabilidadesFiscales servicioResponsabilidades,
@@ -58,13 +66,32 @@ public class ImpuestosController {
         this.autorizacion = autorizacion;
     }
 
+    @Autowired(required = false)
+    public void setServicioImpuestos(ServicioImpuestos servicioImpuestos) {
+        this.servicioImpuestos = servicioImpuestos;
+    }
+
+    private String normalizar(String impuestoCodigo) {
+        if (servicioImpuestos == null || impuestoCodigo == null) {
+            return impuestoCodigo;
+        }
+        return servicioImpuestos.normalizar(impuestoCodigo);
+    }
+
+    @GetMapping("/catalogo")
+    public ResponseEntity<List<CatalogoImpuestoDto>> catalogo(@PathVariable Long empresaId,
+                                                              Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioImpuestos.catalogo());
+    }
+
     @GetMapping("/tarifas")
     public ResponseEntity<List<TarifaImpuestoDto>> tarifas(@PathVariable Long empresaId,
                                                            @RequestParam(required = false) String impuestoCodigo,
                                                            @RequestParam(required = false) Integer anio,
                                                            Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
-        return ResponseEntity.ok(servicioTarifas.listar(impuestoCodigo, anio));
+        return ResponseEntity.ok(servicioTarifas.listar(normalizar(impuestoCodigo), anio));
     }
 
     @PostMapping("/calcular")
@@ -74,7 +101,8 @@ public class ImpuestosController {
             Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
         return ResponseEntity.ok(servicioTarifas.calcular(
-                solicitud.impuestoCodigo(), solicitud.anio(), solicitud.conceptoCodigo(), solicitud.base()));
+                normalizar(solicitud.impuestoCodigo()), solicitud.anio(),
+                solicitud.conceptoCodigo(), solicitud.base()));
     }
 
     @GetMapping("/responsabilidades")
@@ -90,7 +118,10 @@ public class ImpuestosController {
             @RequestBody SolicitudResponsabilidadFiscalDto solicitud,
             Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
-        return ResponseEntity.ok(servicioResponsabilidades.registrar(empresaId, solicitud));
+        SolicitudResponsabilidadFiscalDto normalizada = new SolicitudResponsabilidadFiscalDto(
+                solicitud.terceroId(), normalizar(solicitud.impuestoCodigo()), solicitud.codigo(),
+                solicitud.desde(), solicitud.hasta());
+        return ResponseEntity.ok(servicioResponsabilidades.registrar(empresaId, normalizada));
     }
 
     @PostMapping("/causaciones")
@@ -98,7 +129,21 @@ public class ImpuestosController {
                                                        @RequestBody SolicitudCausacionImpuestoDto solicitud,
                                                        Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
-        return ResponseEntity.ok(servicioCausacion.causar(empresaId, solicitud));
+        SolicitudCausacionImpuestoDto normalizada = new SolicitudCausacionImpuestoDto(
+                normalizar(solicitud.impuestoCodigo()), solicitud.origen(), solicitud.origenId(),
+                solicitud.terceroId(), solicitud.fecha(), solicitud.conceptoCodigo(),
+                solicitud.baseImponible(), solicitud.observaciones());
+        return ResponseEntity.ok(servicioCausacion.causar(empresaId, normalizada));
+    }
+
+    @GetMapping("/causaciones/desde-asientos")
+    public ResponseEntity<List<ResumenImpuestoAsientoDto>> causacionDesdeAsientos(
+            @PathVariable Long empresaId,
+            @RequestParam("fechaDesde") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam("fechaHasta") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioImpuestos.causacionDesdeAsientos(empresaId, fechaDesde, fechaHasta));
     }
 
     @GetMapping("/causaciones")
@@ -137,7 +182,10 @@ public class ImpuestosController {
             @RequestBody SolicitudCertificadoImpuestoDto solicitud,
             Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
-        return ResponseEntity.ok(servicioCertificados.emitir(empresaId, solicitud));
+        SolicitudCertificadoImpuestoDto normalizada = new SolicitudCertificadoImpuestoDto(
+                solicitud.terceroId(), normalizar(solicitud.impuestoCodigo()), solicitud.anio(),
+                solicitud.numero(), solicitud.valor(), solicitud.fechaEmision());
+        return ResponseEntity.ok(servicioCertificados.emitir(empresaId, normalizada));
     }
 
     @GetMapping("/certificados")
@@ -154,7 +202,20 @@ public class ImpuestosController {
             @RequestBody SolicitudDeclaracionImpuestoDto solicitud,
             Authentication authentication) {
         autorizacion.verificar(empresaId, authentication);
-        return ResponseEntity.ok(servicioDeclaraciones.generarBorrador(empresaId, solicitud));
+        SolicitudDeclaracionImpuestoDto normalizada = new SolicitudDeclaracionImpuestoDto(
+                normalizar(solicitud.impuestoCodigo()), solicitud.anioGravable(), solicitud.periodo(),
+                solicitud.fechaDesde(), solicitud.fechaHasta());
+        return ResponseEntity.ok(servicioDeclaraciones.generarBorrador(empresaId, normalizada));
+    }
+
+    @GetMapping("/declaraciones/desde-asientos")
+    public ResponseEntity<DeclaracionAsientoDto> declaracionDesdeAsientos(
+            @PathVariable Long empresaId,
+            @RequestParam(value = "anio", required = false) Integer anio,
+            @RequestParam(value = "periodo", required = false) String periodo,
+            Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.ok(servicioImpuestos.declaracionDesdeAsientos(empresaId, anio, periodo));
     }
 
     @GetMapping("/declaraciones")

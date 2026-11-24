@@ -46,6 +46,9 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+# Los valores por defecto de esta sección son SOLO para desarrollo local.
+# Con SEGURIDAD_FAIL_FAST=true (Render) la app no arranca si faltan los secretos
+# o si se detecta alguno de estos valores de ejemplo. Ver SecurityConfig.
 magnetixdian:
   jwt:
     secret: ${JWT_SECRET:bWFnbmV0aXhkaWFuLXN1cGVyLXNlY3JldC1rZXktZm9yLWp3dC1zaWduaW5nLTIwMjYtcGt6ZDEyM2ZiYQ==}

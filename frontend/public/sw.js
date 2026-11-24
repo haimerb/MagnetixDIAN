@@ -1,4 +1,4 @@
-const CACHE = 'magnetixdian-v1'
+const CACHE = 'magnetixdian-__CACHE_VERSION__'
 const PRECARGADOS = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg']
 
 self.addEventListener('install', (event) => {
@@ -14,9 +14,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((claves) => Promise.all(claves.filter((clave) => clave !== CACHE).map((clave) => caches.delete(clave))))
+      .then((claves) => Promise.all(claves.filter((clave) => clave.startsWith('magnetixdian-') && clave !== CACHE).map((clave) => caches.delete(clave))))
       .then(() => self.clients.claim()),
   )
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting()
 })
 
 self.addEventListener('fetch', (event) => {
@@ -24,6 +28,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return
   const url = new URL(request.url)
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return
+  if (url.pathname === '/sw.js') return
 
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => caches.match('/index.html')))

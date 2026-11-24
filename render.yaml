@@ -7,6 +7,9 @@
 # Reemplaza DB_URL, CORS_ORIGINS y genera los secretos en el dashboard de Render.
 # Credenciales de integraciones NO van aquí: se guardan cifradas por empresa en BD.
 # Webhooks: PAGOS_EXIGIR_FIRMA_WEBHOOK e INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK = true (fail-closed).
+# SEGURIDAD_FAIL_FAST=true: el backend NO arranca si faltan JWT_SECRET, CRYPTO_KEY,
+# CRYPTO_KEY_ID, FRONTEND_URL, WOMPI_EVENTS_SECRET o MERCADOPAGO_WEBHOOK_SECRET.
+# Nunca usar valores de ejemplo ni pasarela SIMULADO en este entorno.
 
 services:
   - type: web
@@ -27,13 +30,13 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CRYPTO_KEY
-        generateValue: true
+        sync: false
       - key: CRYPTO_KEY_ID
         value: primary
       - key: CRYPTO_EXTRA_KEYS
         sync: false
       - key: SEGURIDAD_FAIL_FAST
-        value: "false"
+        value: "true"
       - key: CORS_ORIGINS
         value: https://magnetixdian.pages.dev,https://magnetixdian.hbarbetti-ing.workers.dev
       - key: UPLOAD_DIR
