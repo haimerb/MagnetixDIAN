@@ -56,12 +56,36 @@ jobs:
       - name: Build frontend
         run: pnpm install --frozen-lockfile && pnpm run build
       - name: Deploy Worker (SW_VERSION derivado del commit)
-        uses: cloudflare/wrangler-action@v3
+        id: deploy-worker
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --var SW_VERSION:${{ github.sha }}
+          wranglerVersion: '4'
+          command: deploy
+          vars: |
+            SW_VERSION
           workingDirectory: .
+        env:
+          SW_VERSION: ${{ github.sha }}
+      - name: Verificar SW_VERSION publicado
+        env:
+          WORKER_URL: https://magnetixdian.hbarbetti-ing.workers.dev
+          SW_VERSION: ${{ github.sha }}
+        run: |
+          for i in $(seq 1 12); do
+            sw=$(curl -fsS -m 30 "$WORKER_URL/sw.js" 2>/dev/null || true)
+            case "$sw" in
+              *"magnetixdian-$SW_VERSION"*)
+                echo "SW_VERSION publicado: $SW_VERSION"
+                exit 0
+                ;;
+            esac
+            echo "Intento $i: SW_VERSION aún no visible; reintentando en 10s..."
+            sleep 10
+          done
+          echo "::error::El Worker no publicó SW_VERSION=$SW_VERSION en /sw.js."
+          exit 1
 
   backend:
     name: Deploy backend (Render)
