@@ -1,8 +1,8 @@
 import { type Page } from '@playwright/test'
 import { expect, test } from './fixtures'
-import { loginAdmin } from './helpers'
+import { loginAdmin, token } from './helpers'
 
-const TOKEN = 'token-de-prueba'
+const TOKEN = token()
 
 const PERFIL = {
   id: 1,

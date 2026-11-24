@@ -38,7 +38,7 @@ const PLANES = [
   },
 ]
 
-function token(): string {
+export function token(): string {
   const cabecera = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64')
   const carga = Buffer.from(
     JSON.stringify({ sub: 'admin', roles: ['ROLE_ADMIN'], empresaId: 1 }),
