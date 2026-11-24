@@ -11,6 +11,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined'
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { api } from '../api/client'
 import type { MedioMagnetico } from '../api/client'
 import EstadoChip from '../components/ui/EstadoChip'
@@ -20,6 +21,27 @@ import SectionCard from '../components/ui/SectionCard'
 import StatCard from '../components/ui/StatCard'
 import { srOnly } from '../components/ui/srOnly'
 import { useEmpresaActiva } from '../features/auth/useEmpresaActiva'
+
+const ACCESOS_RAPIDOS = [
+  {
+    to: '/app/facturacion/nueva',
+    etiqueta: 'Facturar',
+    descripcion: 'Emita una factura electrónica desde cero.',
+    icono: <ReceiptLongOutlinedIcon />,
+  },
+  {
+    to: '/app/contabilidad/asentar-facturacion',
+    etiqueta: 'Contabilizar',
+    descripcion: 'Asiente la facturación y revise sus asientos.',
+    icono: <CheckCircleOutlineIcon />,
+  },
+  {
+    to: '/app/erp/exogena',
+    etiqueta: 'Cumplir con la DIAN',
+    descripcion: 'Genere y valide la información exógena.',
+    icono: <DescriptionOutlinedIcon />,
+  },
+]
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -52,15 +74,50 @@ export default function DashboardPage() {
   return (
     <Box component="section" sx={{ display: 'grid', gap: { xs: 3, md: 4 } }}>
       <PageHeader
-        overline="Información exógena"
-        title="Panel de reportes"
-        subtitle="Resumen de los medios magnéticos cargados para la empresa activa."
+        overline="Inicio"
+        title="De la venta a la factura, sin fricción"
+        subtitle="Facture, contabilice y cumpla con la DIAN desde un solo lugar."
         actions={
-          <Button variant="contained" onClick={() => navigate('/app/carga')}>
-            Cargar datos
-          </Button>
+          <>
+            <Button variant="contained" onClick={() => navigate('/app/facturacion/nueva')}>
+              Facturar ahora
+            </Button>
+            <Button variant="outlined" onClick={() => navigate('/app/contabilidad/asentar-facturacion')}>
+              Asentar facturación
+            </Button>
+          </>
         }
       />
+
+      <SectionCard title="Su operación, en orden" subtitle="Tres pasos para cerrar el ciclo de cada factura.">
+        <Grid container spacing={2}>
+          {ACCESOS_RAPIDOS.map(({ to, etiqueta, descripcion, icono }) => (
+            <Grid key={to} size={{ xs: 12, md: 4 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={() => navigate(to)}
+                startIcon={icono}
+                sx={{
+                  height: '100%',
+                  justifyContent: 'flex-start',
+                  px: 2.5,
+                  py: 2,
+                  textAlign: 'left',
+                  whiteSpace: 'normal',
+                }}
+              >
+                <Box sx={{ display: 'grid', gap: 0.25 }}>
+                  <Typography variant="subtitle2">{etiqueta}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {descripcion}
+                  </Typography>
+                </Box>
+              </Button>
+            </Grid>
+          ))}
+        </Grid>
+      </SectionCard>
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 6, md: 4 }}>
