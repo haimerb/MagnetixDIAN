@@ -51,6 +51,7 @@ public class ServicioDocumentoSoporte {
                 null,
                 null,
                 solicitud.concepto().trim(),
+                null,
                 null);
         return ResultadoDocumentoDianDto.desde(facturacion.emitirSolicitud(empresaId, usuarioId, emision));
     }

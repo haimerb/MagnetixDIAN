@@ -5,6 +5,7 @@ import com.magnetixdian.application.ServicioFacturacion;
 import com.magnetixdian.application.ServicioNominaElectronica;
 import com.magnetixdian.application.ServicioNotasDian;
 import com.magnetixdian.interfaces.dto.DocumentoSoporteRequest;
+import com.magnetixdian.interfaces.dto.FacturaRequest;
 import com.magnetixdian.interfaces.dto.LineaFacturaRequest;
 import com.magnetixdian.interfaces.dto.NominaElectronicaDto;
 import com.magnetixdian.interfaces.dto.NotaDianRequest;
@@ -107,6 +108,14 @@ class DocumentosDianServiciosTest {
         assertEquals("05", capturada.retenciones().get(0).codigo());
         assertEquals(new BigDecimal("100.00"), capturada.retenciones().get(0).valor());
         assertEquals(nominaDto, capturada.nomina());
+    }
+
+    @Test
+    void solicitudDesdeFacturaConservaPedidoId() {
+        FacturaRequest request = new FacturaRequest("01", null, List.of(), null, null, null, null,
+                null, null, null, 42L);
+
+        assertEquals(42L, SolicitudEmisionDianDto.desde(request).pedidoId());
     }
 
     private void stubResultado() {

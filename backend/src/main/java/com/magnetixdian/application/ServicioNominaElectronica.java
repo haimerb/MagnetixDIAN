@@ -71,7 +71,8 @@ public class ServicioNominaElectronica {
                 null,
                 null,
                 observaciones,
-                nomina);
+                nomina,
+                null);
         return ResultadoDocumentoDianDto.desde(facturacion.emitirSolicitud(empresaId, usuarioId, emision));
     }
 

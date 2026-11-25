@@ -189,6 +189,7 @@ export default function FacturaEditor({
     fechaVencimiento: null,
     cufeReferencia,
     numeroReferencia,
+    pedidoId: null,
   })
 
   const onValidar = async () => {

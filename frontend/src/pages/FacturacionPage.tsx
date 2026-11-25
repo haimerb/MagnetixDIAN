@@ -105,6 +105,7 @@ export default function FacturacionPage() {
         fechaVencimiento: null,
         cufeReferencia: null,
         numeroReferencia: null,
+        pedidoId: null,
       })
       setEditorAbierto(true)
     } catch {

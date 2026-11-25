@@ -1,4 +1,8 @@
 export {
+  aprobarPedidoErp,
+  crearOrdenVentaErp,
+  crearPedidoErp,
+  emitirFactura,
   listarComprasErp,
   listarInventarioErp,
   listarPedidosErp,
@@ -8,5 +12,8 @@ export type {
   CompraErp,
   MovimientoInventarioErp,
   MovimientoTesoreriaErp,
+  OrdenVentaErp,
+  OrdenVentaErpRequest,
   PedidoErp,
+  PedidoErpRequest,
 } from '../client'

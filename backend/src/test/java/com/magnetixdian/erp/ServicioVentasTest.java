@@ -62,4 +62,62 @@ class ServicioVentasTest {
         assertThrows(IllegalArgumentException.class, () -> servicio.crearPedido(1L,
                 new PedidoRequestDto("P1", null, "C1", "Cliente", LocalDate.now(), BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("-1"), null)));
     }
+
+    @Test
+    void vincularFacturaDianPersisteReferencia() {
+        ErpPedidoJpa pedido = pedidoAprobado();
+        when(pedidos.findByIdAndEmpresaIdForUpdate(10L, 1L)).thenReturn(Optional.of(pedido));
+        when(pedidos.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        var dto = servicio.vincularFacturaDian(1L, 10L, "FV 0002");
+
+        assertEquals("FV 0002", dto.facturaDianId());
+        verify(pedidos).save(pedido);
+    }
+
+    @Test
+    void vincularFacturaDianEsIdempotente() {
+        ErpPedidoJpa pedido = pedidoAprobado();
+        pedido.setFacturaDianId("FV 0002");
+        when(pedidos.findByIdAndEmpresaIdForUpdate(10L, 1L)).thenReturn(Optional.of(pedido));
+
+        var dto = servicio.vincularFacturaDian(1L, 10L, "FV 0002");
+
+        assertEquals("FV 0002", dto.facturaDianId());
+        verify(pedidos, never()).save(any());
+    }
+
+    @Test
+    void vincularFacturaDianRechazaOtraFactura() {
+        ErpPedidoJpa pedido = pedidoAprobado();
+        pedido.setFacturaDianId("FV 0001");
+        when(pedidos.findByIdAndEmpresaIdForUpdate(10L, 1L)).thenReturn(Optional.of(pedido));
+
+        assertThrows(IllegalStateException.class,
+                () -> servicio.vincularFacturaDian(1L, 10L, "FV 0002"));
+    }
+
+    @Test
+    void vincularFacturaDianRequierePedidoAprobado() {
+        ErpPedidoJpa pedido = pedidoAprobado();
+        pedido.setEstado("BORRADOR");
+        when(pedidos.findByIdAndEmpresaIdForUpdate(10L, 1L)).thenReturn(Optional.of(pedido));
+
+        assertThrows(IllegalStateException.class,
+                () -> servicio.vincularFacturaDian(1L, 10L, "FV 0002"));
+    }
+
+    private ErpPedidoJpa pedidoAprobado() {
+        ErpPedidoJpa pedido = new ErpPedidoJpa();
+        pedido.setId(10L);
+        pedido.setEmpresaId(1L);
+        pedido.setNumero("PED-1");
+        pedido.setClienteNombre("Cliente");
+        pedido.setFecha(LocalDate.now());
+        pedido.setEstado("APROBADO");
+        pedido.setSubtotal(new BigDecimal("100"));
+        pedido.setImpuestos(new BigDecimal("19"));
+        pedido.setTotal(new BigDecimal("119"));
+        return pedido;
+    }
 }
