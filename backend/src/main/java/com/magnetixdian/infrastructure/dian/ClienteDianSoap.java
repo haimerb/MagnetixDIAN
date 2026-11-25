@@ -16,6 +16,8 @@ import org.apache.xml.security.c14n.Canonicalizer;
 import org.apache.xml.security.keys.KeyInfo;
 import org.apache.xml.security.signature.XMLSignature;
 import org.apache.xml.security.transforms.Transforms;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
@@ -60,10 +62,12 @@ public class ClienteDianSoap implements CanalTransmision {
     private static final String NS_WSU = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd";
     private static final String NS_X509 = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3";
     private static final String NS_WCF = "http://wcf.dian.colombia";
+    private static final Logger log = LoggerFactory.getLogger(ClienteDianSoap.class);
 
     private final String endpointProduccion;
     private final String endpointHabilitacion;
     private final String versionPorDefecto;
+    private final String wsdlUrlOficial;
     private final Duration connectTimeout;
     private final Duration requestTimeout;
     private final CifradorAes cifrador;
@@ -71,7 +75,8 @@ public class ClienteDianSoap implements CanalTransmision {
     public ClienteDianSoap(
             @Value("${magnetixdian.dian.url-produccion:https://vpfe.dian.gov.co/WcfDianCustomerServices.svc}") String urlProduccion,
             @Value("${magnetixdian.dian.url-habilitacion:https://vpfe-hab.dian.gov.co/WcfDianCustomerServices.svc}") String urlHabilitacion,
-            @Value("${magnetixdian.dian.wsdl.version:1.8}") String versionWsdl,
+            @Value("${magnetixdian.dian.wsdl.version:2.1}") String versionWsdl,
+            @Value("${magnetixdian.dian.wsdl.url-oficial:}") String wsdlUrlOficial,
             @Value("${magnetixdian.dian.connect-timeout-ms:30000}") long connectTimeoutMs,
             @Value("${magnetixdian.dian.request-timeout-ms:60000}") long requestTimeoutMs,
             CifradorAes cifrador) {
@@ -79,6 +84,11 @@ public class ClienteDianSoap implements CanalTransmision {
         this.endpointHabilitacion = urlHabilitacion;
         this.versionPorDefecto = versionWsdl == null || versionWsdl.isBlank()
                 ? CatalogoWsdlDian.VERSION_POR_DEFECTO : versionWsdl.trim();
+        this.wsdlUrlOficial = wsdlUrlOficial == null || wsdlUrlOficial.isBlank()
+                ? null : wsdlUrlOficial.trim();
+        if (this.wsdlUrlOficial == null) {
+            log.warn("Los WSDL locales de DIAN son solo soporte de prueba; configure magnetixdian.dian.wsdl.url-oficial con el WSDL publicado por la DIAN antes de operar en produccion");
+        }
         this.connectTimeout = Duration.ofMillis(connectTimeoutMs);
         this.requestTimeout = Duration.ofMillis(requestTimeoutMs);
         this.cifrador = cifrador;
@@ -194,8 +204,11 @@ public class ClienteDianSoap implements CanalTransmision {
     private RespuestaDian invocar(OperacionDian operacion, List<Parametro> parametros, int ambiente,
                                   String version, EmpresaFeConfigJpa config) {
         AmbienteDian.desde(ambiente);
-        CatalogoWsdlDian.validarRecurso(version, ambiente);
-        validarOperacionEnWsdl(leerWsdl(version, ambiente), operacion);
+        String versionNormalizada = CatalogoWsdlDian.validarVersion(version);
+        if (wsdlUrlOficial == null) {
+            CatalogoWsdlDian.validarRecurso(versionNormalizada, ambiente);
+        }
+        validarOperacionEnWsdl(leerWsdl(versionNormalizada, ambiente), operacion);
         String envelope;
         try {
             envelope = construirEnvelope(operacion, parametros, config);
@@ -240,6 +253,9 @@ public class ClienteDianSoap implements CanalTransmision {
     }
 
     private String leerWsdl(String version, int ambiente) {
+        if (wsdlUrlOficial != null) {
+            return leerWsdlOficial();
+        }
         String ruta = CatalogoWsdlDian.ruta(version, ambiente);
         try (InputStream entrada = getClass().getClassLoader().getResourceAsStream(ruta)) {
             if (entrada == null) {
@@ -248,6 +264,27 @@ public class ClienteDianSoap implements CanalTransmision {
             return new String(entrada.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new IllegalStateException("No se pudo leer el WSDL DIAN", e);
+        }
+    }
+
+    private String leerWsdlOficial() {
+        URI uri = URI.create(wsdlUrlOficial);
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+            throw new IllegalArgumentException("La URL oficial del WSDL DIAN debe ser HTTPS");
+        }
+        try {
+            HttpClient cliente = HttpClient.newBuilder().connectTimeout(connectTimeout).build();
+            HttpRequest solicitud = HttpRequest.newBuilder(uri).timeout(requestTimeout).GET().build();
+            HttpResponse<String> respuesta = cliente.send(solicitud, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (respuesta.statusCode() < 200 || respuesta.statusCode() >= 300) {
+                throw new IllegalStateException("La DIAN no entregó el WSDL oficial: HTTP " + respuesta.statusCode());
+            }
+            return respuesta.body();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Lectura del WSDL DIAN interrumpida", e);
+        } catch (IOException e) {
+            throw new IllegalStateException("No se pudo leer el WSDL DIAN oficial", e);
         }
     }
 

@@ -1,8 +1,12 @@
 package com.magnetixdian.dian;
 
 import com.magnetixdian.domain.dian.CatalogoWsdlDian;
+import com.magnetixdian.domain.dian.ErrorDian;
+import com.magnetixdian.domain.dian.RespuestaDian;
 import com.magnetixdian.infrastructure.dian.ClienteDianSoap;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,6 +14,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CatalogoWsdlDianTest {
+
+    @Test
+    void versionPorDefectoEsDosPuntoUno() {
+        assertEquals("2.1", CatalogoWsdlDian.VERSION_POR_DEFECTO);
+    }
+
+    @Test
+    void soloCodigoCeroCeroEsAprobado() {
+        assertTrue(new RespuestaDian("T", "00", "Aceptado", null, null, null, List.of()).aprobada());
+        assertFalse(new RespuestaDian("T", "000", "Aceptado", null, null, null, List.of()).aprobada());
+        assertFalse(new RespuestaDian("T", "0", "Aceptado", null, null, null, List.of()).aprobada());
+        assertFalse(new RespuestaDian("T", "1", "Rechazado", null, null, null, List.of()).aprobada());
+        assertFalse(new RespuestaDian("T", "100", "Rechazado", null, null, null, List.of()).aprobada());
+        assertFalse(new RespuestaDian("T", "00", "Con errores", null, null, null,
+                List.of(new ErrorDian("E-1", "Error"))).aprobada());
+    }
 
     @Test
     void resuelveRecursosVersionadosParaAmbosAmbientes() {
