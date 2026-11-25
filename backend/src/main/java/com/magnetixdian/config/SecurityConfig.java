@@ -5,7 +5,7 @@ import com.magnetixdian.security.JwtAuthFilter;
 import com.magnetixdian.security.TenantAccessFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -68,9 +68,6 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final ApiKeyAuthFilter apiKeyAuthFilter;
 
-    @Autowired(required = false)
-    private TenantAccessFilter tenantAccessFilter;
-
     @Value("${magnetixdian.cors.allowed-origins:http://localhost:5173,http://localhost:4173}")
     private String allowedOrigins;
 
@@ -95,7 +92,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   ObjectProvider<TenantAccessFilter> tenantAccessFilterProvider) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -123,6 +121,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        TenantAccessFilter tenantAccessFilter = tenantAccessFilterProvider.getIfAvailable();
         if (tenantAccessFilter != null) {
             http.addFilterAfter(tenantAccessFilter, JwtAuthFilter.class);
         }
