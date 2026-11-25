@@ -16,6 +16,7 @@
 services:
   - type: web
     name: magnetixdian-backend
+    branch: main
     runtime: docker
     dockerfilePath: backend/Dockerfile.render
     dockerContext: backend
