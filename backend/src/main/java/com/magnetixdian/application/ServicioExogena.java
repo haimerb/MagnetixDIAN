@@ -2,6 +2,7 @@ package com.magnetixdian.application;
 
 import com.magnetixdian.domain.exogena.AgregadorExogena;
 import com.magnetixdian.domain.exogena.ClasificadorMovimientos;
+import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
 import com.magnetixdian.domain.exogena.FormatoTributarioCatalogo;
 import com.magnetixdian.domain.exogena.GeneradorExcelExogena;
 import com.magnetixdian.domain.exogena.GeneradorXml1001Exogena;
@@ -46,6 +47,7 @@ public class ServicioExogena {
     private final JdbcTemplate jdbc;
     private final AuditoriaService auditoria;
     private final FormatoTributarioCatalogo catalogoFormatos;
+    private final FormatoExogenaRegistry registryFormatos;
     private final ClasificadorMovimientos clasificador;
     private final MapeadorCuentaConcepto mapeador;
     private final ValidadorExogena validador;
@@ -56,6 +58,7 @@ public class ServicioExogena {
 
     public ServicioExogena(JdbcTemplate jdbc, AuditoriaService auditoria,
                            FormatoTributarioCatalogo catalogoFormatos,
+                           FormatoExogenaRegistry registryFormatos,
                            ClasificadorMovimientos clasificador,
                            MapeadorCuentaConcepto mapeador,
                            ValidadorExogena validador,
@@ -66,6 +69,7 @@ public class ServicioExogena {
         this.jdbc = jdbc;
         this.auditoria = auditoria;
         this.catalogoFormatos = catalogoFormatos;
+        this.registryFormatos = registryFormatos;
         this.clasificador = clasificador;
         this.mapeador = mapeador;
         this.validador = validador;
@@ -287,6 +291,7 @@ public class ServicioExogena {
         Integer ano = solicitud.ano();
         String formato = solicitud.formato();
         catalogoFormatos.validar(formato);
+        validarGenerador(formato);
         Long generacionId = jdbc.queryForObject("""
                 INSERT INTO exogena_generacion (empresa_id, ano, formato, estado, incluir_advertencias, creado_por)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -344,6 +349,15 @@ public class ServicioExogena {
                 "EXOGENA_GENERACION", generacionId, formato + " año " + ano + ": " + mensaje);
         return new ResultadoExogenaGenerarDto(generacionId, estado, ano, formato, renglones.size(),
                 validaciones.size(), false, xml, excel, mensaje, validaciones);
+    }
+
+    private void validarGenerador(String formato) {
+        if (FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS.contains(formato)
+                && "GeneradorXmlExogenaOficial".equals(registryFormatos.obtener(formato).generadorXml())) {
+            throw new IllegalArgumentException("El formato " + formato
+                    + " se genera con el generador oficial: POST /api/empresas/{empresaId}/exogena/"
+                    + formato + "/generar");
+        }
     }
 
     private Map<Long, DianConceptoDto> mapaConceptos(Integer ano, String formato) {
