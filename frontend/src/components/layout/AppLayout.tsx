@@ -4,6 +4,7 @@ import AppBar from '@mui/material/AppBar'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Collapse from '@mui/material/Collapse'
 import Container from '@mui/material/Container'
 import Divider from '@mui/material/Divider'
 import Drawer from '@mui/material/Drawer'
@@ -18,6 +19,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined'
 import LockResetIcon from '@mui/icons-material/LockReset'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -31,8 +33,17 @@ const NAV_ITEMS = [
   { to: '/app', label: 'Inicio' },
   { to: '/app/facturacion', label: 'Facturación' },
   { to: '/app/contabilidad/asentar-facturacion', label: 'Contabilidad' },
-  { to: '/app/erp/ventas', label: 'Ventas' },
+  { to: '/app/erp', label: 'ERP' },
   { to: '/app/empresa', label: 'Empresa' },
+]
+
+const ERP_ITEMS = [
+  { to: '/app/erp/ventas', label: 'Ventas' },
+  { to: '/app/erp/compras', label: 'Compras' },
+  { to: '/app/erp/inventario', label: 'Inventario' },
+  { to: '/app/erp/tesoreria', label: 'Tesorería' },
+  { to: '/app/erp/exogena', label: 'Exógena' },
+  { to: '/app/erp/integraciones', label: 'Integraciones' },
 ]
 
 const ROL_LABEL: Record<string, string> = {
@@ -48,6 +59,8 @@ export default function AppLayout() {
   const { mode, alternar, branding } = useThemeMode()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+  const [erpAnchor, setErpAnchor] = useState<HTMLElement | null>(null)
+  const [erpAbierto, setErpAbierto] = useState(false)
 
   const items = NAV_ITEMS
   const isActive = (to: string) => {
@@ -56,6 +69,13 @@ export default function AppLayout() {
       return location.pathname.startsWith('/app/contabilidad')
     }
     return location.pathname.startsWith(to)
+  }
+
+  const navegar = (to: string) => {
+    navigate(to)
+    setErpAnchor(null)
+    setDrawerOpen(false)
+    setErpAbierto(false)
   }
 
   const iniciales = (sesion?.username ?? '?').slice(0, 2).toUpperCase()
@@ -129,6 +149,51 @@ export default function AppLayout() {
             >
               {items.map((item) => {
                 const active = isActive(item.to)
+                if (item.to === '/app/erp') {
+                  return (
+                    <Button
+                      key={item.to}
+                      disableRipple
+                      onClick={(event) => setErpAnchor(event.currentTarget)}
+                      aria-haspopup="menu"
+                      aria-controls="erp-menu"
+                      aria-expanded={Boolean(erpAnchor)}
+                      sx={{
+                        px: 1.5,
+                        position: 'relative',
+                        display: 'inline-flex',
+                        gap: 0.5,
+                        color: active ? 'primary.main' : 'text.secondary',
+                        fontWeight: active ? 700 : 500,
+                        '&:hover': {
+                          color: 'primary.main',
+                          bgcolor: (t) => alpha(t.palette.primary.main, 0.06),
+                        },
+                        '&::after': active
+                          ? {
+                              content: '""',
+                              position: 'absolute',
+                              left: 12,
+                              right: 12,
+                              bottom: 4,
+                              height: 2,
+                              borderRadius: 1,
+                              bgcolor: 'secondary.main',
+                            }
+                          : {},
+                      }}
+                    >
+                      {item.label}
+                      <ExpandMoreIcon
+                        fontSize="small"
+                        sx={{
+                          transform: erpAnchor ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 150ms ease',
+                        }}
+                      />
+                    </Button>
+                  )
+                }
                 return (
                   <Button
                     key={item.to}
@@ -206,6 +271,27 @@ export default function AppLayout() {
       </AppBar>
 
       <Menu
+        id="erp-menu"
+        anchorEl={erpAnchor}
+        open={Boolean(erpAnchor)}
+        onClose={() => setErpAnchor(null)}
+        aria-label="Submenú ERP"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        {ERP_ITEMS.map((item) => (
+          <MenuItem
+            key={item.to}
+            selected={isActive(item.to)}
+            aria-current={isActive(item.to) ? 'page' : undefined}
+            onClick={() => navegar(item.to)}
+          >
+            {item.label}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={() => setMenuAnchor(null)}
@@ -239,20 +325,59 @@ export default function AppLayout() {
           </Box>
           <Divider />
           <List disablePadding aria-label="Navegación principal">
-            {items.map((item) => (
-              <ListItemButton
-                key={item.to}
-                selected={isActive(item.to)}
-                aria-current={isActive(item.to) ? 'page' : undefined}
-                onClick={() => {
-                  navigate(item.to)
-                  setDrawerOpen(false)
-                }}
-                sx={{ borderRadius: 2, mb: 0.5 }}
-              >
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            ))}
+            {items.map((item) => {
+              if (item.to === '/app/erp') {
+                return (
+                  <Box key={item.to}>
+                    <ListItemButton
+                      selected={isActive(item.to)}
+                      aria-expanded={erpAbierto}
+                      aria-controls="erp-submenu"
+                      onClick={() => setErpAbierto((abierto) => !abierto)}
+                      sx={{ borderRadius: 2, mb: 0.5 }}
+                    >
+                      <ListItemText primary={item.label} />
+                      <ExpandMoreIcon
+                        fontSize="small"
+                        sx={{
+                          transform: erpAbierto ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 150ms ease',
+                        }}
+                      />
+                    </ListItemButton>
+                    <Collapse in={erpAbierto}>
+                      <List id="erp-submenu" disablePadding aria-label="Submenú ERP" sx={{ pl: 2 }}>
+                        {ERP_ITEMS.map((erpItem) => (
+                          <ListItemButton
+                            key={erpItem.to}
+                            selected={isActive(erpItem.to)}
+                            aria-current={isActive(erpItem.to) ? 'page' : undefined}
+                            onClick={() => navegar(erpItem.to)}
+                            sx={{ borderRadius: 2, mb: 0.5 }}
+                          >
+                            <ListItemText primary={erpItem.label} />
+                          </ListItemButton>
+                        ))}
+                      </List>
+                    </Collapse>
+                  </Box>
+                )
+              }
+              return (
+                <ListItemButton
+                  key={item.to}
+                  selected={isActive(item.to)}
+                  aria-current={isActive(item.to) ? 'page' : undefined}
+                  onClick={() => {
+                    navigate(item.to)
+                    setDrawerOpen(false)
+                  }}
+                  sx={{ borderRadius: 2, mb: 0.5 }}
+                >
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
+              )
+            })}
           </List>
           <Divider />
           <Box sx={{ px: 1 }}>
