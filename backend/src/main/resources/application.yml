@@ -70,6 +70,9 @@ magnetixdian:
     url-produccion: ${DIAN_URL_PRODUCCION:https://vpfe.dian.gov.co/WcfDianCustomerServices.svc}
     connect-timeout-ms: ${DIAN_CONNECT_TIMEOUT_MS:30000}
     request-timeout-ms: ${DIAN_REQUEST_TIMEOUT_MS:60000}
+    wsdl:
+      version: ${DIAN_WSDL_VERSION:2.1}
+      url-oficial: ${DIAN_WSDL_URL_OFICIAL:}
     catalogo:
       base-url: ${DIAN_CATALOGO_BASE_URL:https://catalogo-vpfe.dian.gov.co}
       token-url: ${DIAN_CATALOGO_TOKEN_URL:}

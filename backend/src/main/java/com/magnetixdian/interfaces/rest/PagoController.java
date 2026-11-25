@@ -5,9 +5,11 @@ import com.magnetixdian.application.pago.CheckoutRequestDto;
 import com.magnetixdian.application.pago.CheckoutResponseDto;
 import com.magnetixdian.application.pago.ComprobantePagoDto;
 import com.magnetixdian.application.pago.EntitlementDto;
+import com.magnetixdian.application.pago.EstadoWebhookPagoDto;
 import com.magnetixdian.application.pago.ServicioCheckoutBilling;
 import com.magnetixdian.application.pago.ServicioComprobante;
 import com.magnetixdian.application.pago.ServicioEntitlement;
+import com.magnetixdian.application.pago.ServicioEstadoWebhookBilling;
 import com.magnetixdian.application.pago.ServicioWebhookBilling;
 import com.magnetixdian.application.pago.WebhookResultDto;
 import com.magnetixdian.domain.pago.FirmaWebhookException;
@@ -43,6 +45,7 @@ public class PagoController {
     private final ServicioPagos servicio;
     private final ServicioCheckoutBilling checkoutBilling;
     private final ServicioWebhookBilling webhookBilling;
+    private final ServicioEstadoWebhookBilling estadoWebhookBilling;
     private final ServicioComprobante servicioComprobante;
     private final GeneradorPdfComprobante generadorPdf;
     private final ServicioEntitlement servicioEntitlement;
@@ -51,6 +54,7 @@ public class PagoController {
     public PagoController(ServicioPagos servicio,
                           ServicioCheckoutBilling checkoutBilling,
                           ServicioWebhookBilling webhookBilling,
+                          ServicioEstadoWebhookBilling estadoWebhookBilling,
                           ServicioComprobante servicioComprobante,
                           GeneradorPdfComprobante generadorPdf,
                           ServicioEntitlement servicioEntitlement,
@@ -58,6 +62,7 @@ public class PagoController {
         this.servicio = servicio;
         this.checkoutBilling = checkoutBilling;
         this.webhookBilling = webhookBilling;
+        this.estadoWebhookBilling = estadoWebhookBilling;
         this.servicioComprobante = servicioComprobante;
         this.generadorPdf = generadorPdf;
         this.servicioEntitlement = servicioEntitlement;
@@ -112,6 +117,11 @@ public class PagoController {
         } catch (FirmaWebhookException e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @GetMapping("/pagos/{referencia}/webhook-estado")
+    public ResponseEntity<EstadoWebhookPagoDto> estadoWebhook(@PathVariable String referencia) {
+        return ResponseEntity.ok(estadoWebhookBilling.estado(referencia));
     }
 
     @GetMapping("/pagos/comprobantes/{numero}")

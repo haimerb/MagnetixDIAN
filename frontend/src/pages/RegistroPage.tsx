@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -14,6 +14,8 @@ import { registrarEmpresa } from '../api/client'
 
 export default function RegistroPage() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const planCode = (params.get('plan') ?? 'FREE').trim() || 'FREE'
   const [form, setForm] = useState({
     nit: '',
     razonSocial: '',
@@ -36,7 +38,7 @@ export default function RegistroPage() {
     setError(null)
     setCargando(true)
     try {
-      await registrarEmpresa({ ...form, aceptaTerminos })
+      await registrarEmpresa({ ...form, aceptaTerminos, planCode })
       navigate('/login', { state: { registro: true, username: form.username } })
     } catch (err) {
       const respuesta = err as { response?: { data?: { message?: string } } }
@@ -74,7 +76,9 @@ export default function RegistroPage() {
           Crear cuenta
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Registre su empresa y comience con el plan gratuito: 50 documentos y 1 usuario al mes.
+          {planCode === 'FREE'
+            ? 'Registre su empresa y comience con el plan gratuito: 50 documentos y 1 usuario al mes.'
+            : `Registre su empresa con el plan ${planCode}. Verifique su correo y finalice el pago para activar su tenant.`}
         </Typography>
 
         <Box component="form" noValidate onSubmit={onSubmit} sx={{ display: 'grid', gap: 2 }}>
@@ -157,7 +161,7 @@ export default function RegistroPage() {
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <Button type="submit" variant="contained" size="large" disabled={cargando} loading={cargando}>
-            Crear cuenta gratis
+            {planCode === 'FREE' ? 'Crear cuenta gratis' : 'Crear cuenta'}
           </Button>
         </Box>
 

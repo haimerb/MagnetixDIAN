@@ -27,12 +27,17 @@ class FormatoExogenaRegistryTest {
     @Test
     void formatosOficiales1125_2278Y5253EstanActivos() {
         List<String> versiones = List.of("13", "1", "2");
+        List<String> descripciones = List.of(
+                "Declaración informativa individual de precios de transferencia",
+                "Información de la compra de bonos electrónicos",
+                "Información de beneficiarios efectivos");
         List<String> codigos = FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS;
         for (int i = 0; i < codigos.size(); i++) {
             String codigo = codigos.get(i);
             FormatoExogena formato = registry.validarActivo(codigo);
             assertTrue(formato.activo());
             assertEquals(FormatoExogenaRegistry.ESTADO_ACTIVO, formato.estado());
+            assertEquals(descripciones.get(i), formato.descripcion());
             assertEquals(versiones.get(i), formato.version());
             assertEquals("xsd/dian/2025/" + codigo + ".xsd", formato.xsd());
             assertEquals("xsd-local-2025", formato.validacion());

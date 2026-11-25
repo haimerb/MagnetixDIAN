@@ -4,7 +4,6 @@ import com.magnetixdian.domain.pago.CheckoutPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
 import com.magnetixdian.domain.pago.ProveedorPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
-import com.magnetixdian.domain.pago.ValidadorFirmaWebhook;
 import com.magnetixdian.application.PasarelasPago;
 import com.magnetixdian.infrastructure.persistence.EmpresaJpa;
 import com.magnetixdian.infrastructure.persistence.EmpresaRepository;
@@ -30,7 +29,6 @@ public class ServicioCheckoutBilling {
     private final UsuarioRepository usuarioRepo;
     private final PlanRepository planRepo;
     private final PasarelasPago pasarelas;
-    private final ValidadorFirmaWebhook validador;
     private final String frontendUrl;
 
     public ServicioCheckoutBilling(BillingCheckoutRepository checkoutRepo,
@@ -38,14 +36,12 @@ public class ServicioCheckoutBilling {
                                    UsuarioRepository usuarioRepo,
                                    PlanRepository planRepo,
                                    PasarelasPago pasarelas,
-                                   ValidadorFirmaWebhook validador,
                                    @Value("${magnetixdian.app.frontend-url:http://localhost:5173}") String frontendUrl) {
         this.checkoutRepo = checkoutRepo;
         this.empresaRepo = empresaRepo;
         this.usuarioRepo = usuarioRepo;
         this.planRepo = planRepo;
         this.pasarelas = pasarelas;
-        this.validador = validador;
         this.frontendUrl = frontendUrl;
     }
 
@@ -61,8 +57,9 @@ public class ServicioCheckoutBilling {
             throw new IllegalArgumentException("Debe indicar el correo del pagador.");
         }
         ProveedorPago proveedor = ProveedorPago.desde(request.proveedor());
-        if (proveedor == ProveedorPago.SIMULADO && validador.esProduccion()) {
-            throw new IllegalArgumentException("El proveedor SIMULADO solo está disponible en dev/test.");
+        if (proveedor == ProveedorPago.SIMULADO) {
+            throw new IllegalArgumentException(
+                    "El checkout público requiere WOMPI o MERCADOPAGO; SIMULADO no genera webhook firmado.");
         }
         EmpresaJpa empresa = resolverEmpresa(request.empresaId(), request.correo());
         String planCodigo = request.planCode().trim();
@@ -70,7 +67,8 @@ public class ServicioCheckoutBilling {
                 .orElseThrow(() -> new IllegalArgumentException("Plan no encontrado: " + planCodigo));
         PasarelaPago pasarela = pasarelas.obtener(proveedor.name());
         if (!pasarela.configurada()) {
-            throw new IllegalStateException("La pasarela " + proveedor + " no está configurada.");
+            throw new IllegalStateException(
+                    "La pasarela " + proveedor + " no está configurada. Configure sus credenciales para cobrar.");
         }
         String referencia = proveedor.name() + "-" + UUID.randomUUID();
         BillingCheckoutJpa checkout = new BillingCheckoutJpa();

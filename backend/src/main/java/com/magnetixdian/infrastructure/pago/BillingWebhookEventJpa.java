@@ -41,6 +41,9 @@ public class BillingWebhookEventJpa {
     @Column(name = "comprobante_numero", length = 30)
     private String comprobanteNumero;
 
+    @Column(nullable = false)
+    private boolean firmado;
+
     @Column(length = 300)
     private String mensaje;
 
@@ -113,6 +116,14 @@ public class BillingWebhookEventJpa {
 
     public void setComprobanteNumero(String comprobanteNumero) {
         this.comprobanteNumero = comprobanteNumero;
+    }
+
+    public boolean isFirmado() {
+        return firmado;
+    }
+
+    public void setFirmado(boolean firmado) {
+        this.firmado = firmado;
     }
 
     public String getMensaje() {

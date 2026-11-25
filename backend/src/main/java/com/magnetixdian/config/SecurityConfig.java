@@ -103,6 +103,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/pagos/webhook/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/pagos/checkout").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pagos/{referencia}/webhook-estado").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/integraciones/webhook/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/planes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/branding/{publicSlug}").permitAll()

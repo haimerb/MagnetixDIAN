@@ -4,6 +4,7 @@ import com.magnetixdian.application.AuditoriaService;
 import com.magnetixdian.application.ServicioExogena;
 import com.magnetixdian.domain.exogena.AgregadorExogena;
 import com.magnetixdian.domain.exogena.ClasificadorMovimientos;
+import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
 import com.magnetixdian.domain.exogena.FormatoTributarioCatalogo;
 import com.magnetixdian.domain.exogena.GeneradorExcelExogena;
 import com.magnetixdian.domain.exogena.GeneradorXml1001Exogena;
@@ -27,6 +28,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -39,7 +41,8 @@ class ServicioExogenaGenerarTest {
     @Test
     void genera1001ConXmlValidadoYExcel() throws Exception {
         ServicioExogena servicio = new ServicioExogena(jdbc(), mock(AuditoriaService.class),
-                new FormatoTributarioCatalogo(), new ClasificadorMovimientos(), new MapeadorCuentaConcepto(),
+                new FormatoTributarioCatalogo(), new FormatoExogenaRegistry(),
+                new ClasificadorMovimientos(), new MapeadorCuentaConcepto(),
                 new ValidadorExogena(), new AgregadorExogena(), new GeneradorExcelExogena(),
                 new GeneradorXml1001Exogena(), new ValidadorXsdExogena());
 
@@ -53,6 +56,22 @@ class ServicioExogenaGenerarTest {
         assertFalse(resultado.prevalidacionOficial());
         assertTrue(resultado.xml().contains("prevalidacionOficial=\"false\""));
         assertTrue(resultado.excel().length > 0);
+    }
+
+    @Test
+    void formatosOficialesNoSeGeneranConElMotorLegacy() {
+        ServicioExogena servicio = new ServicioExogena(jdbc(), mock(AuditoriaService.class),
+                new FormatoTributarioCatalogo(), new FormatoExogenaRegistry(),
+                new ClasificadorMovimientos(), new MapeadorCuentaConcepto(),
+                new ValidadorExogena(), new AgregadorExogena(), new GeneradorExcelExogena(),
+                new GeneradorXml1001Exogena(), new ValidadorXsdExogena());
+
+        for (String formato : FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS) {
+            IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                    () -> servicio.generar(1L, new SolicitudExogenaGenerarDto(ANO, formato, true)));
+            assertTrue(error.getMessage().contains("generador oficial"), error.getMessage());
+            assertTrue(error.getMessage().contains("/" + formato + "/generar"), error.getMessage());
+        }
     }
 
     private static JdbcTemplate jdbc() {

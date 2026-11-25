@@ -549,6 +549,7 @@ export type RegistroEmpresaRequest = {
   password: string
   aceptaTerminos: boolean
   website?: string
+  planCode: string
 }
 
 export type RegistroEmpresaResponse = {
@@ -1619,6 +1620,21 @@ export type PagoCheckoutRequest = {
   email?: string
 }
 
+export type CheckoutBillingRequest = {
+  planCodigo: string
+  proveedor: string
+  correo: string
+  empresaId?: number
+}
+
+export type CheckoutBillingResponse = {
+  checkoutUrl: string
+  referencia: string
+  monto: number
+  moneda: string
+  estado: string
+}
+
 export type EstadoWebhookPago = {
   referencia: string
   proveedor: string
@@ -1626,13 +1642,21 @@ export type EstadoWebhookPago = {
   firmado: boolean
   eventId: string | null
   procesadoEn: string | null
+  comprobanteNumero: string | null
   mensaje: string | null
 }
 
 export type VerificacionEmail = {
-  verificada: boolean
-  email: string | null
+  empresaId: number | null
+  estadoTenant: string
+  emailVerificado: boolean
   mensaje: string
+}
+
+export type ReenviarVerificacionResponse = {
+  enviado: boolean
+  mensaje: string
+  token: string | null
 }
 
 export type Invitacion = {
@@ -1785,31 +1809,32 @@ export type MovimientoTesoreriaErp = {
   fecha: string
 }
 
-export async function crearCheckoutEmpresa(empresaId: number, solicitud: PagoCheckoutRequest) {
-  const { data } = await api.post<Pago>(`/empresas/${empresaId}/pagos/checkout`, solicitud, {
+export async function crearCheckoutBilling(solicitud: CheckoutBillingRequest) {
+  const { data } = await api.post<CheckoutBillingResponse>('/pagos/checkout', solicitud, {
     skipGlobalError: true,
   })
   return data
 }
 
-export async function estadoWebhookPago(empresaId: number, referencia: string) {
+export async function estadoWebhookPago(referencia: string) {
   const { data } = await api.get<EstadoWebhookPago>(
-    `/empresas/${empresaId}/pagos/${encodeURIComponent(referencia)}/webhook-estado`,
+    `/pagos/${encodeURIComponent(referencia)}/webhook-estado`,
     { skipGlobalError: true },
   )
   return data
 }
 
 export async function verificarEmail(token: string) {
-  const { data } = await api.post<VerificacionEmail>('/auth/verificar-email', { token }, {
-    skipGlobalError: true,
-  })
+  const { data } = await api.get<VerificacionEmail>(
+    `/registro/verificar?token=${encodeURIComponent(token)}`,
+    { skipGlobalError: true },
+  )
   return data
 }
 
 export async function reenviarVerificacionEmail(email: string) {
-  const { data } = await api.post<{ mensaje: string }>(
-    '/auth/verificar-email/reenviar',
+  const { data } = await api.post<ReenviarVerificacionResponse>(
+    '/registro/reenviar',
     { email },
     { skipGlobalError: true },
   )

@@ -1,7 +1,9 @@
 package com.magnetixdian.interfaces.rest;
 
+import com.magnetixdian.application.ServicioExogena;
 import com.magnetixdian.application.ServicioGeneracionExogena;
 import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
+import com.magnetixdian.domain.exogena.FormatoTributarioCatalogo;
 import com.magnetixdian.interfaces.dto.ConceptoExogenaDto;
 import com.magnetixdian.interfaces.dto.ResultadoGeneracionExogenaDto;
 import com.magnetixdian.interfaces.dto.ResultadoValidacionExogenaDto;
@@ -39,25 +41,58 @@ class ExogenaControllerTest {
     @Mock
     private ServicioGeneracionExogena servicio;
     @Mock
+    private ServicioExogena servicioExogena;
+    @Mock
     private AutorizacionEmpresa autorizacion;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ExogenaController(servicio, autorizacion)).build();
+        ExogenaController controller = new ExogenaController(servicio, autorizacion);
+        controller.setServicioExogena(servicioExogena);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
     @Test
     void listarFormatosOficiales() throws Exception {
-        when(servicio.formatosOficiales()).thenReturn(List.of(new FormatoExogenaRegistry().obtener("1125")));
+        FormatoExogenaRegistry registry = new FormatoExogenaRegistry();
+        when(servicio.formatosOficiales()).thenReturn(
+                FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS.stream().map(registry::obtener).toList());
 
         mockMvc.perform(get("/api/empresas/1/exogena/formatos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].codigo").value("1125"))
-                .andExpect(jsonPath("$[0].activo").value(true));
+                .andExpect(jsonPath("$[0].descripcion")
+                        .value("Declaración informativa individual de precios de transferencia"))
+                .andExpect(jsonPath("$[0].generadorXml").value("GeneradorXmlExogenaOficial"))
+                .andExpect(jsonPath("$[1].codigo").value("2278"))
+                .andExpect(jsonPath("$[1].activo").value(true))
+                .andExpect(jsonPath("$[2].codigo").value("5253"))
+                .andExpect(jsonPath("$[2].activo").value(true));
 
         verify(autorizacion).verificar(eq(1L), nullable(Authentication.class));
+    }
+
+    @Test
+    void listarFormatosTributariosUsaElCatalogoUnificado() throws Exception {
+        when(servicioExogena.formatos()).thenReturn(new FormatoTributarioCatalogo().todos());
+
+        mockMvc.perform(get("/api/empresas/1/exogena/formatos-tributarios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[8].codigo").value("1125"))
+                .andExpect(jsonPath("$[8].descripcion")
+                        .value("Declaración informativa individual de precios de transferencia"))
+                .andExpect(jsonPath("$[8].activo").value(true))
+                .andExpect(jsonPath("$[9].codigo").value("2278"))
+                .andExpect(jsonPath("$[9].descripcion")
+                        .value("Información de la compra de bonos electrónicos"))
+                .andExpect(jsonPath("$[9].activo").value(true))
+                .andExpect(jsonPath("$[10].codigo").value("5253"))
+                .andExpect(jsonPath("$[10].descripcion").value("Información de beneficiarios efectivos"))
+                .andExpect(jsonPath("$[10].activo").value(true));
+
+        verify(servicioExogena).formatos();
     }
 
     @Test

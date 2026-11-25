@@ -82,9 +82,16 @@ class SecurityConfigRulesTest {
     }
 
     @Test
+    void checkoutYEstadoDelWebhookSonPublicos() throws Exception {
+        mockMvc.perform(post("/api/pagos/checkout")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/pagos/WOMPI-REF/webhook-estado")).andExpect(status().isOk());
+    }
+
+    @Test
     void todoLoDemasExigeAutenticacion() throws Exception {
         mockMvc.perform(get("/api/facturas")).andExpect(denegado());
-        mockMvc.perform(post("/api/pagos/checkout")).andExpect(denegado());
         mockMvc.perform(get("/api/admin/usuarios")).andExpect(denegado());
     }
 
@@ -153,6 +160,7 @@ class SecurityConfigRulesTest {
                 "/api/registro/reenviar",
                 "/api/registro/invitaciones",
                 "/api/auth/registro",
+                "/api/pagos/{referencia}/webhook-estado",
                 "/api/facturas",
                 "/api/admin/usuarios",
                 "/actuator/health"

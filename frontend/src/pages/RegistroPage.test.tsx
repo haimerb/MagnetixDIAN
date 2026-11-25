@@ -1,5 +1,5 @@
 import { ThemeProvider } from '@mui/material/styles'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,23 +13,23 @@ vi.mock('../api/client', () => ({
 
 const mockRegistrar = vi.mocked(registrarEmpresa)
 
-function renderPage() {
+function renderPage(ruta = '/registro') {
   return render(
     <ThemeProvider theme={theme}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[ruta]}>
         <RegistroPage />
       </MemoryRouter>
     </ThemeProvider>,
   )
 }
 
-async function llenarFormulario(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText(/NIT/), '900123456')
-  await user.type(screen.getByLabelText(/Razón social/), 'Empresa Prueba SAS')
-  await user.type(screen.getByLabelText(/Nombre completo/), 'Cliente Uno')
-  await user.type(screen.getByLabelText(/Correo electrónico/), 'cliente1@ejemplo.com')
-  await user.type(screen.getByLabelText(/Usuario/), 'cliente1')
-  await user.type(screen.getByLabelText(/Contraseña/), 'clave1234')
+function llenarFormulario() {
+  fireEvent.change(screen.getByLabelText(/NIT/), { target: { value: '900123456' } })
+  fireEvent.change(screen.getByLabelText(/Razón social/), { target: { value: 'Empresa Prueba SAS' } })
+  fireEvent.change(screen.getByLabelText(/Nombre completo/), { target: { value: 'Cliente Uno' } })
+  fireEvent.change(screen.getByLabelText(/Correo electrónico/), { target: { value: 'cliente1@ejemplo.com' } })
+  fireEvent.change(screen.getByLabelText(/Usuario/), { target: { value: 'cliente1' } })
+  fireEvent.change(screen.getByLabelText(/Contraseña/), { target: { value: 'clave1234' } })
 }
 
 describe('RegistroPage', () => {
@@ -37,7 +37,7 @@ describe('RegistroPage', () => {
     vi.clearAllMocks()
   })
 
-  it('registra la empresa con aceptación de términos', async () => {
+  it('registra la empresa con plan gratuito por defecto y aceptación de términos', async () => {
     mockRegistrar.mockResolvedValue({
       empresaId: 1,
       usuarioId: 2,
@@ -47,7 +47,7 @@ describe('RegistroPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await llenarFormulario(user)
+    llenarFormulario()
     await user.click(screen.getByRole('checkbox', { name: 'Acepto los términos y condiciones' }))
     await user.click(screen.getByRole('button', { name: 'Crear cuenta gratis' }))
 
@@ -61,7 +61,28 @@ describe('RegistroPage', () => {
         password: 'clave1234',
         aceptaTerminos: true,
         website: '',
+        planCode: 'FREE',
       }),
+    )
+  })
+
+  it('propaga el plan seleccionado en la URL al registrar', async () => {
+    mockRegistrar.mockResolvedValue({
+      empresaId: 1,
+      usuarioId: 2,
+      username: 'cliente1',
+      mensaje: 'Cuenta creada.',
+    })
+    const user = userEvent.setup()
+    renderPage('/registro?plan=PRO')
+
+    expect(screen.getByText(/Registre su empresa con el plan PRO/)).toBeInTheDocument()
+    llenarFormulario()
+    await user.click(screen.getByRole('checkbox', { name: 'Acepto los términos y condiciones' }))
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    await waitFor(() =>
+      expect(mockRegistrar).toHaveBeenCalledWith(expect.objectContaining({ planCode: 'PRO' })),
     )
   })
 
@@ -70,7 +91,7 @@ describe('RegistroPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await llenarFormulario(user)
+    llenarFormulario()
     await user.click(screen.getByRole('checkbox', { name: 'Acepto los términos y condiciones' }))
     await user.click(screen.getByRole('button', { name: 'Crear cuenta gratis' }))
 
