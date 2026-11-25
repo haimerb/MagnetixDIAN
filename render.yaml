@@ -8,7 +8,9 @@
 # Credenciales de integraciones NO van aquí: se guardan cifradas por empresa en BD.
 # Webhooks: PAGOS_EXIGIR_FIRMA_WEBHOOK e INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK = true (fail-closed).
 # SEGURIDAD_FAIL_FAST=true: el backend NO arranca si faltan JWT_SECRET, CRYPTO_KEY,
-# CRYPTO_KEY_ID, FRONTEND_URL, WOMPI_EVENTS_SECRET o MERCADOPAGO_WEBHOOK_SECRET.
+# CRYPTO_KEY_ID, FRONTEND_URL, WOMPI_EVENTS_SECRET, MERCADOPAGO_WEBHOOK_SECRET,
+# PAGOS_EXIGIR_FIRMA_WEBHOOK=true, INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK=true,
+# TENANT_FILTER_ENABLED=true y AUTH_EXPOSE_TOKEN=false.
 # Nunca usar valores de ejemplo ni pasarela SIMULADO en este entorno.
 
 services:
@@ -36,6 +38,8 @@ services:
       - key: CRYPTO_EXTRA_KEYS
         sync: false
       - key: SEGURIDAD_FAIL_FAST
+        value: "true"
+      - key: TENANT_FILTER_ENABLED
         value: "true"
       - key: CORS_ORIGINS
         value: https://magnetixdian.pages.dev,https://magnetixdian.hbarbetti-ing.workers.dev

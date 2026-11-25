@@ -1,6 +1,5 @@
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
 import { useEffect, useState } from 'react'
 import { listarCuentasPuc } from '../../api/client'
@@ -53,7 +52,7 @@ export default function CatalogosTab({ titulo, descripcion }: CatalogosTabProps)
         {buscando && <p>Cargando cuentas...</p>}
 
         <Box sx={{ overflowX: 'auto' }}>
-          <p>Catálogo PUC - {cuentas.length} cuentas cargadas</p>
+          <p>Catálogo PUC - {cuentasFiltradas.length} de {cuentas.length} cuentas</p>
         </Box>
       </SectionCard>
       {error && <Alert severity="error">{error}</Alert>}

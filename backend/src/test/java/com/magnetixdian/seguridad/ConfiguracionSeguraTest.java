@@ -32,6 +32,10 @@ class ConfiguracionSeguraTest {
         env.setProperty("magnetixdian.app.frontend-url", "https://magnetixdian.example.workers.dev");
         env.setProperty("magnetixdian.pagos.wompi.events-secret", "wompi-event-secret-value");
         env.setProperty("magnetixdian.pagos.mercadopago.webhook-secret", "mp-webhook-secret-value");
+        env.setProperty("magnetixdian.pagos.exigir-firma-webhook", "true");
+        env.setProperty("integraciones.exigir-firma-webhook", "true");
+        env.setProperty("magnetixdian.seguridad.tenant-filter-enabled", "true");
+        env.setProperty("magnetixdian.auth.expose-token", "false");
         return env;
     }
 
@@ -62,6 +66,15 @@ class ConfiguracionSeguraTest {
         assertTrue(error.getMessage().contains("CRYPTO_KEY"));
         assertTrue(error.getMessage().contains("JWT_SECRET"));
         assertTrue(!error.getMessage().contains("change-me") && !error.getMessage().contains("base64-de-64-bytes"));
+    }
+
+    @Test
+    void failFastRechazaFirmasWebhookDesactivadas() {
+        MockEnvironment env = entorno(true);
+        env.setProperty("magnetixdian.pagos.exigir-firma-webhook", "false");
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> SecurityConfig.validarConfiguracionSegura(env));
+        assertTrue(error.getMessage().contains("PAGOS_EXIGIR_FIRMA_WEBHOOK=true"));
     }
 
     @Test

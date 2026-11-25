@@ -9,6 +9,7 @@ import com.magnetixdian.domain.integracion.EventoIntegracion;
 import com.magnetixdian.domain.integracion.FacturaIntegracion;
 import com.magnetixdian.domain.integracion.ProveedorIntegracion;
 import com.magnetixdian.domain.integracion.ResultadoIntegracion;
+import com.magnetixdian.infrastructure.crypto.CifradorAes;
 import com.magnetixdian.infrastructure.persistence.EmpresaJpa;
 import com.magnetixdian.infrastructure.persistence.EmpresaRepository;
 import com.magnetixdian.infrastructure.persistence.IntegracionConfigJpa;
@@ -21,6 +22,7 @@ import com.magnetixdian.interfaces.dto.IntegracionEventoDto;
 import com.magnetixdian.interfaces.dto.IntegracionSincronizacionRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -53,6 +55,9 @@ public class ServicioIntegraciones {
     private final AuditoriaService auditoria;
     private final ObjectMapper mapper;
     private final boolean exigirFirma;
+
+    @Autowired(required = false)
+    private CifradorAes cifrador;
 
     public ServicioIntegraciones(
             IntegracionConfigRepository configuraciones,
@@ -96,8 +101,8 @@ public class ServicioIntegraciones {
         config.setProveedor(proveedor.name());
         config.setActivo(solicitud.activo());
         try {
-            config.setCredenciales(mapper.writeValueAsString(solicitud.credenciales() == null
-                    ? Map.of() : solicitud.credenciales()));
+            config.setCredenciales(proteger(mapper.writeValueAsString(solicitud.credenciales() == null
+                    ? Map.of() : solicitud.credenciales())));
             config.setConfiguracion(mapper.writeValueAsString(solicitud.configuracion() == null
                     ? Map.of() : solicitud.configuracion()));
         } catch (Exception ex) {
@@ -303,7 +308,7 @@ public class ServicioIntegraciones {
         return new DatosConexionIntegracion(
                 config.getEmpresa().getId(),
                 ProveedorIntegracion.valueOf(config.getProveedor()),
-                leerMapa(config.getCredenciales()),
+                leerCredenciales(config),
                 leerMapa(config.getConfiguracion()),
                 config.isActivo());
     }
@@ -316,7 +321,7 @@ public class ServicioIntegraciones {
             Map<String, String> mapa = mapper.readValue(json, new TypeReference<Map<String, String>>() { });
             return mapa == null ? Map.of() : mapa;
         } catch (Exception ex) {
-            log.warn("No se pudo leer configuración cifrada de integración: {}", ex.getMessage());
+            log.warn("No se pudo leer configuración de integración: {}", ex.getMessage());
             return Map.of();
         }
     }
@@ -337,6 +342,33 @@ public class ServicioIntegraciones {
     private IntegracionEventoDto aEventoDto(IntegracionEventoJpa evento) {
         return new IntegracionEventoDto(evento.getId(), evento.getProveedor(), evento.getTipo(), evento.getEstado(),
                 evento.getIntentos(), evento.getProximoIntento(), evento.getUltimoError(), evento.getCreatedAt());
+    }
+
+    private String proteger(String json) {
+        return cifrador == null ? json : cifrador.cifrar(json);
+    }
+
+    private Map<String, String> leerCredenciales(IntegracionConfigJpa config) {
+        String valor = config.getCredenciales();
+        if (valor == null || valor.isBlank()) {
+            return Map.of();
+        }
+        boolean cifrado = cifrador != null && cifrador.estaCifrado(valor);
+        String json = cifrado ? cifrador.descifrar(valor) : valor;
+        try {
+            Map<String, String> mapa = mapper.readValue(json, new TypeReference<Map<String, String>>() { });
+            if (mapa == null) {
+                return Map.of();
+            }
+            if (cifrador != null && !cifrado) {
+                config.setCredenciales(cifrador.cifrar(json));
+                configuraciones.save(config);
+            }
+            return mapa;
+        } catch (Exception ex) {
+            log.warn("No se pudieron leer credenciales de integración: {}", ex.getMessage());
+            return Map.of();
+        }
     }
 
     private static String generarToken() {
