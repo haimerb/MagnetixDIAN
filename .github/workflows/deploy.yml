@@ -118,3 +118,16 @@ jobs:
           done
           echo "::error::El backend no respondió UP a tiempo. Render debe tener SEGURIDAD_FAIL_FAST=true y todos los secretos configurados."
           exit 1
+      - name: Verificar endpoints ERP/DIAN publicados
+        run: |
+          for i in $(seq 1 30); do
+            api=$(curl -fsS -m 30 "$BACKEND_URL/v3/api-docs" 2>/dev/null || true)
+            if API_DOCS="$api" python3 -c 'import json,os,sys; paths=json.loads(os.environ["API_DOCS"]).get("paths",{}); requeridos=["/api/empresas/{empresaId}/erp/ventas/pedidos","/api/empresas/{empresaId}/dian/habilitacion"]; sys.exit(0 if all(r in paths for r in requeridos) else 1)'; then
+              echo "Endpoints ERP/DIAN verificados en el backend publicado."
+              exit 0
+            fi
+            echo "Intento $i: backend sin endpoints ERP/DIAN; reintentando en 10s..."
+            sleep 10
+          done
+          echo "::error::El backend publicado no expone los endpoints ERP/DIAN de v0.5.9. Revise la rama configurada en Render y el deploy."
+          exit 1
