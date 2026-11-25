@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.magnetixdian.domain.exogena.CabeceraExogena;
 import com.magnetixdian.domain.exogena.DocumentoExogena;
+import com.magnetixdian.domain.exogena.FormatoExogena;
+import com.magnetixdian.domain.exogena.FormatoExogenaRegistry;
 import com.magnetixdian.domain.exogena.MapeadorExogenaOficial;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
@@ -46,6 +48,19 @@ class GeneradorXmlExogenaOficialTest {
             String xml = generador.generar(documento(formato));
             assertTrue(xml.contains("<Formato>" + formato + "</Formato>"), formato);
             assertEquals(normalizar(golden(formato)), normalizar(xml), formato);
+        }
+    }
+
+    @Test
+    void formatosActivosDelRegistroUsanElGeneradorOficial() throws Exception {
+        FormatoExogenaRegistry registry = new FormatoExogenaRegistry();
+        for (String codigo : FormatoExogenaRegistry.FORMATOS_OFICIALES_ACTIVOS) {
+            FormatoExogena formato = registry.validarActivo(codigo);
+            assertEquals("GeneradorXmlExogenaOficial", formato.generadorXml());
+            assertEquals(VERSIONES.get(codigo), formato.version());
+            String xml = generador.generar(documento(codigo));
+            assertTrue(xml.contains("<Formato>" + formato.codigo() + "</Formato>"), codigo);
+            assertTrue(xml.contains("<Version>" + formato.version() + "</Version>"), codigo);
         }
     }
 
