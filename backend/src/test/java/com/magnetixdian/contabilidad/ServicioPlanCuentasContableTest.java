@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -40,7 +41,8 @@ class ServicioPlanCuentasContableTest {
 
         assertEquals("NIIF_FULL", regimen.regimenNiif());
         assertEquals("NIIF_FULL", regimen.versionPuc());
-        verify(jdbc).update(anyString(), eq("NIIF_FULL"), eq(1L));
+        verify(jdbc).update(contains("UPDATE empresa SET regimen_niif"), eq("NIIF_FULL"), eq(1L));
+        verify(jdbc).update(contains("UPDATE cuenta_contable SET version_puc"), eq("NIIF_FULL"), eq(1L));
     }
 
     @Test

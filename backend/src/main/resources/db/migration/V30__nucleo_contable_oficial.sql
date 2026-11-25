@@ -79,19 +79,13 @@ WHERE NOT EXISTS (
 UPDATE cuenta_contable
 SET naturaleza = CASE WHEN tipo IN ('PASIVO', 'PATRIMONIO', 'INGRESO') THEN 'ACREEDORA' ELSE 'DEUDORA' END,
     nivel = CASE WHEN length(codigo) <= 1 THEN 1 WHEN length(codigo) <= 2 THEN 2 WHEN length(codigo) <= 4 THEN 3 ELSE 4 END,
-    acepta_auxiliar = codigo IN ('130505', '220505', '110510', '236505', '240805');
+    acepta_auxiliar = codigo IN ('130505', '220505', '110510', '236505', '240805')
+WHERE empresa_id IS NULL;
 
--- Añade restricción de unicidad compuesta por versión y código (ya estaba en V24, pero aseguramos)
-ALTER TABLE cuenta_contable
-    ADD CONSTRAINT uq_cuenta_contable_empresa_version_codigo
-    ON cuenta_contable (COALESCE(empresa_id, 0), version_puc, codigo)
-    WHERE documento_tipo IS NOT NULL AND documento_id IS NOT NULL;
-
--- Añade índice para búsquedas por versión
-CREATE INDEX idx_cuenta_contable_version ON cuenta_contable(version_puc);
+-- La unicidad por (empresa, versión, código) y el índice por versión ya existen desde V24.
 
 -- Comenta para documentación
 COMMENT ON TABLE cuenta_contable IS 'Catálogo oficial de cuentas contables NIIF 2025 - versión completa';
-COMMENT ON COLUMN cuenta_contable.version_puc IS 'Versión del PUC: NIIF_FULL o NIIF_PYMES';
+COMMENT ON COLUMN cuenta_contable.version_puc IS 'Versión del PUC: 2025';
 COMMENT ON COLUMN cuenta_contable.naturaleza IS 'DEUDORA/ACREEDORA según tipo de cuenta';
 COMMENT ON COLUMN cuenta_contable.nivel IS 'Nivel jerárquico: 1-4 (1=cuenta raíz)';

@@ -16,5 +16,6 @@ public record FacturaRequest(
         String tipoOperacion,
         LocalDate fechaVencimiento,
         String cufeReferencia,
-        String numeroReferencia) {
+        String numeroReferencia,
+        Long pedidoId) {
 }

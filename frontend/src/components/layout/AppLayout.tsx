@@ -31,6 +31,7 @@ const NAV_ITEMS = [
   { to: '/app', label: 'Inicio' },
   { to: '/app/facturacion', label: 'Facturación' },
   { to: '/app/contabilidad/asentar-facturacion', label: 'Contabilidad' },
+  { to: '/app/erp/ventas', label: 'Ventas' },
   { to: '/app/empresa', label: 'Empresa' },
 ]
 

@@ -168,7 +168,8 @@ public class ImportadorFacturas {
                 vacioANull(valor(base, columnas, "tipo_operacion")),
                 fechaOpcional(valor(base, columnas, "fecha_vencimiento"), filas.get(0).numero()),
                 null,
-                grupo);
+                grupo,
+                null);
     }
 
     private static Map<String, Integer> columnas(List<String> encabezado) {
