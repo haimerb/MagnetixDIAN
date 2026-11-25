@@ -102,6 +102,7 @@ export default function FacturaEditorPage() {
     fechaVencimiento: null,
     cufeReferencia: null,
     numeroReferencia: null,
+    pedidoId: null,
   })
 
   const validar = async () => {

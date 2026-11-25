@@ -302,6 +302,7 @@ export type FacturaRequest = {
   fechaVencimiento: string | null
   cufeReferencia: string | null
   numeroReferencia: string | null
+  pedidoId: number | null
 }
 
 export type FacturaResumen = {
@@ -1698,13 +1699,61 @@ export type ResultadoGenerarTodoExogena = {
   prevalidacionOficial: false
 }
 
+export type OrdenVentaErpRequest = {
+  numero: string
+  clienteId: string | null
+  clienteNombre: string
+  fecha: string
+  subtotal: number
+  impuestos: number
+  total: number
+  moneda: string | null
+  observaciones: string | null
+}
+
+export type OrdenVentaErp = {
+  id: number
+  empresaId: number
+  numero: string
+  clienteId: string | null
+  clienteNombre: string
+  fecha: string
+  estado: string
+  subtotal: number
+  impuestos: number
+  total: number
+  moneda: string | null
+  observaciones: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type PedidoErpRequest = {
+  numero: string
+  ordenVentaId: number
+  clienteId: string | null
+  clienteNombre: string
+  fecha: string
+  subtotal: number
+  impuestos: number
+  total: number
+  observaciones: string | null
+}
+
 export type PedidoErp = {
   id: number
+  empresaId: number
+  ordenVentaId: number
   consecutivo: string
+  clienteId: string | null
   cliente: string
   estado: string
+  subtotal: number
+  impuestos: number
   total: number
   fecha: string
+  facturaDianId: string | null
+  observaciones: string | null
 }
 
 export type CompraErp = {
@@ -1854,8 +1903,28 @@ export async function generarTodoExogena(empresaId: number, solicitud: Solicitud
   return data
 }
 
+export async function crearOrdenVentaErp(empresaId: number, solicitud: OrdenVentaErpRequest) {
+  const { data } = await api.post<OrdenVentaErp>(`/empresas/${empresaId}/erp/ventas/ordenes`, solicitud)
+  return data
+}
+
+export async function crearPedidoErp(empresaId: number, solicitud: PedidoErpRequest) {
+  const { data } = await api.post<PedidoErp>(`/empresas/${empresaId}/erp/ventas/pedidos`, solicitud)
+  return data
+}
+
+export async function aprobarPedidoErp(empresaId: number, pedidoId: number) {
+  const { data } = await api.post<PedidoErp>(`/empresas/${empresaId}/erp/ventas/pedidos/${pedidoId}/aprobar`)
+  return data
+}
+
+export async function emitirFactura(empresaId: number, solicitud: FacturaRequest) {
+  const { data } = await api.post<ResultadoEmision>(`/facturacion/${empresaId}/emitir`, solicitud)
+  return data
+}
+
 export async function listarPedidosErp(empresaId: number) {
-  const { data } = await api.get<PedidoErp[]>(`/empresas/${empresaId}/erp/pedidos`)
+  const { data } = await api.get<PedidoErp[]>(`/empresas/${empresaId}/erp/ventas/pedidos`)
   return data
 }
 

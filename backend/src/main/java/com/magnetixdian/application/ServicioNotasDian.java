@@ -44,6 +44,7 @@ public class ServicioNotasDian {
                 solicitud.cufeFactura().trim(),
                 solicitud.numeroFactura().trim(),
                 solicitud.motivo().trim(),
+                null,
                 null);
         return ResultadoDocumentoDianDto.desde(facturacion.emitirSolicitud(empresaId, usuarioId, emision));
     }

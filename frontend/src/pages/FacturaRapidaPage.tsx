@@ -86,6 +86,7 @@ export default function FacturaRapidaPage() {
         fechaVencimiento: null,
         cufeReferencia: null,
         numeroReferencia: null,
+        pedidoId: null,
       }
       const { data: emision } = await api.post<ResultadoEmision>(
         `/facturacion/${empresaId}/emitir`,

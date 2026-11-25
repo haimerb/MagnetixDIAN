@@ -37,6 +37,7 @@ const ComprasPage = lazy(() => import('./pages/erp/ComprasPage'))
 const InventarioPage = lazy(() => import('./pages/erp/InventarioPage'))
 const TesoreriaPage = lazy(() => import('./pages/erp/TesoreriaPage'))
 const IntegracionesPage = lazy(() => import('./pages/erp/IntegracionesPage'))
+const VentasPage = lazy(() => import('./pages/erp/VentasPage'))
 
 function RequiereAuth({ children }: { children: React.ReactNode }) {
   const { sesion } = useAuth()
@@ -83,6 +84,7 @@ export default function App() {
               <Route path="erp/nomina" element={<NominaPage />} />
               <Route path="erp/documentos-soporte" element={<DocumentoSoportePage />} />
               <Route path="erp/exogena" element={<ExogenaPage />} />
+              <Route path="erp/ventas" element={<VentasPage />} />
               <Route path="erp/compras" element={<ComprasPage />} />
               <Route path="erp/inventario" element={<InventarioPage />} />
               <Route path="erp/tesoreria" element={<TesoreriaPage />} />

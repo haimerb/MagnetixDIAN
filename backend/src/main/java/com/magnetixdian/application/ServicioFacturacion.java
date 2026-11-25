@@ -1,5 +1,6 @@
 package com.magnetixdian.application;
 
+import com.magnetixdian.application.erp.ServicioVentas;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.magnetixdian.domain.cufe.CufeCalculator;
@@ -119,6 +120,7 @@ public class ServicioFacturacion {
     private final ImpuestoPagoRepository impuestoPagoRepository;
     private final TerceroContableRepository terceroRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ServicioVentas ventas;
 
     @FunctionalInterface
     public interface HookEntregaFactura {
@@ -166,7 +168,7 @@ public class ServicioFacturacion {
                                List<HookEntregaFactura> hooksEntrega) {
         this(empresaRepository, configRepository, facturaRepository, eventoRepository, numeracion, validador,
                 generadorUbl, generadorAttached, generadorPdf, firma, transmision, notificador, generadorEvento,
-                auditoria, envios, suscripciones, branding, hooksEntrega, null, null, null, null, null);
+                auditoria, envios, suscripciones, branding, hooksEntrega, null, null, null, null, null, null);
     }
 
     @Autowired
@@ -191,8 +193,10 @@ public class ServicioFacturacion {
                                DocumentoRadianRepository documentoRadianRepository,
                                PagoRepository pagoRepository,
                                ImpuestoPagoRepository impuestoPagoRepository,
-                               TerceroContableRepository terceroRepository,
-                               ApplicationEventPublisher eventPublisher) {
+                                TerceroContableRepository terceroRepository,
+                                ApplicationEventPublisher eventPublisher,
+                                ServicioVentas ventas) {
+
         this.empresaRepository = empresaRepository;
         this.configRepository = configRepository;
         this.facturaRepository = facturaRepository;
@@ -216,6 +220,7 @@ public class ServicioFacturacion {
         this.impuestoPagoRepository = impuestoPagoRepository;
         this.terceroRepository = terceroRepository;
         this.eventPublisher = eventPublisher;
+        this.ventas = ventas;
     }
 
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
@@ -269,6 +274,13 @@ public class ServicioFacturacion {
         FacturaJpa factura = persistir(empresa, usuarioId, config, datos, cufe, qrUrl, xml, xmlFirmado,
                 transmisionResultado, req.tipoDocumento());
         guardarPdf(factura, datos, cufe, qrUrl);
+
+        if (transmisionResultado.exitoso() && req.pedidoId() != null) {
+            if (ventas == null) {
+                throw new IllegalStateException("La correlación con pedidos ERP no está disponible.");
+            }
+            ventas.vincularFacturaDian(empresaId, req.pedidoId(), numeroCompleto);
+        }
 
         FacturaEventoJpa evento = new FacturaEventoJpa();
         evento.setFactura(factura);

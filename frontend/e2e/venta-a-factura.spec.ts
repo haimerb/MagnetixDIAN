@@ -63,7 +63,7 @@ async function preparar(page: Page) {
     if (ruta === '/empresas/1/integraciones' && metodo === 'GET') {
       return responder(route, [])
     }
-    if (ruta === '/empresas/1/erp/pedidos' && metodo === 'GET') {
+    if (ruta === '/empresas/1/erp/ventas/pedidos' && metodo === 'GET') {
       return responder(route, [{
         id: 12,
         consecutivo: 'PED-2026-001',

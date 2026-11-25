@@ -94,6 +94,26 @@ public class ServicioVentas {
         return toDto(guardado);
     }
 
+    public PedidoDto vincularFacturaDian(Long empresaId, Long pedidoId, String facturaDianId) {
+        if (pedidoId == null || facturaDianId == null || facturaDianId.isBlank()) {
+            throw new IllegalArgumentException("El pedido y la factura DIAN son obligatorios.");
+        }
+        ErpPedidoJpa pedido = pedidos.findByIdAndEmpresaIdForUpdate(pedidoId, empresaId)
+                .orElseThrow(() -> new IllegalArgumentException("El pedido no existe para la empresa."));
+        if (!EstadoErp.APROBADO.name().equals(pedido.getEstado())) {
+            throw new IllegalStateException("Solo se puede facturar un pedido aprobado.");
+        }
+        String actual = pedido.getFacturaDianId();
+        if (actual != null && !actual.isBlank()) {
+            if (actual.equals(facturaDianId)) {
+                return toDto(pedido);
+            }
+            throw new IllegalStateException("El pedido ya está vinculado a otra factura DIAN.");
+        }
+        pedido.setFacturaDianId(facturaDianId);
+        return toDto(pedidos.save(pedido));
+    }
+
     private String requerido(String v, String campo) {
         if (v == null || v.isBlank()) throw new IllegalArgumentException("Campo requerido: " + campo);
         return v.trim();

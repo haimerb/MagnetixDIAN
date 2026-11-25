@@ -16,7 +16,8 @@ public record SolicitudEmisionDianDto(
         String cufeReferencia,
         String numeroReferencia,
         String motivo,
-        NominaElectronicaDto nomina) {
+        NominaElectronicaDto nomina,
+        Long pedidoId) {
 
     public static SolicitudEmisionDianDto desde(FacturaRequest req) {
         return new SolicitudEmisionDianDto(
@@ -32,6 +33,7 @@ public record SolicitudEmisionDianDto(
                 req.cufeReferencia(),
                 req.numeroReferencia(),
                 null,
-                null);
+                null,
+                req.pedidoId());
     }
 }
