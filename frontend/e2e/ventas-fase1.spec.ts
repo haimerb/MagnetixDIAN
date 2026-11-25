@@ -138,13 +138,13 @@ test('venta ERP genera pedido, factura DIAN y deja trazabilidad', async ({ page 
   await page.getByLabel('Cliente', { exact: true }).fill('Cliente ERP')
   await page.getByRole('button', { name: 'Crear pedido' }).click()
 
-  await expect(page.getByText('PED-2026-001')).toBeVisible()
-  await expect(page.getByText('BORRADOR')).toBeVisible()
+  await expect(page.getByText('PED-2026-001', { exact: true })).toBeVisible()
+  await expect(page.getByText('Borrador', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Aprobar pedido' }).click()
-  await expect(page.getByText('APROBADO')).toBeVisible()
+  await expect(page.getByText('Aprobado', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Emitir factura' }).click()
-  await expect(page.getByText('FV 0002')).toBeVisible()
+  await expect(page.getByText('FV 0002', { exact: true })).toBeVisible()
   await expect(page.getByText('Factura FV 0002 vinculada al pedido PED-2026-001.')).toBeVisible()
 })
