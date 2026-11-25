@@ -4,7 +4,7 @@ import java.util.regex.Pattern;
 
 public final class CatalogoWsdlDian {
 
-    public static final String VERSION_POR_DEFECTO = "1.8";
+    public static final String VERSION_POR_DEFECTO = "2.1";
     public static final String NOMBRE_ARCHIVO = "WcfDianCustomerServices.wsdl";
 
     private static final Pattern VERSION = Pattern.compile("\\d+\\.\\d+(?:\\.\\d+)?");
@@ -30,7 +30,7 @@ public final class CatalogoWsdlDian {
         }
     }
 
-    private static String validarVersion(String version) {
+    public static String validarVersion(String version) {
         if (version == null || !VERSION.matcher(version.trim()).matches()) {
             throw new IllegalArgumentException("Versión de WSDL DIAN no soportada: " + version);
         }
