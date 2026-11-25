@@ -13,10 +13,10 @@ vi.mock('../api/client', () => ({
 
 const mockRegistrar = vi.mocked(registrarEmpresa)
 
-function renderPage() {
+function renderPage(ruta = '/registro') {
   return render(
     <ThemeProvider theme={theme}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[ruta]}>
         <RegistroPage />
       </MemoryRouter>
     </ThemeProvider>,
@@ -37,7 +37,7 @@ describe('RegistroPage', () => {
     vi.clearAllMocks()
   })
 
-  it('registra la empresa con aceptación de términos', async () => {
+  it('registra la empresa con plan gratuito por defecto y aceptación de términos', async () => {
     mockRegistrar.mockResolvedValue({
       empresaId: 1,
       usuarioId: 2,
@@ -61,7 +61,28 @@ describe('RegistroPage', () => {
         password: 'clave1234',
         aceptaTerminos: true,
         website: '',
+        planCode: 'FREE',
       }),
+    )
+  })
+
+  it('propaga el plan seleccionado en la URL al registrar', async () => {
+    mockRegistrar.mockResolvedValue({
+      empresaId: 1,
+      usuarioId: 2,
+      username: 'cliente1',
+      mensaje: 'Cuenta creada.',
+    })
+    const user = userEvent.setup()
+    renderPage('/registro?plan=PRO')
+
+    expect(screen.getByText(/Registre su empresa con el plan PRO/)).toBeInTheDocument()
+    llenarFormulario()
+    await user.click(screen.getByRole('checkbox', { name: 'Acepto los términos y condiciones' }))
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    await waitFor(() =>
+      expect(mockRegistrar).toHaveBeenCalledWith(expect.objectContaining({ planCode: 'PRO' })),
     )
   })
 

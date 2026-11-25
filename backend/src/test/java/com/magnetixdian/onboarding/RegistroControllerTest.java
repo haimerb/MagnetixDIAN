@@ -7,12 +7,14 @@ import com.magnetixdian.domain.dian.ModoOperacionDian;
 import com.magnetixdian.interfaces.dto.AceptarInvitacionResponse;
 import com.magnetixdian.interfaces.dto.InvitacionTenantResponse;
 import com.magnetixdian.interfaces.dto.ReenviarVerificacionResponse;
+import com.magnetixdian.interfaces.dto.RegistroEmpresaRequest;
 import com.magnetixdian.interfaces.dto.RegistroEmpresaResponse;
 import com.magnetixdian.interfaces.dto.VerificacionEmailResponse;
 import com.magnetixdian.interfaces.rest.RegistroController;
 import com.magnetixdian.security.AutorizacionEmpresa;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.OffsetDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -67,7 +70,9 @@ class RegistroControllerTest {
                 .andExpect(jsonPath("$.planCode").value("PRO"))
                 .andExpect(jsonPath("$.estadoTenant").value("PENDIENTE_VERIFICACION"))
                 .andExpect(jsonPath("$.modoOperacionDian").value("ADQUIRIDO_CLIENTE"));
-        verify(registro).registrar(any());
+        ArgumentCaptor<RegistroEmpresaRequest> captor = ArgumentCaptor.forClass(RegistroEmpresaRequest.class);
+        verify(registro).registrar(captor.capture());
+        assertEquals("PRO", captor.getValue().planCode());
     }
 
     @Test
@@ -91,7 +96,9 @@ class RegistroControllerTest {
         mockMvc.perform(get("/api/registro/verificar").param("token", "abc"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.empresaId").value(1))
-                .andExpect(jsonPath("$.emailVerificado").value(true));
+                .andExpect(jsonPath("$.emailVerificado").value(true))
+                .andExpect(jsonPath("$.estadoTenant").value("ACTIVO"))
+                .andExpect(jsonPath("$.mensaje").value("Correo verificado."));
         mockMvc.perform(get("/api/auth/registro/verificar").param("token", "abc"))
                 .andExpect(status().isOk());
         verify(verificacion, org.mockito.Mockito.times(2)).verificar("abc");

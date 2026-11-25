@@ -8,15 +8,21 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { reenviarVerificacionEmail, tokenDeVerificacion, verificarEmail } from '../../api/erp/cuenta'
-import type { VerificacionEmail } from '../../api/erp/cuenta'
+import type { ReenviarVerificacionResponse, VerificacionEmail } from '../../api/erp/cuenta'
 import Logo from '../../components/ui/Logo'
 import LoadingState from '../../components/ui/LoadingState'
+
+function mensajeServidor(error: unknown, respaldo: string) {
+  const respuesta = error as { response?: { data?: { message?: string } } }
+  return respuesta.response?.data?.message ?? respaldo
+}
 
 export default function VerificarEmailPage() {
   const [params] = useSearchParams()
   const token = tokenDeVerificacion(params.get('token'))
   const [email, setEmail] = useState(params.get('email') ?? '')
-  const [resultado, setResultado] = useState<VerificacionEmail | null>(null)
+  const [verificacion, setVerificacion] = useState<VerificacionEmail | null>(null)
+  const [reenvio, setReenvio] = useState<ReenviarVerificacionResponse | null>(null)
   const [cargando, setCargando] = useState(Boolean(token))
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -26,10 +32,13 @@ export default function VerificarEmailPage() {
     let activo = true
     verificarEmail(token)
       .then((datos) => {
-        if (activo) setResultado(datos)
+        if (activo) setVerificacion(datos)
       })
-      .catch(() => {
-        if (activo) setError('El enlace de verificación no es válido o ya fue usado.')
+      .catch((errorVerificacion) => {
+        if (activo) {
+          setError(mensajeServidor(errorVerificacion,
+            'El enlace de verificación no es válido o ya fue usado.'))
+        }
       })
       .finally(() => {
         if (activo) setCargando(false)
@@ -44,14 +53,9 @@ export default function VerificarEmailPage() {
     setEnviando(true)
     setError(null)
     try {
-      await reenviarVerificacionEmail(email.trim())
-      setResultado({
-        verificada: false,
-        email: email.trim(),
-        mensaje: 'Envíe el enlace desde su correo para completar la verificación.',
-      })
-    } catch {
-      setError('No se pudo reenviar el correo de verificación.')
+      setReenvio(await reenviarVerificacionEmail(email.trim()))
+    } catch (errorReenvio) {
+      setError(mensajeServidor(errorReenvio, 'No se pudo reenviar el correo de verificación.'))
     } finally {
       setEnviando(false)
     }
@@ -74,9 +78,13 @@ export default function VerificarEmailPage() {
           <LoadingState label="Verificando correo…" minHeight="20vh" />
         ) : (
           <Stack spacing={2}>
-            {resultado && (
-              <Alert severity={resultado.verificada ? 'success' : 'info'}>{resultado.mensaje}</Alert>
+            {verificacion && (
+              <Alert severity={verificacion.emailVerificado ? 'success' : 'info'}>
+                {verificacion.mensaje}
+                {verificacion.estadoTenant ? ` · Estado del tenant: ${verificacion.estadoTenant}` : ''}
+              </Alert>
             )}
+            {reenvio && <Alert severity={reenvio.enviado ? 'info' : 'warning'}>{reenvio.mensaje}</Alert>}
             {error && <Alert severity="error">{error}</Alert>}
             {!token && (
               <>
@@ -92,7 +100,7 @@ export default function VerificarEmailPage() {
                 </Button>
               </>
             )}
-            {resultado?.verificada && (
+            {verificacion?.emailVerificado && (
               <Button component={RouterLink} to="/app/habilitacion-dian" variant="contained">
                 Continuar a habilitación DIAN
               </Button>
