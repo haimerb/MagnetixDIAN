@@ -2,8 +2,10 @@ package com.magnetixdian.config;
 
 import com.magnetixdian.security.ApiKeyAuthFilter;
 import com.magnetixdian.security.JwtAuthFilter;
+import com.magnetixdian.security.TenantAccessFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -66,6 +68,9 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final ApiKeyAuthFilter apiKeyAuthFilter;
 
+    @Autowired(required = false)
+    private TenantAccessFilter tenantAccessFilter;
+
     @Value("${magnetixdian.cors.allowed-origins:http://localhost:5173,http://localhost:4173}")
     private String allowedOrigins;
 
@@ -118,6 +123,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        if (tenantAccessFilter != null) {
+            http.addFilterAfter(tenantAccessFilter, JwtAuthFilter.class);
+        }
 
         return http.build();
     }
@@ -163,9 +171,26 @@ public class SecurityConfig {
                 faltantes.add(variable);
             }
         });
+        exigirVerdadero(environment, "magnetixdian.pagos.exigir-firma-webhook",
+                "PAGOS_EXIGIR_FIRMA_WEBHOOK=true", faltantes);
+        exigirVerdadero(environment, "integraciones.exigir-firma-webhook",
+                "INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK=true", faltantes);
+        exigirVerdadero(environment, "magnetixdian.seguridad.tenant-filter-enabled",
+                "TENANT_FILTER_ENABLED=true", faltantes);
+        String exponerToken = environment.getProperty("magnetixdian.auth.expose-token", "true");
+        if (Boolean.parseBoolean(exponerToken)) {
+            faltantes.add("AUTH_EXPOSE_TOKEN=false");
+        }
         if (!faltantes.isEmpty()) {
             throw new IllegalStateException(
                     "Arranque abortado: faltan variables de seguridad obligatorias: " + String.join(", ", faltantes));
+        }
+    }
+
+    private static void exigirVerdadero(Environment environment, String propiedad, String variable,
+                                        List<String> faltantes) {
+        if (!Boolean.parseBoolean(environment.getProperty(propiedad, "false"))) {
+            faltantes.add(variable);
         }
     }
 

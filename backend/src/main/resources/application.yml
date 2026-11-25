@@ -104,6 +104,7 @@ magnetixdian:
     extra-keys: ${CRYPTO_EXTRA_KEYS:}
   seguridad:
     fail-fast: ${SEGURIDAD_FAIL_FAST:false}
+    tenant-filter-enabled: ${TENANT_FILTER_ENABLED:false}
   whatsapp:
     base-url: ${WHATSAPP_BASE_URL:https://wa.me}
     default-template: ${WHATSAPP_DEFAULT_TEMPLATE:Hola, le compartimos su factura {numero} por un total de {total}. ¡Gracias!}

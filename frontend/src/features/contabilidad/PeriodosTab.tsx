@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
-import { useEmpresaActiva } from '../auth/useEmpresaActiva'
 import { listarPeriodosContables } from '../../api/client'
 import type { PeriodoContable } from '../../api/client'
 import SectionCard from '../../components/ui/SectionCard'
@@ -15,7 +14,6 @@ type PeriodosTabProps = {
 }
 
 export default function PeriodosTab({ empresaId, cargandoEmpresa }: PeriodosTabProps) {
-  const { empresaId: activaId } = useEmpresaActiva()
   const { notificar } = useNotificaciones()
   const [periodos, setPeriodos] = useState<PeriodoContable[]>([])
   const [cargando, setCargando] = useState(true)
@@ -52,7 +50,7 @@ export default function PeriodosTab({ empresaId, cargandoEmpresa }: PeriodosTabP
     } finally {
       setCargando(false)
     }
-  }, [empresaId])
+  }, [empresaId, notificar])
 
   const cerrarPeriodo = useCallback(async (periodoId: number) => {
     if (empresaId == null) return
@@ -65,7 +63,7 @@ export default function PeriodosTab({ empresaId, cargandoEmpresa }: PeriodosTabP
     } finally {
       setCargando(false)
     }
-  }, [empresaId])
+  }, [empresaId, notificar])
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3 }}>
@@ -86,7 +84,13 @@ export default function PeriodosTab({ empresaId, cargandoEmpresa }: PeriodosTabP
         <Button variant="contained" onClick={() => abrirPeriodo(2024, 1)}>
           Abrir periodo
         </Button>
-        <Button variant="contained" disabled={cargando}>
+        <Button
+          variant="contained"
+          disabled={cargando || periodos.length === 0}
+          onClick={() => {
+            void cerrarPeriodo(periodos[0].id)
+          }}
+        >
           Cerrar periodo seleccionado
         </Button>
       </SectionCard>

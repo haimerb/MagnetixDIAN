@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 
@@ -8,7 +8,7 @@ type AsientosTabProps = {
 }
 
 export default function AsientosTab({ empresaId, cargandoEmpresa }: AsientosTabProps) {
-  const [asientos, setAsientos] = useState<Array<{id: number, codigoCuenta: string, nombreCuenta: string, descripcion: string, totalDebito: number, totalCredito: number}>>([])
+  const asientos = useMemo<Array<{id: number, codigoCuenta: string, nombreCuenta: string, descripcion: string, totalDebito: number, totalCredito: number}>>(() => [], [])
 
   useEffect(() => {
     // Cargar asientos del backend
@@ -27,6 +27,7 @@ export default function AsientosTab({ empresaId, cargandoEmpresa }: AsientosTabP
       <Alert severity="info">
         Gestión de asientos contables
       </Alert>
+      {cargandoEmpresa && <p>Cargando asientos...</p>}
       <p>Total de asientos: {asientos.length}</p>
       <p>Débitos totales: ${totales.debito.toFixed(2)}</p>
       <p>Créditos totales: ${totales.credito.toFixed(2)}</p>

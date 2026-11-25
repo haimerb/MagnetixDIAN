@@ -34,7 +34,7 @@ import java.util.Set;
 public class ServicioAsientos {
 
     private static final Set<String> TIPOS_PERMITIDOS =
-            Set.of("MANUAL", "AJUSTE", "REVERSION", "CIERRE", "APERTURA");
+            Set.of("MANUAL", "AJUSTE", "REVERSION", "CIERRE", "APERTURA", "VENTA");
     private static final String CUENTA_CIERRE = "399999";
     private static final String CUENTA_RESULTADO = "320505";
     private static final BigDecimal CERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
