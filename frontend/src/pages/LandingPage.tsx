@@ -207,7 +207,12 @@ export default function LandingPage() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                       {plan.descripcion}
                     </Typography>
-                    <Button component={RouterLink} to="/registro" fullWidth variant="contained">
+                    <Button
+                      component={RouterLink}
+                      to={`/registro?plan=${encodeURIComponent(plan.codigo)}`}
+                      fullWidth
+                      variant="contained"
+                    >
                       {plan.codigo === 'FREE' ? 'Empezar gratis' : 'Crear cuenta'}
                     </Button>
                   </CardContent>

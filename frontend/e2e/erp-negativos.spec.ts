@@ -68,26 +68,24 @@ async function mockBase(page: Page, opciones: Opciones = {}) {
         orden: 1,
       }])
     }
-    if (ruta === `/empresas/${empresaId}/pagos/checkout` && metodo === 'POST') {
+    if (ruta === '/pagos/checkout' && metodo === 'POST') {
       return responder(route, {
-        id: 1,
+        checkoutUrl: 'https://checkout.e2e.local/p/PAY-E2E-001',
         referencia: 'PAY-E2E-001',
-        proveedor: 'SIMULADO',
-        planCodigo: 'BASICO',
         monto: 99000,
         moneda: 'COP',
-        estado: 'APROBADO',
-        url: null,
+        estado: 'PENDIENTE',
       })
     }
-    if (/^\/empresas\/\d+\/pagos\/[^/]+\/webhook-estado$/.test(ruta) && metodo === 'GET') {
+    if (/^\/pagos\/[^/]+\/webhook-estado$/.test(ruta) && metodo === 'GET') {
       return responder(route, {
         referencia: 'PAY-E2E-001',
-        proveedor: 'SIMULADO',
+        proveedor: 'WOMPI',
         estado: opciones.duplicado ? 'RECHAZADO' : 'APROBADO',
         firmado: opciones.firmado ?? true,
         eventId: opciones.duplicado ? 'evt-duplicado' : 'evt-unico',
         procesadoEn: opciones.duplicado ? null : new Date().toISOString(),
+        comprobanteNumero: opciones.duplicado ? null : 'COMP-E2E-001',
         mensaje: opciones.duplicado ? 'Evento duplicado: no procesado' : 'Webhook verificado',
       })
     }
@@ -122,7 +120,8 @@ async function mockBase(page: Page, opciones: Opciones = {}) {
 
 async function pagar(page: Page) {
   await page.goto('/checkout?empresa=1&plan=BASICO')
-  await page.getByRole('button', { name: 'Pagar con pasarela de prueba' }).click()
+  await page.getByLabel('Correo del pagador').fill('admin@ejemplo.com')
+  await page.getByRole('button', { name: 'Continuar al pago' }).click()
   await expect(page.getByText('Referencia: PAY-E2E-001')).toBeVisible()
   await page.getByRole('button', { name: 'Consultar estado del webhook' }).click()
 }

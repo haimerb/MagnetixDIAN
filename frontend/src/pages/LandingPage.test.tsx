@@ -61,6 +61,16 @@ describe('LandingPage', () => {
     expect(screen.getAllByText('Gratis').length).toBeGreaterThan(0)
   })
 
+  it('propaga el plan de cada tarjeta al enlace de registro', async () => {
+    renderPage()
+
+    await screen.findByText('Profesional')
+    const enlaces = screen.getAllByRole('link', { name: /Crear cuenta|Empezar gratis/ })
+
+    expect(enlaces.some((enlace) => enlace.getAttribute('href') === '/registro?plan=PRO')).toBe(true)
+    expect(enlaces.some((enlace) => enlace.getAttribute('href') === '/registro?plan=FREE')).toBe(true)
+  })
+
   it('muestra detalles de términos y privacidad', async () => {
     renderPage()
 

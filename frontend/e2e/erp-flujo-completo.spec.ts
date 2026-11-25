@@ -145,40 +145,43 @@ async function mockApi(page: Page, opciones: OpcionesMock = {}) {
         orden: 1,
       }])
     }
-    if (ruta === `/empresas/${empresaId}/pagos/checkout` && metodo === 'POST') {
+    if (ruta === '/pagos/checkout' && metodo === 'POST') {
       return responder(route, {
-        id: 1,
+        checkoutUrl: 'https://checkout.e2e.local/p/PAY-E2E-001',
         referencia: 'PAY-E2E-001',
-        proveedor: 'SIMULADO',
-        planCodigo: 'BASICO',
         monto: 99000,
         moneda: 'COP',
-        estado: 'APROBADO',
-        url: null,
+        estado: 'PENDIENTE',
       })
     }
-    if (/^\/empresas\/\d+\/pagos\/[^/]+\/webhook-estado$/.test(ruta) && metodo === 'GET') {
+    if (/^\/pagos\/[^/]+\/webhook-estado$/.test(ruta) && metodo === 'GET') {
       return responder(route, {
         referencia: 'PAY-E2E-001',
-        proveedor: 'SIMULADO',
+        proveedor: 'WOMPI',
         estado: duplicado ? 'RECHAZADO' : 'APROBADO',
         firmado,
         eventId: duplicado ? 'evt-pago-001' : 'evt-pago-002',
         procesadoEn: firmado && !duplicado ? new Date().toISOString() : null,
+        comprobanteNumero: firmado && !duplicado ? 'COMP-E2E-001' : null,
         mensaje: duplicado
           ? 'Evento duplicado: no procesado'
           : firmado ? 'Webhook verificado' : 'Firma ausente',
       })
     }
-    if (ruta === '/auth/verificar-email' && metodo === 'POST') {
+    if (ruta === '/registro/verificar' && metodo === 'GET') {
       return responder(route, {
-        verificada: true,
-        email: 'admin@ejemplo.com',
+        empresaId: 1,
+        estadoTenant: 'ACTIVO',
+        emailVerificado: true,
         mensaje: 'Correo verificado correctamente.',
       })
     }
-    if (ruta === '/auth/verificar-email/reenviar' && metodo === 'POST') {
-      return responder(route, { mensaje: 'Correo de verificación reenviado' })
+    if (ruta === '/registro/reenviar' && metodo === 'POST') {
+      return responder(route, {
+        enviado: true,
+        mensaje: 'Envíe el enlace desde su correo para completar la verificación.',
+        token: null,
+      })
     }
     if (ruta === `/empresas/${empresaId}/dian/habilitacion` && metodo === 'GET') {
       return responder(route, habilitacion)
@@ -274,7 +277,7 @@ test.describe('Flujo ERP completo', () => {
 
     await page.goto('/checkout?empresa=1&plan=BASICO&email=admin%40ejemplo.com')
     await expect(page.getByRole('heading', { name: 'Finalizar suscripción' })).toBeVisible()
-    await page.getByRole('button', { name: 'Pagar con pasarela de prueba' }).click()
+    await page.getByRole('button', { name: 'Continuar al pago' }).click()
     await expect(page.getByText('Referencia: PAY-E2E-001')).toBeVisible()
     await page.getByRole('button', { name: 'Consultar estado del webhook' }).click()
     await expect(page.getByText(/firma válida/)).toBeVisible()

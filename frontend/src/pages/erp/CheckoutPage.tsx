@@ -10,14 +10,23 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { listarPlanes } from '../../api/client'
-import type { Pago, Plan } from '../../api/client'
-import { crearCheckoutEmpresa, estadoWebhookPago, PASARELA_PRUEBA } from '../../api/erp/pagos'
-import type { EstadoWebhookPago } from '../../api/erp/pagos'
+import type { Plan } from '../../api/client'
+import {
+  crearCheckoutBilling,
+  estadoWebhookPago,
+  PROVEEDORES_CHECKOUT,
+} from '../../api/erp/pagos'
+import type { CheckoutBillingResponse, EstadoWebhookPago, ProveedorCheckout } from '../../api/erp/pagos'
 import EmptyState from '../../components/ui/EmptyState'
 import LoadingState from '../../components/ui/LoadingState'
 import Logo from '../../components/ui/Logo'
 import SectionCard from '../../components/ui/SectionCard'
 import { money } from '../../features/facturacion/calculos'
+
+function mensajeServidor(error: unknown, respaldo: string) {
+  const respuesta = error as { response?: { data?: { message?: string } } }
+  return respuesta.response?.data?.message ?? respaldo
+}
 
 export default function CheckoutPage() {
   const [params] = useSearchParams()
@@ -25,8 +34,9 @@ export default function CheckoutPage() {
   const empresaId = Number.isInteger(empresaIdParam) && empresaIdParam > 0 ? empresaIdParam : null
   const [planes, setPlanes] = useState<Plan[]>([])
   const [planCodigo, setPlanCodigo] = useState(params.get('plan') ?? '')
+  const [proveedor, setProveedor] = useState<ProveedorCheckout>('WOMPI')
   const [email, setEmail] = useState(params.get('email') ?? '')
-  const [pago, setPago] = useState<Pago | null>(null)
+  const [checkout, setCheckout] = useState<CheckoutBillingResponse | null>(null)
   const [webhook, setWebhook] = useState<EstadoWebhookPago | null>(null)
   const [cargando, setCargando] = useState(true)
   const [procesando, setProcesando] = useState(false)
@@ -54,34 +64,34 @@ export default function CheckoutPage() {
   const planSeleccionado = planes.find((plan) => plan.codigo === planCodigo) ?? null
 
   const onPagar = useCallback(async () => {
-    if (empresaId == null || !planCodigo) return
+    if (!planCodigo || !email.trim()) return
     setProcesando(true)
     setError(null)
     setWebhook(null)
+    setCheckout(null)
     try {
-      const resultado = await crearCheckoutEmpresa(empresaId, {
+      setCheckout(await crearCheckoutBilling({
         planCodigo,
-        proveedor: PASARELA_PRUEBA,
-        metodo: 'CARD',
-        email: email.trim() || undefined,
-      })
-      setPago(resultado)
-    } catch {
-      setError('El pago de prueba no pudo completarse. Revise los datos e intente de nuevo.')
+        proveedor,
+        correo: email.trim(),
+        ...(empresaId == null ? {} : { empresaId }),
+      }))
+    } catch (errorPago) {
+      setError(mensajeServidor(errorPago, 'No se pudo iniciar el checkout. Revise los datos e intente de nuevo.'))
     } finally {
       setProcesando(false)
     }
-  }, [email, empresaId, planCodigo])
+  }, [email, empresaId, planCodigo, proveedor])
 
   const onConsultarWebhook = useCallback(async () => {
-    if (empresaId == null || !pago) return
+    if (!checkout) return
     setError(null)
     try {
-      setWebhook(await estadoWebhookPago(empresaId, pago.referencia))
-    } catch {
-      setError('No se pudo consultar el estado del webhook.')
+      setWebhook(await estadoWebhookPago(checkout.referencia))
+    } catch (errorEstado) {
+      setError(mensajeServidor(errorEstado, 'No se pudo consultar el estado del webhook.'))
     }
-  }, [empresaId, pago])
+  }, [checkout])
 
   if (cargando) return <LoadingState label="Cargando checkout…" minHeight="70vh" />
 
@@ -100,16 +110,6 @@ export default function CheckoutPage() {
           </Stack>
         </Grid>
 
-        {empresaId == null && (
-          <Grid size={{ xs: 12 }}>
-            <EmptyState
-              title="Seleccione una empresa desde el registro"
-              description="El checkout requiere una empresa activa. Cree su cuenta para continuar con el pago de prueba."
-              action={<Button component={RouterLink} to="/registro" variant="contained">Crear cuenta</Button>}
-            />
-          </Grid>
-        )}
-
         {error && (
           <Grid size={{ xs: 12 }}>
             <Alert severity="error">{error}</Alert>
@@ -117,7 +117,7 @@ export default function CheckoutPage() {
         )}
 
         <Grid size={{ xs: 12, md: 7 }}>
-          <SectionCard title="Plan y método de pago" subtitle="Pago de prueba sin credenciales reales">
+          <SectionCard title="Plan y método de pago" subtitle="Checkout seguro con pasarela real">
             <Stack spacing={2}>
               <TextField
                 select
@@ -135,24 +135,39 @@ export default function CheckoutPage() {
                 ))}
               </TextField>
               <TextField
-                label="Correo para verificación"
+                select
+                label="Pasarela de pago"
+                value={proveedor}
+                onChange={(evento) => setProveedor(evento.target.value as ProveedorCheckout)}
+                fullWidth
+              >
+                {PROVEEDORES_CHECKOUT.map((opcion) => (
+                  <MenuItem key={opcion.value} value={opcion.value}>
+                    {opcion.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                label="Correo del pagador"
                 type="email"
                 value={email}
                 onChange={(evento) => setEmail(evento.target.value)}
                 placeholder="nombre@empresa.com"
+                helperText="Debe coincidir con el correo usado al registrar la empresa."
                 fullWidth
               />
               <Alert severity="info">
-                Se usa la pasarela simulada: el pago se aprueba al instante y no genera cargos.
+                El pago se confirma con webhook firmado. La suscripción se activa automáticamente y podrá descargar
+                el comprobante desde el estado del pago.
               </Alert>
               <Button
                 variant="contained"
                 size="large"
                 loading={procesando}
-                disabled={empresaId == null || !planCodigo || procesando}
+                disabled={!planCodigo || !email.trim() || procesando}
                 onClick={() => void onPagar()}
               >
-                Pagar con pasarela de prueba
+                Continuar al pago
               </Button>
             </Stack>
           </SectionCard>
@@ -176,30 +191,44 @@ export default function CheckoutPage() {
           </SectionCard>
         </Grid>
 
-        {pago && (
+        {checkout && (
           <Grid size={{ xs: 12 }}>
             <Paper variant="outlined" sx={{ p: 3, display: 'grid', gap: 1.5 }}>
               <Typography variant="h6" component="h2">
-                Resultado del pago
+                Checkout iniciado
               </Typography>
-              <Typography>Referencia: {pago.referencia}</Typography>
-              <Typography>Estado: {pago.estado}</Typography>
-              <Typography>Proveedor: {pago.proveedor}</Typography>
-              <Typography>Monto: {money(pago.monto)}</Typography>
+              <Typography>Referencia: {checkout.referencia}</Typography>
+              <Typography>Estado: {checkout.estado}</Typography>
+              <Typography>Monto: {money(checkout.monto)}</Typography>
               <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                <Button component="a" href={checkout.checkoutUrl} target="_blank" rel="noreferrer" variant="contained">
+                  Ir al checkout de {proveedor}
+                </Button>
                 <Button variant="outlined" onClick={() => void onConsultarWebhook()}>
                   Consultar estado del webhook
                 </Button>
-                <Button component={RouterLink} to={`/verificar-email?email=${encodeURIComponent(email)}&referencia=${encodeURIComponent(pago.referencia)}`} variant="contained">
+                <Button
+                  component={RouterLink}
+                  to={`/verificar-email?email=${encodeURIComponent(email)}&referencia=${encodeURIComponent(checkout.referencia)}`}
+                  variant="outlined"
+                >
                   Verificar correo
                 </Button>
-                <Button component={RouterLink} to={`/app/habilitacion-dian?empresa=${empresaId}`} variant="outlined">
-                  Habilitar DIAN
-                </Button>
+                {empresaId != null && (
+                  <Button
+                    component={RouterLink}
+                    to={`/app/habilitacion-dian?empresa=${empresaId}`}
+                    variant="text"
+                  >
+                    Habilitar DIAN
+                  </Button>
+                )}
               </Stack>
               {webhook && (
-                <Alert severity={webhook.firmado ? 'success' : 'error'}>
+                <Alert severity={webhook.firmado && webhook.estado === 'APROBADO' ? 'success' : 'info'}>
                   Webhook {webhook.estado} · firma {webhook.firmado ? 'válida' : 'ausente o inválida'}
+                  {webhook.eventId ? ` · evento ${webhook.eventId}` : ''}
+                  {webhook.comprobanteNumero ? ` · comprobante ${webhook.comprobanteNumero}` : ''}
                   {webhook.mensaje ? ` · ${webhook.mensaje}` : ''}
                 </Alert>
               )}

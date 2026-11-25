@@ -67,10 +67,7 @@ public class ValidadorFirmaWebhook {
             }
             return;
         }
-        String cabecera = cabecera(headers, "X-Event-Signature");
-        if (cabecera == null || cabecera.isBlank()) {
-            cabecera = cabecera(headers, "X-Signature");
-        }
+        String cabecera = cabeceraFirma(headers);
         if (cabecera == null || cabecera.isBlank()) {
             if (proveedor == ProveedorPago.WOMPI && checksumWompiValido(payload, secreto)) {
                 return;
@@ -80,6 +77,23 @@ public class ValidadorFirmaWebhook {
         if (!firmaValida(proveedor, payload, cabecera, headers, secreto)) {
             throw new FirmaWebhookException("Firma del webhook inválida para " + proveedor);
         }
+    }
+
+    public boolean firmaVerificada(ProveedorPago proveedor, String payload, Map<String, String> headers) {
+        String secreto = secreto(proveedor);
+        if (secreto.isEmpty()) {
+            return false;
+        }
+        String cabecera = cabeceraFirma(headers);
+        if (cabecera != null && !cabecera.isBlank()) {
+            return firmaValida(proveedor, payload, cabecera, headers, secreto);
+        }
+        return proveedor == ProveedorPago.WOMPI && checksumWompiValido(payload, secreto);
+    }
+
+    private static String cabeceraFirma(Map<String, String> headers) {
+        String cabecera = cabecera(headers, "X-Event-Signature");
+        return cabecera == null || cabecera.isBlank() ? cabecera(headers, "X-Signature") : cabecera;
     }
 
     public boolean firmaValida(String payload, String cabecera, String secreto) {
