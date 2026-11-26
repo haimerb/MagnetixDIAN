@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AppBar from '@mui/material/AppBar'
 import Avatar from '@mui/material/Avatar'
@@ -61,6 +61,11 @@ export default function AppLayout() {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const [erpAnchor, setErpAnchor] = useState<HTMLElement | null>(null)
   const [erpAbierto, setErpAbierto] = useState(false)
+
+  useEffect(() => {
+    setErpAnchor(null)
+    setErpAbierto(false)
+  }, [location.pathname])
 
   const items = NAV_ITEMS
   const isActive = (to: string) => {
@@ -154,7 +159,10 @@ export default function AppLayout() {
                     <Button
                       key={item.to}
                       disableRipple
-                      onClick={(event) => setErpAnchor(event.currentTarget)}
+                      onClick={(event) => {
+                        const objetivo = event.currentTarget
+                        setErpAnchor((ancla) => (ancla ? null : objetivo))
+                      }}
                       aria-haspopup="menu"
                       aria-controls="erp-menu"
                       aria-expanded={Boolean(erpAnchor)}
