@@ -1954,16 +1954,16 @@ export async function listarPedidosErp(empresaId: number) {
 }
 
 export async function listarComprasErp(empresaId: number) {
-  const { data } = await api.get<CompraErp[]>(`/empresas/${empresaId}/erp/compras`)
+  const { data } = await api.get<CompraErp[]>(`/empresas/${empresaId}/erp/compras/ordenes`)
   return data
 }
 
 export async function listarInventarioErp(empresaId: number) {
-  const { data } = await api.get<MovimientoInventarioErp[]>(`/empresas/${empresaId}/erp/inventario`)
+  const { data } = await api.get<MovimientoInventarioErp[]>(`/empresas/${empresaId}/erp/inventario/movimientos`)
   return data
 }
 
 export async function listarTesoreriaErp(empresaId: number) {
-  const { data } = await api.get<MovimientoTesoreriaErp[]>(`/empresas/${empresaId}/erp/tesoreria`)
+  const { data } = await api.get<MovimientoTesoreriaErp[]>(`/empresas/${empresaId}/erp/tesoreria/movimientos`)
   return data
 }
