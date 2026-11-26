@@ -94,6 +94,7 @@ test.describe('ERP · dominios', () => {
     await page.getByRole('menuitem', { name: 'Compras', exact: true }).click()
 
     await expect(page).toHaveURL(/\/app\/erp\/compras$/)
+    await expect(page.getByRole('menu')).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Compras', exact: true, level: 1 })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'OC-2026-001' })).toBeVisible()
     await expect(page.getByRole('cell', { name: 'Proveedor Andino' })).toBeVisible()
@@ -135,6 +136,7 @@ test.describe('ERP · dominios', () => {
       .click()
 
     await expect(page).toHaveURL(/\/app\/erp\/tesoreria$/)
+    await expect(page.getByRole('list', { name: 'Submenú ERP' })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Tesorería', exact: true, level: 1 })).toBeVisible()
   })
 })
