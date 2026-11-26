@@ -38,21 +38,21 @@ const TESORERIA = [
 ]
 
 async function responderDominios(page: Page) {
-  await page.route('**/api/empresas/1/erp/compras', (route) =>
+  await page.route('**/api/empresas/1/erp/compras/ordenes', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(COMPRAS),
     }),
   )
-  await page.route('**/api/empresas/1/erp/inventario', (route) =>
+  await page.route('**/api/empresas/1/erp/inventario/movimientos', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(INVENTARIO),
     }),
   )
-  await page.route('**/api/empresas/1/erp/tesoreria', (route) =>
+  await page.route('**/api/empresas/1/erp/tesoreria/movimientos', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
