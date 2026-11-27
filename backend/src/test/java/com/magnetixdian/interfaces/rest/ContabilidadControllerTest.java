@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -66,7 +67,7 @@ class ContabilidadControllerTest {
     void listarAsientos() throws Exception {
         when(servicioContabilizacion.listar(1L)).thenReturn(List.of(new AsientoContableDto(
                 20L, 1L, "AS-1-5-CAUSACION", LocalDate.of(2026, 2, 20), "Causación RADIAN",
-                "RADIAN", 5L, "CAUSACION", "CONTABILIZADO", new BigDecimal("1190.00"),
+                "RADIAN", 5L, "CAUSACION", "RADIAN", 5L, "CONTABILIZADO", new BigDecimal("1190.00"),
                 new BigDecimal("1190.00"), new BigDecimal("1190.00"), new BigDecimal("190.00"),
                 new BigDecimal("50.00"), OffsetDateTime.now(), List.of())));
 
@@ -75,6 +76,34 @@ class ContabilidadControllerTest {
                 .andExpect(jsonPath("$[0].numero").value("AS-1-5-CAUSACION"));
 
         verify(autorizacion).verificar(eq(1L), nullable(Authentication.class));
+    }
+
+    @Test
+    void buscarAsientoPorOrigen() throws Exception {
+        when(servicioContabilizacion.buscarPorOrigen(1L, "FACTURA", 44L, "VENTA"))
+                .thenReturn(Optional.of(asientoDto()));
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/asientos/origen")
+                        .param("origen", "FACTURA")
+                        .param("origenId", "44")
+                        .param("tipoEvento", "VENTA"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.origen").value("FACTURA"))
+                .andExpect(jsonPath("$.origenId").value(44));
+
+        verify(autorizacion).verificar(eq(1L), nullable(Authentication.class));
+    }
+
+    @Test
+    void buscarAsientoPorOrigenSinResultado() throws Exception {
+        when(servicioContabilizacion.buscarPorOrigen(1L, "FACTURA", 99L, "VENTA"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/empresas/1/contabilidad/asientos/origen")
+                        .param("origen", "FACTURA")
+                        .param("origenId", "99")
+                        .param("tipoEvento", "VENTA"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -258,7 +287,7 @@ class ContabilidadControllerTest {
     private static AsientoContableDto asientoDto() {
         return new AsientoContableDto(
                 21L, 1L, "AS-1-202603-0001", LocalDate.of(2026, 3, 1), "Ajuste manual",
-                null, null, "AJUSTE", "CONTABILIZADO", new BigDecimal("100.00"),
+                null, null, "AJUSTE", "FACTURA", 44L, "CONTABILIZADO", new BigDecimal("100.00"),
                 new BigDecimal("100.00"), new BigDecimal("100.00"), BigDecimal.ZERO.setScale(2),
                 BigDecimal.ZERO.setScale(2), OffsetDateTime.now(), List.of());
     }

@@ -26,7 +26,8 @@ async function preparar(page: Page) {
   }, { valor: token() })
 
   await page.route('**/api/**', async (route) => {
-    const ruta = new URL(route.request().url()).pathname.replace(/^\/api/, '')
+    const url = new URL(route.request().url())
+    const ruta = url.pathname.replace(/^\/api/, '')
     const metodo = route.request().method()
 
     if (ruta === '/auth/me' && metodo === 'GET') {
@@ -88,17 +89,22 @@ async function preparar(page: Page) {
         errores: [],
       })
     }
-    if (ruta === '/empresas/1/contabilidad/asientos' && metodo === 'POST') {
-      return responder(route, {
-        id: 66,
-        numero: 'AS-88',
-        fecha: new Date().toISOString().slice(0, 10),
-        tipoEvento: 'EMISION_FACTURA',
-        descripcion: 'Asiento de la factura FV 0002',
-        totalDebito: 1250000,
-        totalCredito: 1250000,
-        lineas: [],
-      })
+    if (ruta === '/empresas/1/contabilidad/asientos/origen' && metodo === 'GET') {
+      if (url.searchParams.get('origen') === 'FACTURA' && url.searchParams.get('origenId') === '88') {
+        return responder(route, {
+          id: 66,
+          numero: 'AS-88',
+          fecha: new Date().toISOString().slice(0, 10),
+          tipoEvento: 'VENTA',
+          origen: 'FACTURA',
+          origenId: 88,
+          descripcion: 'Asiento de la factura FV 0002',
+          totalDebito: 1250000,
+          totalCredito: 1250000,
+          lineas: [],
+        })
+      }
+      return responder(route, null, 404)
     }
 
     return responder(route, { mensaje: 'Ruta no implementada en el mock E2E' }, 404)
@@ -126,6 +132,5 @@ test('venta del ERP se convierte en factura y asiento', async ({ page }) => {
   await expect(page.getByText('Estado: EMITIDO')).toBeVisible()
   await expect(page.getByText('FV 0002')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Asentar factura' }).click()
-  await expect(page.getByText('Asiento AS-88 generado')).toBeVisible()
+  await expect(page.getByText(/Asiento AS-88 generado automáticamente/)).toBeVisible()
 })

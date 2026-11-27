@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -129,6 +130,22 @@ class ServicioContabilizacionTest {
 
         assertThrows(IllegalArgumentException.class, () -> servicio.contabilizar(1L, 5L));
         verify(asientoRepository, never()).saveAndFlush(any(AsientoContableJpa.class));
+    }
+
+    @Test
+    void buscarPorOrigenDevuelveAsientoMapeado() {
+        AsientoContableJpa entidad = asiento();
+        entidad.setOrigen("FACTURA");
+        entidad.setOrigenId(44L);
+        when(asientoRepository.findByEmpresaIdAndOrigenAndOrigenIdAndTipoEvento(
+                1L, "FACTURA", 44L, "VENTA")).thenReturn(Optional.of(entidad));
+
+        Optional<AsientoContableDto> resultado =
+                servicio.buscarPorOrigen(1L, "FACTURA", 44L, "VENTA");
+
+        assertTrue(resultado.isPresent());
+        assertEquals("FACTURA", resultado.orElseThrow().origen());
+        assertEquals(44L, resultado.orElseThrow().origenId());
     }
 
     private void prepararContabilizacion(DocumentoRadianJpa documento) {
