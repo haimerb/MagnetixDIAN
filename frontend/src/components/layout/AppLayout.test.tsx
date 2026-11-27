@@ -59,4 +59,14 @@ describe('AppLayout', () => {
     fireEvent.click(screen.getByText('Ir a facturación'))
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
+
+  it('cierra el submenú al elegir un dominio sin bloquear el documento', () => {
+    renderLayout()
+
+    fireEvent.click(screen.getByRole('button', { name: 'ERP' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Compras' }))
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(document.body.style.overflow).not.toBe('hidden')
+  })
 })
