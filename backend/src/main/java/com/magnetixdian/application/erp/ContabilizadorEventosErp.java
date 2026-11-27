@@ -1,6 +1,7 @@
 package com.magnetixdian.application.erp;
 
 import com.magnetixdian.application.ServicioAsientos;
+import com.magnetixdian.application.ServicioAsientosPendientes;
 import com.magnetixdian.domain.contabilidad.PlanCuentas;
 import com.magnetixdian.domain.erp.evento.CobroClienteEvent;
 import com.magnetixdian.domain.erp.evento.CompraRecibidaEvent;
@@ -8,6 +9,9 @@ import com.magnetixdian.domain.erp.evento.PagoProveedorEvent;
 import com.magnetixdian.interfaces.dto.FacturaEmitidaEvent;
 import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
 import com.magnetixdian.interfaces.dto.SolicitudLineaAsientoDto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,11 +42,19 @@ public class ContabilizadorEventosErp {
     private static final Set<String> ESTADOS_RECHAZADOS = Set.of(
             "RECHAZADO", "RECHAZADA", "ANULADO", "ANULADA");
     private static final BigDecimal CERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    private static final Logger log = LoggerFactory.getLogger(ContabilizadorEventosErp.class);
 
     private final ServicioAsientos servicioAsientos;
+    private final ServicioAsientosPendientes pendientes;
 
     public ContabilizadorEventosErp(ServicioAsientos servicioAsientos) {
+        this(servicioAsientos, null);
+    }
+
+    @Autowired
+    public ContabilizadorEventosErp(ServicioAsientos servicioAsientos, ServicioAsientosPendientes pendientes) {
         this.servicioAsientos = servicioAsientos;
+        this.pendientes = pendientes;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -165,8 +177,17 @@ public class ContabilizadorEventosErp {
 
     private void crearAsiento(Long empresaId, LocalDate fecha, String descripcion, String tipoEvento,
                               String origen, Long origenId, List<SolicitudLineaAsientoDto> lineas) {
-        servicioAsientos.crear(empresaId, new SolicitudAsientoDto(
-                fecha, descripcion, tipoEvento, lineas, origen, origenId));
+        SolicitudAsientoDto solicitud = new SolicitudAsientoDto(
+                fecha, descripcion, tipoEvento, lineas, origen, origenId);
+        try {
+            servicioAsientos.crear(empresaId, solicitud);
+        } catch (RuntimeException ex) {
+            log.warn("No se pudo contabilizar {} {}. Se programa reintento: {}",
+                    origen, origenId, ex.getMessage());
+            if (pendientes != null) {
+                pendientes.registrar(empresaId, solicitud, ex.getMessage());
+            }
+        }
     }
 
     private static boolean rechazado(String estado) {

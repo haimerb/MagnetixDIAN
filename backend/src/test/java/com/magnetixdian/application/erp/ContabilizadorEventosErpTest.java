@@ -1,6 +1,7 @@
 package com.magnetixdian.application.erp;
 
 import com.magnetixdian.application.ServicioAsientos;
+import com.magnetixdian.application.ServicioAsientosPendientes;
 import com.magnetixdian.application.ServicioPlanCuentas;
 import com.magnetixdian.domain.erp.evento.CobroClienteEvent;
 import com.magnetixdian.domain.erp.evento.CompraRecibidaEvent;
@@ -11,6 +12,7 @@ import com.magnetixdian.infrastructure.persistence.CuentaContableJpa;
 import com.magnetixdian.infrastructure.persistence.PeriodoContableJpa;
 import com.magnetixdian.infrastructure.persistence.PeriodoContableRepository;
 import com.magnetixdian.interfaces.dto.FacturaEmitidaEvent;
+import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +29,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -43,6 +47,8 @@ class ContabilizadorEventosErpTest {
     private PeriodoContableRepository periodoRepository;
     @Mock
     private ServicioPlanCuentas servicioPlanCuentas;
+    @Mock
+    private ServicioAsientosPendientes pendientes;
 
     private ContabilizadorEventosErp contabilizador;
 
@@ -50,7 +56,7 @@ class ContabilizadorEventosErpTest {
     void setUp() {
         ServicioAsientos servicioAsientos =
                 new ServicioAsientos(asientoRepository, periodoRepository, servicioPlanCuentas);
-        contabilizador = new ContabilizadorEventosErp(servicioAsientos);
+        contabilizador = new ContabilizadorEventosErp(servicioAsientos, pendientes);
     }
 
     @Test
@@ -145,6 +151,20 @@ class ContabilizadorEventosErpTest {
         verify(asientoRepository, never()).saveAndFlush(any(AsientoContableJpa.class));
         verify(periodoRepository, never()).findVigentePorFecha(any(), any());
         verify(servicioPlanCuentas, never()).asegurar(any());
+    }
+
+    @Test
+    void falloDeContabilizacionRegistraOutbox() {
+        when(asientoRepository.findByEmpresaIdAndOrigenAndOrigenIdAndTipoEvento(
+                1L, ContabilizadorEventosErp.ORIGEN_FACTURA, 77L,
+                ContabilizadorEventosErp.TIPO_VENTA)).thenReturn(Optional.empty());
+        when(periodoRepository.findVigentePorFecha(1L, FECHA)).thenReturn(Optional.of(periodo()));
+        when(servicioPlanCuentas.asegurar(1L)).thenThrow(new IllegalStateException("BD caída"));
+
+        contabilizador.contabilizarFactura(factura("ACEPTADO"));
+
+        verify(pendientes).registrar(eq(1L), any(SolicitudAsientoDto.class), contains("BD caída"));
+        verify(asientoRepository, never()).saveAndFlush(any(AsientoContableJpa.class));
     }
 
     private void prepararGuardado(String origen, Long origenId, String tipoEvento) {

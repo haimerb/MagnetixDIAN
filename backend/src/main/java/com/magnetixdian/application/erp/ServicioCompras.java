@@ -1,5 +1,6 @@
 package com.magnetixdian.application.erp;
 
+import com.magnetixdian.application.ValidadorPeriodoAbierto;
 import com.magnetixdian.domain.erp.evento.CompraRecibidaEvent;
 import com.magnetixdian.domain.erp.modelo.EstadoErp;
 import com.magnetixdian.infrastructure.integracion.erp.persistence.ErpCompraJpa;
@@ -31,12 +32,15 @@ public class ServicioCompras {
     private final ErpRecepcionRepository recepciones;
     private final ServicioInventario inventario;
     private final PublicadorEventosErp publicador;
+    private final ValidadorPeriodoAbierto validadorPeriodo;
 
-    public ServicioCompras(ErpCompraRepository compras, ErpRecepcionRepository recepciones, ServicioInventario inventario, PublicadorEventosErp publicador) {
+    public ServicioCompras(ErpCompraRepository compras, ErpRecepcionRepository recepciones, ServicioInventario inventario,
+                           PublicadorEventosErp publicador, ValidadorPeriodoAbierto validadorPeriodo) {
         this.compras = compras;
         this.recepciones = recepciones;
         this.inventario = inventario;
         this.publicador = publicador;
+        this.validadorPeriodo = validadorPeriodo;
     }
 
     public CompraDto crearOrdenCompra(Long empresaId, CompraRequestDto r) {
@@ -64,11 +68,13 @@ public class ServicioCompras {
         ErpCompraJpa compra = compras.findByIdAndEmpresaId(compraId, empresaId)
                 .orElseThrow(() -> new IllegalArgumentException("Compra no encontrada"));
         if (r.lineas() == null || r.lineas().isEmpty()) throw new IllegalArgumentException("La recepción debe tener líneas");
+        LocalDate fecha = r.fecha() == null ? LocalDate.now() : r.fecha();
+        validadorPeriodo.verificar(empresaId, fecha);
         ErpRecepcionJpa rec = new ErpRecepcionJpa();
         rec.setEmpresaId(empresaId);
         rec.setCompraId(compraId);
         rec.setNumero(req(r.numero(), "numero"));
-        rec.setFecha(r.fecha() == null ? LocalDate.now() : r.fecha());
+        rec.setFecha(fecha);
         rec.setBodega(req(r.bodega(), "bodega"));
         rec.setEstado(EstadoErp.RECIBIDA.name());
         rec.setObservaciones(r.observaciones());
