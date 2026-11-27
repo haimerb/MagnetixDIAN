@@ -59,6 +59,10 @@ public class ValidadorFirmaWebhook {
         return failFast || produccion;
     }
 
+    public boolean configuradoPara(ProveedorPago proveedor) {
+        return !secreto(proveedor).isEmpty();
+    }
+
     public void verificar(ProveedorPago proveedor, String payload, Map<String, String> headers) {
         String secreto = secreto(proveedor);
         if (secreto.isEmpty()) {

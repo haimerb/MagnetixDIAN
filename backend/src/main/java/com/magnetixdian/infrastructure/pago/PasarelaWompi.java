@@ -7,7 +7,9 @@ import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.MetodoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
+import com.magnetixdian.domain.pago.ProveedorPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
+import com.magnetixdian.domain.pago.ValidadorFirmaWebhook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +23,8 @@ import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -40,15 +40,14 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
 
     private final String publicKey;
     private final String integritySecret;
-    private final String eventsSecret;
     private final String checkoutUrl;
     private final String apiToken;
     private final String brebQrUrl;
     private final String brebQrToken;
-    private final long webhookToleranceSeconds;
     private final boolean exigirFirmaWebhook;
     private final ObjectMapper mapper;
     private final RestClient http;
+    private final ValidadorFirmaWebhook validador;
 
     @Autowired
     public PasarelaWompi(@Value("${magnetixdian.pagos.wompi.public-key:}") String publicKey,
@@ -64,15 +63,14 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
                          ObjectMapper mapper) {
         this.publicKey = publicKey;
         this.integritySecret = integritySecret;
-        this.eventsSecret = eventsSecret;
         this.checkoutUrl = checkoutUrl;
         this.apiToken = apiToken;
         this.brebQrUrl = brebQrUrl;
         this.brebQrToken = brebQrToken;
-        this.webhookToleranceSeconds = webhookToleranceSeconds;
         this.exigirFirmaWebhook = exigirFirmaWebhook;
         this.mapper = mapper;
         this.http = RestClient.builder().baseUrl(apiUrl).build();
+        this.validador = new ValidadorFirmaWebhook(eventsSecret, "", false, "", webhookToleranceSeconds, mapper);
     }
 
     public PasarelaWompi(String publicKey, String integritySecret, String eventsSecret, String checkoutUrl,
@@ -278,12 +276,9 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
             if (transaccion.isMissingNode()) {
                 return Optional.empty();
             }
-            if (configurada() && exigirFirmaWebhook && eventsSecret.isBlank()) {
-                log.warn("Evento Wompi sin secreto de firma; se ignora.");
-                return Optional.empty();
-            }
-            if (!eventsSecret.isBlank() && !checksumValido(raiz, data)) {
-                log.warn("Evento Wompi con checksum inválido; se ignora.");
+            if ((validador.configuradoPara(ProveedorPago.WOMPI) || validador.exigeFirma() || exigirFirmaWebhook)
+                    && !validador.firmaVerificada(ProveedorPago.WOMPI, payload, headers)) {
+                log.warn("Evento Wompi con firma inválida o ausente; se ignora.");
                 return Optional.empty();
             }
             String referencia = transaccion.path("reference").asText(null);
@@ -298,51 +293,6 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
             log.warn("No se pudo procesar el evento Wompi: {}", e.getMessage());
             return Optional.empty();
         }
-    }
-
-    private boolean checksumValido(JsonNode raiz, JsonNode data) {
-        JsonNode signature = raiz.path("signature");
-        String checksum = signature.path("checksum").asText("");
-        JsonNode properties = signature.path("properties");
-        if (checksum.isBlank() || !properties.isArray() || properties.isEmpty()) {
-            return false;
-        }
-        long marca;
-        try {
-            marca = Long.parseLong(raiz.path("timestamp").asText(""));
-        } catch (NumberFormatException e) {
-            return false;
-        }
-        if (marca <= 0 || Math.abs(Instant.now().getEpochSecond() - marca) > Math.max(0, webhookToleranceSeconds)) {
-            return false;
-        }
-        StringBuilder concat = new StringBuilder();
-        for (JsonNode propiedad : properties) {
-            String valor = resolver(data, propiedad.asText(""));
-            if (valor == null) {
-                return false;
-            }
-            concat.append(valor);
-        }
-        concat.append(marca).append(eventsSecret);
-        byte[] esperado = sha256(concat.toString()).getBytes(StandardCharsets.UTF_8);
-        byte[] recibido = checksum.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
-        return MessageDigest.isEqual(esperado, recibido);
-    }
-
-    private String resolver(JsonNode data, String ruta) {
-        if (ruta == null || ruta.isBlank()) {
-            return null;
-        }
-        JsonNode nodo = data;
-        for (String parte : ruta.split("\\.")) {
-            nodo = nodo.path(parte);
-            if (nodo.isMissingNode() || nodo.isNull()) {
-                return null;
-            }
-        }
-        String valor = nodo.asText(null);
-        return valor == null || valor.isBlank() ? null : valor;
     }
 
     private static String parametro(String valor) {
