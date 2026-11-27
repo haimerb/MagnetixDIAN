@@ -15,7 +15,8 @@ public record CheckoutRequest(
         @JsonAlias("payer_name") String payerName,
         @JsonAlias("payer_email") String payerEmail,
         @JsonAlias("payer_phone") String payerPhone,
-        @JsonAlias("description") String descripcion) {
+        @JsonAlias("description") String descripcion,
+        @JsonAlias("accepts_terms") boolean aceptaTerminos) {
 
     public CheckoutRequest {
         if (metodo == null) {
@@ -24,6 +25,6 @@ public record CheckoutRequest(
     }
 
     public CheckoutRequest(String planCodigo, String proveedor) {
-        this(planCodigo, proveedor, MetodoPago.CARD, null, null, null, null, null, null, null, null, null);
+        this(planCodigo, proveedor, MetodoPago.CARD, null, null, null, null, null, null, null, null, null, false);
     }
 }

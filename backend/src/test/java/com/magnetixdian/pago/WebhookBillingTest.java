@@ -1,13 +1,16 @@
 package com.magnetixdian.pago;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.magnetixdian.application.PasarelasPago;
 import com.magnetixdian.application.pago.ComprobantePagoDto;
 import com.magnetixdian.application.pago.RegistradorEventoWebhook;
 import com.magnetixdian.application.pago.ServicioComprobante;
 import com.magnetixdian.application.pago.ServicioEntitlement;
 import com.magnetixdian.application.pago.ServicioWebhookBilling;
 import com.magnetixdian.application.pago.WebhookResultDto;
+import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.PagoAprobadoEvent;
+import com.magnetixdian.domain.pago.PasarelaPago;
 import com.magnetixdian.domain.pago.ValidadorFirmaWebhook;
 import com.magnetixdian.infrastructure.persistence.EmpresaJpa;
 import com.magnetixdian.infrastructure.persistence.EmpresaRepository;
@@ -28,6 +31,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -36,6 +40,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -148,8 +155,33 @@ class WebhookBillingTest {
         verify(comprobantes, never()).generar(any(), any(), any(), any(), any(), any());
     }
 
+    @Test
+    void webhookMercadoPagoResuelveReferenciaDesdeLaPasarela() {
+        PasarelasPago pasarelas = mock(PasarelasPago.class);
+        PasarelaPago pasarela = mock(PasarelaPago.class);
+        when(pasarelas.existe("MERCADOPAGO")).thenReturn(true);
+        when(pasarelas.obtener("MERCADOPAGO")).thenReturn(pasarela);
+        when(pasarela.procesarWebhook(anyString(), anyMap())).thenReturn(Optional.of(
+                new EventoPago("WOMPI-REF", "APROBADO", new BigDecimal("99000"))));
+        String payload = """
+                {"type":"payment","data":{"id":"mp-1"}}
+                """;
+
+        WebhookResultDto resultado = servicio(new ValidadorFirmaWebhook("", "", false, "test"), pasarelas)
+                .procesar("MERCADOPAGO", payload, Map.of());
+
+        assertEquals("APROBADO", resultado.estado());
+        assertEquals("WOMPI-REF", resultado.referencia());
+        assertEquals("CP-000001", resultado.comprobanteNumero());
+        verify(pasarela).procesarWebhook(eq(payload), anyMap());
+    }
+
     private ServicioWebhookBilling servicio(ValidadorFirmaWebhook validador) {
-        return new ServicioWebhookBilling(validador, new LectorEventoPagoWebhook(new ObjectMapper()),
+        return servicio(validador, new PasarelasPago(List.of()));
+    }
+
+    private ServicioWebhookBilling servicio(ValidadorFirmaWebhook validador, PasarelasPago pasarelas) {
+        return new ServicioWebhookBilling(validador, pasarelas, new LectorEventoPagoWebhook(new ObjectMapper()),
                 checkoutRepo, eventoRepo, registrador, empresaRepo, entregas, comprobantes, publicador);
     }
 

@@ -69,9 +69,9 @@ class PasarelaMercadoPagoFirmaTest {
     }
 
     @Test
-    void sinSecretoConfiguradoNoValida() {
-        assertTrue(PasarelaMercadoPago.firmaValida(null, null, null, ""));
-        assertTrue(PasarelaMercadoPago.firmaValida("ts=1,v1=bad", null, "123456", null));
+    void sinSecretoConfiguradoSeRechaza() {
+        assertFalse(PasarelaMercadoPago.firmaValida(null, null, null, ""));
+        assertFalse(PasarelaMercadoPago.firmaValida("ts=1,v1=bad", null, "123456", null));
     }
 
     @Test

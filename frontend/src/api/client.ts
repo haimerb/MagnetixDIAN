@@ -688,15 +688,27 @@ export async function reconciliarPago(empresaId: number, referencia: string) {
 
 export type MetodoPago = 'CARD' | 'NEQUI' | 'PSE' | 'BREB_QR' | 'DAVIPLATA'
 
+export type CheckoutDetalles = {
+  celular?: string
+  documentType?: string
+  documentNumber?: string
+  payerName?: string
+  payerEmail?: string
+  payerPhone?: string
+  descripcion?: string
+  aceptaTerminos?: boolean
+}
+
 export async function iniciarCheckout(
   empresaId: number,
   planCodigo: string,
   proveedor: string,
   metodo: MetodoPago = 'CARD',
+  detalles: CheckoutDetalles = {},
 ) {
   const { data } = await api.post<Pago>(
     `/empresas/${empresaId}/pagos/checkout`,
-    { planCodigo, proveedor, metodo },
+    { planCodigo, proveedor, metodo, ...detalles },
     { skipGlobalError: true },
   )
   return data
@@ -1618,6 +1630,7 @@ export type PagoCheckoutRequest = {
   metodo: MetodoPago
   empresaId?: number
   email?: string
+  aceptaTerminos?: boolean
 }
 
 export type CheckoutBillingRequest = {
@@ -1625,6 +1638,15 @@ export type CheckoutBillingRequest = {
   proveedor: string
   correo: string
   empresaId?: number
+  metodo?: MetodoPago
+  celular?: string
+  documentType?: string
+  documentNumber?: string
+  payerName?: string
+  payerEmail?: string
+  payerPhone?: string
+  descripcion?: string
+  aceptaTerminos?: boolean
 }
 
 export type CheckoutBillingResponse = {
@@ -1633,6 +1655,11 @@ export type CheckoutBillingResponse = {
   monto: number
   moneda: string
   estado: string
+  metodo?: MetodoPago | null
+  tipo?: 'REDIRECCION' | 'QR' | 'OTP' | null
+  qrImage?: string | null
+  qrId?: string | null
+  transaccionId?: string | null
 }
 
 export type EstadoWebhookPago = {

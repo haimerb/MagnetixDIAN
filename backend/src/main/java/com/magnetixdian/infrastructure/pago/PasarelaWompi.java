@@ -7,7 +7,9 @@ import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.MetodoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
+import com.magnetixdian.domain.pago.ProveedorPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
+import com.magnetixdian.domain.pago.ValidadorFirmaWebhook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +23,6 @@ import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -29,8 +30,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Integración con Wompi (Web Checkout). Requiere clave pública, secreto de
- * integridad y secreto de eventos. Verifica el checksum de los eventos.
+ * Integración con Wompi (Web Checkout, API de transacciones y webhooks).
+ * Requiere clave pública, secreto de integridad, secreto de eventos y llave privada
+ * para los métodos que se crean por API. Verifica la firma de los eventos.
  */
 @Component
 public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
@@ -40,15 +42,15 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
 
     private final String publicKey;
     private final String integritySecret;
-    private final String eventsSecret;
     private final String checkoutUrl;
     private final String apiToken;
-    private final String brebQrUrl;
-    private final String brebQrToken;
-    private final long webhookToleranceSeconds;
+    private final int qrPollAttempts;
+    private final long qrPollIntervalMs;
+    private final String brebQrSandboxStatus;
     private final boolean exigirFirmaWebhook;
     private final ObjectMapper mapper;
     private final RestClient http;
+    private final ValidadorFirmaWebhook validador;
 
     @Autowired
     public PasarelaWompi(@Value("${magnetixdian.pagos.wompi.public-key:}") String publicKey,
@@ -59,27 +61,38 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
                          @Value("${magnetixdian.pagos.wompi.api-url:https://api.wompi.co}") String apiUrl,
                          @Value("${magnetixdian.pagos.webhook-tolerance-seconds:300}") long webhookToleranceSeconds,
                          @Value("${magnetixdian.pagos.exigir-firma-webhook:false}") boolean exigirFirmaWebhook,
-                         @Value("${magnetixdian.pagos.wompi.breb-qr-url:}") String brebQrUrl,
-                         @Value("${magnetixdian.pagos.wompi.breb-qr-token:}") String brebQrToken,
+                         @Value("${magnetixdian.pagos.wompi.qr-poll-attempts:10}") int qrPollAttempts,
+                         @Value("${magnetixdian.pagos.wompi.qr-poll-interval-ms:500}") long qrPollIntervalMs,
+                         @Value("${magnetixdian.pagos.wompi.breb-qr-sandbox-status:APPROVED}") String brebQrSandboxStatus,
                          ObjectMapper mapper) {
-        this.publicKey = publicKey;
-        this.integritySecret = integritySecret;
-        this.eventsSecret = eventsSecret;
-        this.checkoutUrl = checkoutUrl;
-        this.apiToken = apiToken;
-        this.brebQrUrl = brebQrUrl;
-        this.brebQrToken = brebQrToken;
-        this.webhookToleranceSeconds = webhookToleranceSeconds;
-        this.exigirFirmaWebhook = exigirFirmaWebhook;
-        this.mapper = mapper;
-        this.http = RestClient.builder().baseUrl(apiUrl).build();
+        this(publicKey, integritySecret, eventsSecret, checkoutUrl, apiToken, apiUrl, webhookToleranceSeconds,
+                exigirFirmaWebhook, qrPollAttempts, qrPollIntervalMs, brebQrSandboxStatus, mapper,
+                RestClient.builder().baseUrl(apiUrl).build());
     }
 
     public PasarelaWompi(String publicKey, String integritySecret, String eventsSecret, String checkoutUrl,
                          String apiToken, String apiUrl, long webhookToleranceSeconds, boolean exigirFirmaWebhook,
                          ObjectMapper mapper) {
         this(publicKey, integritySecret, eventsSecret, checkoutUrl, apiToken, apiUrl, webhookToleranceSeconds,
-                exigirFirmaWebhook, "", "", mapper);
+                exigirFirmaWebhook, 10, 500, "APPROVED", mapper,
+                RestClient.builder().baseUrl(apiUrl).build());
+    }
+
+    PasarelaWompi(String publicKey, String integritySecret, String eventsSecret, String checkoutUrl,
+                  String apiToken, String apiUrl, long webhookToleranceSeconds, boolean exigirFirmaWebhook,
+                  int qrPollAttempts, long qrPollIntervalMs, String brebQrSandboxStatus,
+                  ObjectMapper mapper, RestClient http) {
+        this.publicKey = publicKey;
+        this.integritySecret = integritySecret;
+        this.checkoutUrl = checkoutUrl;
+        this.apiToken = apiToken;
+        this.qrPollAttempts = qrPollAttempts;
+        this.qrPollIntervalMs = qrPollIntervalMs;
+        this.brebQrSandboxStatus = brebQrSandboxStatus;
+        this.exigirFirmaWebhook = exigirFirmaWebhook;
+        this.mapper = mapper;
+        this.http = http;
+        this.validador = new ValidadorFirmaWebhook(eventsSecret, "", false, "", webhookToleranceSeconds, mapper);
     }
 
     @Override
@@ -111,8 +124,7 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
                     + "&customer-data:phone-number-prefix=%2B57");
             case PSE -> CheckoutPago.redireccion(url + "&payment_method=PSE&payment-method=PSE"
                     + urlPse(solicitud));
-            case BREB_QR -> checkoutBrebQr(solicitud, centavos, moneda);
-            case DAVIPLATA -> throw new IllegalStateException("DAVIPLATA estará disponible próximamente.");
+            case BREB_QR, DAVIPLATA -> crearTransaccionApi(solicitud, centavos, moneda, metodo);
         };
     }
 
@@ -154,7 +166,7 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
 
     private static String requerido(String valor, String nombre) {
         if (valor == null || valor.isBlank()) {
-            throw new IllegalArgumentException("Falta " + nombre + " para el pago PSE.");
+            throw new IllegalArgumentException("Falta " + nombre + " para el pago.");
         }
         return valor.trim();
     }
@@ -171,42 +183,140 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
         return valor;
     }
 
-    private CheckoutPago checkoutBrebQr(SolicitudPago solicitud, long centavos, String moneda) {
-        if (brebQrUrl == null || brebQrUrl.isBlank() || brebQrToken == null || brebQrToken.isBlank()) {
-            throw new IllegalStateException("BREB_QR no está configurado: faltan la URL y el token del QR de Wompi.");
+    private static String descripcion(SolicitudPago solicitud, int maximo) {
+        String valor = descripcion(solicitud);
+        return valor.length() <= maximo ? valor : valor.substring(0, maximo);
+    }
+
+    private CheckoutPago crearTransaccionApi(SolicitudPago solicitud, long centavos, String moneda,
+                                             MetodoPago metodo) {
+        if (apiToken.isBlank()) {
+            throw new IllegalStateException("Wompi requiere la llave privada (api-token) para " + metodo + ".");
         }
+        TokensAceptacion tokens = tokensAceptacion();
+        String tipo = metodo == MetodoPago.BREB_QR ? "BANCOLOMBIA_QR" : "DAVIPLATA";
         Map<String, Object> metodoPago = new LinkedHashMap<>();
-        metodoPago.put("type", "BANCOLOMBIA_QR");
-        metodoPago.put("payment_description", descripcion(solicitud));
+        metodoPago.put("type", tipo);
+        metodoPago.put("payment_description", descripcion(solicitud, metodo == MetodoPago.DAVIPLATA ? 30 : 64));
+        if (metodo == MetodoPago.BREB_QR && sandbox()) {
+            metodoPago.put("sandbox_status", brebQrSandboxStatus.trim().toUpperCase(Locale.ROOT));
+        }
+        if (metodo == MetodoPago.DAVIPLATA) {
+            metodoPago.put("user_legal_id_type", requerido(solicitud.documentType(), "document_type"));
+            metodoPago.put("user_legal_id", requerido(solicitud.documentNumber(), "document_number"));
+        }
+        if (solicitud.urlRetorno() != null && !solicitud.urlRetorno().isBlank()) {
+            metodoPago.put("redirect_url", solicitud.urlRetorno());
+        }
+
         Map<String, Object> cuerpo = new LinkedHashMap<>();
-        cuerpo.put("reference", solicitud.referencia());
+        cuerpo.put("acceptance_token", tokens.aceptacion());
+        cuerpo.put("accept_personal_auth", tokens.datosPersonales());
         cuerpo.put("amount_in_cents", centavos);
         cuerpo.put("currency", moneda);
+        cuerpo.put("customer_email", requerido(solicitud.payerEmail(), "customer_email"));
+        cuerpo.put("reference", requerido(solicitud.referencia(), "reference"));
+        if (metodo == MetodoPago.DAVIPLATA) {
+            cuerpo.put("payment_method_type", tipo);
+        }
         cuerpo.put("payment_method", metodoPago);
+        cuerpo.put("signature", sha256(solicitud.referencia() + centavos + moneda + integritySecret));
         if (solicitud.urlRetorno() != null && !solicitud.urlRetorno().isBlank()) {
             cuerpo.put("redirect_url", solicitud.urlRetorno());
         }
+
         JsonNode respuesta;
         try {
             respuesta = http.post()
-                    .uri(brebQrUrl)
-                    .header("Authorization", "Bearer " + brebQrToken)
+                    .uri("/v1/transactions")
+                    .header("Authorization", "Bearer " + apiToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(cuerpo)
                     .retrieve()
                     .body(JsonNode.class);
         } catch (Exception e) {
-            throw new IllegalStateException("No se pudo generar el QR BRE-B en Wompi: " + e.getMessage(), e);
+            throw new IllegalStateException("No se pudo crear la transacción " + metodo + " en Wompi: "
+                    + e.getMessage(), e);
         }
-        String url = texto(respuesta, "/data/payment_method/extra/qr_url", "/data/qr_url", "/data/url", "/url");
-        if (url != null && !url.isBlank()) {
-            return CheckoutPago.redireccion(url);
+        String transaccionId = requerido(texto(respuesta, "/data/id"), "id de transacción");
+        if (metodo == MetodoPago.BREB_QR) {
+            JsonNode transaccion = esperarTransaccion(transaccionId, "QR",
+                    "/data/payment_method/extra/qr_image", "/data/payment_method/qr_image",
+                    "/data/payment_method/extra/qr_id", "/data/payment_method/qr_id");
+            String qrImage = texto(transaccion, "/data/payment_method/extra/qr_image",
+                    "/data/payment_method/qr_image");
+            String qrId = texto(transaccion, "/data/payment_method/extra/qr_id",
+                    "/data/payment_method/qr_id");
+            return CheckoutPago.qr(qrId == null ? transaccionId : qrId, qrImage, transaccionId);
         }
-        String qrId = texto(respuesta, "/data/payment_method/extra/qr_id", "/data/qr_id", "/data/id", "/id");
-        if (qrId != null && !qrId.isBlank()) {
-            return CheckoutPago.redireccion("breb-qr:" + qrId);
+        JsonNode transaccion = esperarTransaccion(transaccionId, "OTP",
+                "/data/payment_method/extra/url", "/data/payment_method/url", "/data/url");
+        String urlOtp = texto(transaccion, "/data/payment_method/extra/url",
+                "/data/payment_method/url", "/data/url");
+        return CheckoutPago.otp(urlOtp, transaccionId);
+    }
+
+    private TokensAceptacion tokensAceptacion() {
+        JsonNode respuesta;
+        try {
+            respuesta = http.get()
+                    .uri("/merchants/info")
+                    .header("x-merchant-public-key", publicKey)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudieron obtener los tokens de aceptación de Wompi: "
+                    + e.getMessage(), e);
         }
-        throw new IllegalStateException("Wompi no devolvió una URL ni una referencia de QR para la transacción.");
+        String aceptacion = texto(respuesta, "/data/presigned_acceptance/acceptance_token");
+        String datosPersonales = texto(respuesta, "/data/presigned_personal_data_auth/acceptance_token");
+        if (aceptacion == null || datosPersonales == null) {
+            throw new IllegalStateException("Wompi no devolvió los tokens de aceptación requeridos.");
+        }
+        return new TokensAceptacion(aceptacion, datosPersonales);
+    }
+
+    private JsonNode esperarTransaccion(String transaccionId, String nombre, String... rutas) {
+        int intentos = Math.max(1, qrPollAttempts);
+        JsonNode ultima = null;
+        for (int intento = 0; intento < intentos; intento++) {
+            ultima = consultarTransaccion(transaccionId);
+            for (String ruta : rutas) {
+                String valor = texto(ultima, ruta);
+                if (valor != null && !valor.isBlank()) {
+                    return ultima;
+                }
+            }
+            if (intento < intentos - 1 && qrPollIntervalMs > 0) {
+                try {
+                    Thread.sleep(qrPollIntervalMs);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Se interrumpió la espera del " + nombre + " en Wompi.", e);
+                }
+            }
+        }
+        throw new IllegalStateException("Wompi no devolvió el " + nombre + " de la transacción " + transaccionId + ".");
+    }
+
+    private JsonNode consultarTransaccion(String transaccionId) {
+        try {
+            return http.get()
+                    .uri("/v1/transactions/" + parametro(transaccionId))
+                    .header("Authorization", "Bearer " + apiToken)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudo consultar la transacción " + transaccionId
+                    + " en Wompi: " + e.getMessage(), e);
+        }
+    }
+
+    private record TokensAceptacion(String aceptacion, String datosPersonales) {
+    }
+
+    private boolean sandbox() {
+        return publicKey.startsWith("pub_test_") || apiToken.startsWith("prv_test_");
     }
 
     private static String texto(JsonNode respuesta, String... rutas) {
@@ -278,12 +388,9 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
             if (transaccion.isMissingNode()) {
                 return Optional.empty();
             }
-            if (configurada() && exigirFirmaWebhook && eventsSecret.isBlank()) {
-                log.warn("Evento Wompi sin secreto de firma; se ignora.");
-                return Optional.empty();
-            }
-            if (!eventsSecret.isBlank() && !checksumValido(raiz, data)) {
-                log.warn("Evento Wompi con checksum inválido; se ignora.");
+            if ((validador.configuradoPara(ProveedorPago.WOMPI) || validador.exigeFirma() || exigirFirmaWebhook)
+                    && !validador.firmaVerificada(ProveedorPago.WOMPI, payload, headers)) {
+                log.warn("Evento Wompi con firma inválida o ausente; se ignora.");
                 return Optional.empty();
             }
             String referencia = transaccion.path("reference").asText(null);
@@ -298,51 +405,6 @@ public class PasarelaWompi implements PasarelaPago, ConsultorPagoRemoto {
             log.warn("No se pudo procesar el evento Wompi: {}", e.getMessage());
             return Optional.empty();
         }
-    }
-
-    private boolean checksumValido(JsonNode raiz, JsonNode data) {
-        JsonNode signature = raiz.path("signature");
-        String checksum = signature.path("checksum").asText("");
-        JsonNode properties = signature.path("properties");
-        if (checksum.isBlank() || !properties.isArray() || properties.isEmpty()) {
-            return false;
-        }
-        long marca;
-        try {
-            marca = Long.parseLong(raiz.path("timestamp").asText(""));
-        } catch (NumberFormatException e) {
-            return false;
-        }
-        if (marca <= 0 || Math.abs(Instant.now().getEpochSecond() - marca) > Math.max(0, webhookToleranceSeconds)) {
-            return false;
-        }
-        StringBuilder concat = new StringBuilder();
-        for (JsonNode propiedad : properties) {
-            String valor = resolver(data, propiedad.asText(""));
-            if (valor == null) {
-                return false;
-            }
-            concat.append(valor);
-        }
-        concat.append(marca).append(eventsSecret);
-        byte[] esperado = sha256(concat.toString()).getBytes(StandardCharsets.UTF_8);
-        byte[] recibido = checksum.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
-        return MessageDigest.isEqual(esperado, recibido);
-    }
-
-    private String resolver(JsonNode data, String ruta) {
-        if (ruta == null || ruta.isBlank()) {
-            return null;
-        }
-        JsonNode nodo = data;
-        for (String parte : ruta.split("\\.")) {
-            nodo = nodo.path(parte);
-            if (nodo.isMissingNode() || nodo.isNull()) {
-                return null;
-            }
-        }
-        String valor = nodo.asText(null);
-        return valor == null || valor.isBlank() ? null : valor;
     }
 
     private static String parametro(String valor) {

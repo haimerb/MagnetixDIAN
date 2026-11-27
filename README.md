@@ -14,7 +14,7 @@ Incluye facturación electrónica, RADIAN, contabilidad, impuestos, integracione
 | Paso | Acción en la app | Resultado |
 | --- | --- | --- |
 | 1. Venta | Registro self-service o alta por administrador; selección de plan | Empresa + usuario administrador |
-| 2. Pago | Checkout Wompi / MercadoPago (o simulado solo en desarrollo) | Evento firmado en `POST /api/pagos/webhook/{proveedor}` |
+| 2. Pago | Checkout Wompi (`CARD`, `NEQUI`, `PSE`, `BREB_QR`, `DAVIPLATA`) o MercadoPago (simulado solo en desarrollo) | Evento firmado en `POST /api/pagos/webhook/{proveedor}` |
 | 3. Verificación | Verificación del pago y del correo; token de un solo uso | Suscripción activa y acceso habilitado |
 | 4. Wizard DIAN | Selección de modo DIAN, resolución, prefijo, rango, *test set* y notificación al adquirente | Configuración FE de la empresa |
 | 5. Primera factura | Emisión FEV v1.9, firma, CUFE/CUDE, PDF/QR y entrega | Factura emitida y entregada (WhatsApp Click-to-Chat o correo) |
@@ -23,6 +23,19 @@ Incluye facturación electrónica, RADIAN, contabilidad, impuestos, integracione
 
 La validación de exógena es **local con XSD** (`xsd-local-2025`, `prevalidacionOficial=false`).
 **No** se promete prevalidación oficial ni presentación automática ante la DIAN.
+
+## Métodos de pago Wompi
+
+`BREB_QR` y `DAVIPLATA` se crean con `POST /v1/transactions` y tokens de aceptación de Wompi;
+ambos exigen `aceptaTerminos=true`. Daviplata requiere además `documentType`,
+`documentNumber` y redirige a la URL OTP alojada por Wompi en `payment_method.extra.url`.
+
+- `BREB_QR`: el backend hace *long polling* de `GET /v1/transactions/{id}` hasta obtener
+  `payment_method.qr_image`/`qr_id` o `payment_method.extra.qr_image`/`qr_id`. La imagen base64
+  se devuelve al frontend en `qrImage`; en BD se guarda la referencia compacta `wompi-qr:{qrId}`.
+- Configuración: `WOMPI_API_TOKEN`, `WOMPI_QR_POLL_ATTEMPTS` (10),
+  `WOMPI_QR_POLL_INTERVAL_MS` (500) y `WOMPI_BREB_QR_SANDBOX_STATUS` (`APPROVED`; solo sandbox).
+- El estado final se confirma por webhook firmado o por consulta manual al endpoint de pago.
 
 ## Modos de operación DIAN
 
