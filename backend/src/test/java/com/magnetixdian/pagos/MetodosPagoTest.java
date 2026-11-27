@@ -84,18 +84,23 @@ class MetodosPagoTest {
     }
 
     @Test
-    void brebQrSinConfiguracionFalla() {
+    void brebQrSinLlavePrivadaFalla() {
         IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> pasarela().crearCheckout(solicitud(MetodoPago.BREB_QR, null)));
+                () -> new PasarelaWompi("pub_test", "integrity_test", "events_secret",
+                        "https://checkout.wompi.co/p/", "", "https://api.wompi.co", 300, true, mapper)
+                        .crearCheckout(solicitud(MetodoPago.BREB_QR, null)));
         assertTrue(error.getMessage().contains("BREB_QR"));
-        assertTrue(error.getMessage().contains("configurado"));
+        assertTrue(error.getMessage().contains("api-token"));
     }
 
     @Test
-    void davipLataFallaControlada() {
+    void davipLataSinLlavePrivadaFalla() {
         IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> pasarela().crearCheckout(solicitud(MetodoPago.DAVIPLATA, null)));
-        assertTrue(error.getMessage().contains("próximamente"));
+                () -> new PasarelaWompi("pub_test", "integrity_test", "events_secret",
+                        "https://checkout.wompi.co/p/", "", "https://api.wompi.co", 300, true, mapper)
+                        .crearCheckout(solicitud(MetodoPago.DAVIPLATA, null)));
+        assertTrue(error.getMessage().contains("DAVIPLATA"));
+        assertTrue(error.getMessage().contains("api-token"));
     }
 
     @Test

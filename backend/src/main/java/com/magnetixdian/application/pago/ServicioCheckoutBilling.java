@@ -1,6 +1,7 @@
 package com.magnetixdian.application.pago;
 
 import com.magnetixdian.domain.pago.CheckoutPago;
+import com.magnetixdian.domain.pago.MetodoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
 import com.magnetixdian.domain.pago.ProveedorPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
@@ -61,6 +62,8 @@ public class ServicioCheckoutBilling {
             throw new IllegalArgumentException(
                     "El checkout público requiere WOMPI o MERCADOPAGO; SIMULADO no genera webhook firmado.");
         }
+        MetodoPago metodo = request.metodo() == null ? MetodoPago.CARD : request.metodo();
+        validarMetodo(proveedor, metodo, request.aceptaTerminos());
         EmpresaJpa empresa = resolverEmpresa(request.empresaId(), request.correo());
         String planCodigo = request.planCode().trim();
         PlanJpa plan = planRepo.findByCodigoIgnoreCase(planCodigo)
@@ -82,15 +85,33 @@ public class ServicioCheckoutBilling {
         checkout.setEstado("PENDIENTE");
         checkoutRepo.save(checkout);
 
+        String descripcion = request.descripcion() == null || request.descripcion().isBlank()
+                ? "Plan " + plan.getNombre() : request.descripcion().trim();
+        String correoPagador = request.payerEmail() == null || request.payerEmail().isBlank()
+                ? request.correo().trim() : request.payerEmail().trim();
         SolicitudPago solicitud = new SolicitudPago(empresa.getId(), checkout.getId(), referencia,
                 plan.getCodigo(), plan.getPrecioMensual(), checkout.getMoneda(), "Plan " + plan.getNombre(),
-                frontendUrl + "/suscripcion");
+                frontendUrl + "/suscripcion", metodo, request.celular(), request.financialInstitutionId(),
+                request.paymentType(), request.documentType(), request.documentNumber(), request.payerName(),
+                correoPagador, request.payerPhone(), descripcion);
         CheckoutPago resultado = pasarela.crearCheckout(solicitud);
         checkout.setCheckoutUrl(resultado.url());
         checkout.setUpdatedAt(OffsetDateTime.now());
         checkoutRepo.save(checkout);
-        return new CheckoutResponseDto(checkout.getCheckoutUrl(), referencia, checkout.getMonto(),
-                checkout.getMoneda(), "PENDIENTE");
+        return new CheckoutResponseDto(resultado.url(), referencia, checkout.getMonto(), checkout.getMoneda(),
+                "PENDIENTE", metodo.name(), resultado.tipo(), resultado.qrImage(), resultado.qrId(),
+                resultado.transaccionId());
+    }
+
+    private static void validarMetodo(ProveedorPago proveedor, MetodoPago metodo, boolean aceptaTerminos) {
+        if ((metodo == MetodoPago.BREB_QR || metodo == MetodoPago.DAVIPLATA)
+                && proveedor != ProveedorPago.WOMPI) {
+            throw new IllegalArgumentException("El método " + metodo + " requiere la pasarela WOMPI.");
+        }
+        if ((metodo == MetodoPago.BREB_QR || metodo == MetodoPago.DAVIPLATA) && !aceptaTerminos) {
+            throw new IllegalArgumentException(
+                    "Debe aceptar los términos y el tratamiento de datos personales de Wompi.");
+        }
     }
 
     private EmpresaJpa resolverEmpresa(Long empresaId, String correo) {

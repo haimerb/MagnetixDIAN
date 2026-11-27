@@ -98,6 +98,12 @@ services:
         sync: false
       - key: WOMPI_API_URL
         value: https://api.wompi.co
+      - key: WOMPI_QR_POLL_ATTEMPTS
+        value: "10"
+      - key: WOMPI_QR_POLL_INTERVAL_MS
+        value: "500"
+      - key: WOMPI_BREB_QR_SANDBOX_STATUS
+        value: APPROVED
       - key: PAC_CONNECT_TIMEOUT_MS
         value: "5000"
       - key: PAC_READ_TIMEOUT_MS

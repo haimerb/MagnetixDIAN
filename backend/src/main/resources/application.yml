@@ -94,6 +94,9 @@ magnetixdian:
       checkout-url: ${WOMPI_CHECKOUT_URL:https://checkout.wompi.co/p/}
       api-token: ${WOMPI_API_TOKEN:}
       api-url: ${WOMPI_API_URL:https://api.wompi.co}
+      qr-poll-attempts: ${WOMPI_QR_POLL_ATTEMPTS:10}
+      qr-poll-interval-ms: ${WOMPI_QR_POLL_INTERVAL_MS:500}
+      breb-qr-sandbox-status: ${WOMPI_BREB_QR_SANDBOX_STATUS:APPROVED}
     mercadopago:
       access-token: ${MERCADOPAGO_ACCESS_TOKEN:}
       base-url: ${MERCADOPAGO_BASE_URL:https://api.mercadopago.com}
