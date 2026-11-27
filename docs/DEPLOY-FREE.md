@@ -12,7 +12,8 @@ Navegador → Cloudflare Worker (SPA + proxy /api + PWA + keep-alive)
         Supabase free (PostgreSQL 16, Session pooler IPv4)
 ```
 
-La URL del frontend es `https://magnetixdian.<cuenta>.workers.dev` (o
+La URL del frontend desplegado es `https://magnetixdian.hbarbetti-ing.workers.dev`
+(o, en otra cuenta, `https://magnetixdian.<cuenta>.workers.dev`; también
 `https://magnetixdian.pages.dev`). Backend: `https://magnetixdian-backend.onrender.com`.
 
 ## 1. Base de datos (Supabase)
@@ -44,7 +45,8 @@ La URL del frontend es `https://magnetixdian.<cuenta>.workers.dev` (o
    y `enc:v2:` siguen siendo legibles. **Nunca regenerar `CRYPTO_KEY` sin conservar la anterior.**
 5. `PAGOS_EXIGIR_FIRMA_WEBHOOK=true` e `INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK=true` (fail-closed).
    No se permite pasarela `SIMULADO` ni secretos de ejemplo en producción: la app no arranca.
-6. `CORS_ORIGINS` debe incluir `https://magnetixdian.<cuenta>.workers.dev` y
+6. `CORS_ORIGINS` debe incluir `https://magnetixdian.hbarbetti-ing.workers.dev`
+   (o `https://magnetixdian.<cuenta>.workers.dev` en otra cuenta) y
    `https://magnetixdian.pages.dev` (el worker ya los incluye por defecto en `SecurityConfig`).
 7. Healthcheck: `GET /actuator/health`.
 

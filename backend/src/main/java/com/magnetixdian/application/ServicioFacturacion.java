@@ -239,6 +239,7 @@ public class ServicioFacturacion {
                 .toList();
     }
 
+    @Transactional
     public ResultadoEmisionDto emitir(Long empresaId, Long usuarioId, FacturaRequest req) {
         return emitirSolicitud(empresaId, usuarioId, SolicitudEmisionDianDto.desde(req));
     }
