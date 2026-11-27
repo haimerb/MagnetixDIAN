@@ -6,7 +6,9 @@ import com.magnetixdian.domain.pago.CheckoutPago;
 import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
+import com.magnetixdian.domain.pago.ProveedorPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
+import com.magnetixdian.domain.pago.ValidadorFirmaWebhook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,17 +16,11 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.time.Instant;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -46,6 +42,7 @@ public class PasarelaMercadoPago implements PasarelaPago, ConsultorPagoRemoto {
     private final boolean exigirFirmaWebhook;
     private final ObjectMapper mapper;
     private final RestClient http;
+    private final ValidadorFirmaWebhook validador;
 
     public PasarelaMercadoPago(@Value("${magnetixdian.pagos.mercadopago.access-token:}") String accessToken,
                                @Value("${magnetixdian.pagos.mercadopago.base-url:https://api.mercadopago.com}") String baseUrl,
@@ -62,6 +59,7 @@ public class PasarelaMercadoPago implements PasarelaPago, ConsultorPagoRemoto {
         this.exigirFirmaWebhook = exigirFirmaWebhook;
         this.mapper = mapper;
         this.http = RestClient.builder().baseUrl(baseUrl).build();
+        this.validador = new ValidadorFirmaWebhook("", webhookSecret, false, "", webhookToleranceSeconds, mapper);
     }
 
     @Override
@@ -115,13 +113,9 @@ public class PasarelaMercadoPago implements PasarelaPago, ConsultorPagoRemoto {
             if (pagoId == null || pagoId.isBlank()) {
                 return Optional.empty();
             }
-            if (configurada() && exigirFirmaWebhook && (webhookSecret == null || webhookSecret.isBlank())) {
-                log.warn("Notificación de MercadoPago sin secreto de firma; se ignora.");
-                return Optional.empty();
-            }
-            if (!firmaValida(cabecera(headers, "x-signature"), cabecera(headers, "x-request-id"),
-                    pagoId, webhookSecret, webhookToleranceSeconds)) {
-                log.warn("Notificación de MercadoPago con firma inválida; se ignora.");
+            if ((validador.configuradoPara(ProveedorPago.MERCADOPAGO) || validador.exigeFirma() || exigirFirmaWebhook)
+                    && !validador.firmaVerificada(ProveedorPago.MERCADOPAGO, payload, headers)) {
+                log.warn("Notificación de MercadoPago con firma inválida o ausente; se ignora.");
                 return Optional.empty();
             }
             String tipo = raiz.path("type").asText(raiz.path("topic").asText(""));
@@ -206,53 +200,21 @@ public class PasarelaMercadoPago implements PasarelaPago, ConsultorPagoRemoto {
     static boolean firmaValida(String xSignature, String xRequestId, String dataId, String secret,
                                long toleranciaSegundos) {
         if (secret == null || secret.isBlank()) {
-            return true;
-        }
-        if (xSignature == null || dataId == null || dataId.isBlank()) {
             return false;
         }
-        String ts = null;
-        String v1 = null;
-        for (String parte : xSignature.split(",")) {
-            String[] par = parte.split("=", 2);
-            if (par.length != 2) {
-                continue;
-            }
-            String clave = par[0].trim();
-            if (clave.equalsIgnoreCase("ts")) {
-                ts = par[1].trim();
-            } else if (clave.equalsIgnoreCase("v1")) {
-                v1 = par[1].trim();
-            }
+        ValidadorFirmaWebhook validador = new ValidadorFirmaWebhook("", secret, false, "",
+                toleranciaSegundos, new ObjectMapper());
+        Map<String, String> headers = new LinkedHashMap<>();
+        if (xSignature != null) {
+            headers.put("x-signature", xSignature);
         }
-        if (ts == null || ts.isBlank() || v1 == null || v1.isBlank()) {
-            return false;
+        if (xRequestId != null) {
+            headers.put("x-request-id", xRequestId);
         }
-        long marca;
-        try {
-            marca = Long.parseLong(ts);
-        } catch (NumberFormatException e) {
-            return false;
+        if (dataId != null) {
+            headers.put("data.id", dataId);
         }
-        if (Math.abs(Instant.now().getEpochSecond() - marca) > Math.max(0, toleranciaSegundos)) {
-            return false;
-        }
-        StringBuilder manifiesto = new StringBuilder("id:").append(dataId).append(';');
-        if (xRequestId != null && !xRequestId.isBlank()) {
-            manifiesto.append("request-id:").append(xRequestId).append(';');
-        }
-        manifiesto.append("ts:").append(ts).append(';');
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            byte[] esperado = HexFormat.of().formatHex(
-                    mac.doFinal(manifiesto.toString().getBytes(StandardCharsets.UTF_8)))
-                    .getBytes(StandardCharsets.UTF_8);
-            byte[] recibido = v1.toLowerCase(Locale.ROOT).getBytes(StandardCharsets.UTF_8);
-            return MessageDigest.isEqual(esperado, recibido);
-        } catch (Exception e) {
-            return false;
-        }
+        return validador.firmaVerificada(ProveedorPago.MERCADOPAGO, "{}", headers);
     }
 
     private static String mapearEstado(String estado) {
