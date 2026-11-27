@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
@@ -61,6 +62,30 @@ class ServicioActivosTest {
         assertEquals("ACTIVO", dto.estado());
         assertEquals(new BigDecimal("1000.00"), dto.valorLibros());
         assertEquals(new BigDecimal("0.00"), dto.depreciacionAcumulada());
+    }
+
+    @Test
+    void darAltaRechazaCodigoDuplicado() {
+        when(activos.existsByEmpresaIdAndCodigo(1L, "ACT-0001")).thenReturn(true);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> servicio.darAlta(1L, new ActivoRequestDto("ACT-0001", "Computador",
+                        "Equipo de oficina", FECHA, new BigDecimal("1000"), new BigDecimal("100"), 12, null)));
+
+        assertEquals("Ya existe un activo con el código ACT-0001 para la empresa", error.getMessage());
+        verify(activos, never()).save(any(ErpActivoJpa.class));
+    }
+
+    @Test
+    void darAltaConvierteConflictoDeUnicidadEnSolicitudInvalida() {
+        when(activos.save(any(ErpActivoJpa.class))).thenThrow(new DataIntegrityViolationException(
+                "duplicate", new RuntimeException("duplicate key value violates unique constraint \"uq_erp_activo_empresa_codigo\"")));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> servicio.darAlta(1L, new ActivoRequestDto("ACT-0001", "Computador",
+                        "Equipo de oficina", FECHA, new BigDecimal("1000"), new BigDecimal("100"), 12, null)));
+
+        assertEquals("Ya existe un activo con el código ACT-0001 para la empresa", error.getMessage());
     }
 
     @Test
