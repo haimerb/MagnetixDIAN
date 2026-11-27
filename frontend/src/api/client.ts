@@ -1999,6 +1999,60 @@ export type CobroClienteErp = {
   createdAt: string
 }
 
+export type ActivoErpRequest = {
+  codigo: string
+  nombre: string
+  categoria: string | null
+  fechaAlta: string
+  valorAdquisicion: number
+  valorResidual: number
+  vidaUtilMeses: number
+  observaciones: string | null
+}
+
+export type ActivoErp = {
+  id: number
+  empresaId: number
+  codigo: string
+  nombre: string
+  categoria: string | null
+  fechaAlta: string
+  valorAdquisicion: number
+  valorResidual: number
+  vidaUtilMeses: number
+  depreciacionAcumulada: number
+  valorLibros: number
+  estado: string
+  fechaBaja: string | null
+  observaciones: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type DepreciacionErpRequest = {
+  periodo: string | null
+  fecha: string | null
+}
+
+export type BajaActivoErpRequest = {
+  fechaBaja: string | null
+  motivo: string | null
+}
+
+export type DepreciacionErp = {
+  id: number
+  empresaId: number
+  activoId: number
+  codigoActivo: string | null
+  periodo: string
+  fecha: string
+  valor: number
+  depreciacionAcumulada: number
+  valorLibros: number
+  estado: string
+  createdAt: string
+}
+
 export type MovimientoTesoreriaErp = {
   id: number
   empresaId: number
@@ -2285,5 +2339,41 @@ export async function registrarCobroClienteErp(
 
 export async function listarCobrosClienteErp(empresaId: number) {
   const { data } = await api.get<CobroClienteErp[]>(`/empresas/${empresaId}/erp/tesoreria/cobros-cliente`)
+  return data
+}
+
+export async function listarActivosErp(empresaId: number) {
+  const { data } = await api.get<ActivoErp[]>(`/empresas/${empresaId}/erp/activos`)
+  return data
+}
+
+export async function crearActivoErp(empresaId: number, solicitud: ActivoErpRequest) {
+  const { data } = await api.post<ActivoErp>(`/empresas/${empresaId}/erp/activos`, solicitud)
+  return data
+}
+
+export async function depreciarActivoErp(
+  empresaId: number,
+  activoId: number,
+  solicitud: DepreciacionErpRequest,
+) {
+  const { data } = await api.post<DepreciacionErp>(
+    `/empresas/${empresaId}/erp/activos/${activoId}/depreciaciones`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarDepreciacionesErp(empresaId: number) {
+  const { data } = await api.get<DepreciacionErp[]>(`/empresas/${empresaId}/erp/activos/depreciaciones`)
+  return data
+}
+
+export async function darBajaActivoErp(
+  empresaId: number,
+  activoId: number,
+  solicitud: BajaActivoErpRequest,
+) {
+  const { data } = await api.post<ActivoErp>(`/empresas/${empresaId}/erp/activos/${activoId}/baja`, solicitud)
   return data
 }

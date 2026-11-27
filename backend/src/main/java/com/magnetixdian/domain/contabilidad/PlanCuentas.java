@@ -17,6 +17,8 @@ public final class PlanCuentas {
     public static final String RETENCION_FUENTE = "236505";
     public static final String CAJA = "110505";
     public static final String AJUSTES = "399999";
+    public static final String DEPRECIACION_ACUMULADA = "159215";
+    public static final String GASTO_DEPRECIACION = "516015";
 
     private static final Map<String, String> NOMBRES = new LinkedHashMap<>();
 
@@ -33,6 +35,8 @@ public final class PlanCuentas {
         NOMBRES.put(RETENCION_FUENTE, "Retención en la fuente");
         NOMBRES.put(CAJA, "Caja");
         NOMBRES.put(AJUSTES, "Ajustes");
+        NOMBRES.put(DEPRECIACION_ACUMULADA, "Depreciación acumulada");
+        NOMBRES.put(GASTO_DEPRECIACION, "Gasto por depreciación");
     }
 
     private PlanCuentas() {
