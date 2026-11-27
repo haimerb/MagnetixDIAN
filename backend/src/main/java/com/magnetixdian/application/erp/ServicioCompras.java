@@ -95,7 +95,7 @@ public class ServicioCompras {
         for (ErpRecepcionLineaJpa l : guardada.getLineas()) {
             inventario.registrarMovimiento(empresaId, new MovimientoInventarioRequestDto("ENTRADA", guardada.getBodega(), l.getProductoId(), l.getDescripcion(), l.getCantidad(), l.getCostoUnitario(), guardada.getFecha(), "RECEPCION_COMPRA", String.valueOf(guardada.getId()), "Recepción de compra " + compra.getNumero()));
         }
-        publicador.publicar(new CompraRecibidaEvent(empresaId, compra.getId(), guardada.getId(), compra.getNumero(), compra.getProveedorId(), compra.getProveedorNombre(), guardada.getBodega(), guardada.getFecha(), guardada.getTotal(), OffsetDateTime.now()));
+        publicador.publicar(new CompraRecibidaEvent(empresaId, compra.getId(), guardada.getId(), compra.getNumero(), compra.getProveedorId(), compra.getProveedorNombre(), guardada.getBodega(), guardada.getFecha(), guardada.getTotal(), nvl(compra.getSubtotal()), nvl(compra.getImpuestos()), BigDecimal.ZERO, OffsetDateTime.now()));
         return toDto(guardada);
     }
 

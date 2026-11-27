@@ -14,6 +14,9 @@ public record CompraRecibidaEvent(
         String bodega,
         LocalDate fecha,
         BigDecimal total,
+        BigDecimal subtotal,
+        BigDecimal impuestos,
+        BigDecimal retenciones,
         OffsetDateTime ocurridoEn) implements EventoDominioErp {
     @Override
     public String tipo() {
