@@ -23,6 +23,8 @@ const ESTADOS: Record<string, { tone: Tone; label: string }> = {
   EMITIDO: { tone: 'info', label: 'Emitido' },
   CAUSADA: { tone: 'primary', label: 'Causada' },
   CONTABILIZADA: { tone: 'success', label: 'Contabilizada' },
+  ABIERTO: { tone: 'success', label: 'Abierto' },
+  CERRADO: { tone: 'neutral', label: 'Cerrado' },
   SIN_ASIENTO: { tone: 'warning', label: 'Sin asiento' },
   CONCILIADO: { tone: 'success', label: 'Conciliado' },
   DIFERENCIA: { tone: 'error', label: 'Con diferencias' },

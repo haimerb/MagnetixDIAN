@@ -1,8 +1,10 @@
 export {
-  asentarFactura,
+  buscarAsientoPorOrigen,
   causarDocumentoRadian,
+  cerrarPeriodoContable,
   conciliarContabilidad,
   contabilizarDocumentoRadian,
+  crearPeriodoContable,
   listarAsientosContables,
   listarCuentasPuc,
   listarDocumentosRadian,
@@ -10,9 +12,9 @@ export {
 } from '../client'
 export type {
   AsientoContable,
-  AsientoFacturaRequest,
   ConciliacionLinea,
   CuentaPuc,
   PeriodoContable,
   ResultadoConciliacion,
+  SolicitudPeriodoContable,
 } from '../client'

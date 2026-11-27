@@ -929,6 +929,8 @@ export type AsientoContable = {
   numero: string
   fecha: string
   tipoEvento: string
+  origen: string | null
+  origenId: number | null
   descripcion: string
   totalDebito: number
   totalCredito: number
@@ -1707,13 +1709,16 @@ export type PeriodoContable = {
   id: number
   anio: number
   mes: number
+  fechaDesde: string
+  fechaHasta: string
   estado: 'ABIERTO' | 'CERRADO'
-  fechaCierre: string | null
 }
 
-export type AsientoFacturaRequest = {
-  facturaId: number
-  nota: string | null
+export type SolicitudPeriodoContable = {
+  anio: number
+  mes: number
+  fechaDesde: string
+  fechaHasta: string
 }
 
 export type DetalleValidacionExogena = {
@@ -2113,12 +2118,40 @@ export async function listarPeriodosContables(empresaId: number) {
   return data
 }
 
-export async function asentarFactura(empresaId: number, solicitud: AsientoFacturaRequest) {
-  const { data } = await api.post<AsientoContable>(
-    `/empresas/${empresaId}/contabilidad/asientos`,
+export async function crearPeriodoContable(empresaId: number, solicitud: SolicitudPeriodoContable) {
+  const { data } = await api.post<PeriodoContable>(
+    `/empresas/${empresaId}/contabilidad/periodos`,
     solicitud,
   )
   return data
+}
+
+export async function cerrarPeriodoContable(empresaId: number, periodoId: number) {
+  const { data } = await api.post<AsientoContable>(
+    `/empresas/${empresaId}/contabilidad/periodos/${periodoId}/cerrar`,
+  )
+  return data
+}
+
+export async function buscarAsientoPorOrigen(
+  empresaId: number,
+  origen: string,
+  origenId: number,
+  tipoEvento: string,
+): Promise<AsientoContable | null> {
+  try {
+    const { data } = await api.get<AsientoContable>(
+      `/empresas/${empresaId}/contabilidad/asientos/origen`,
+      {
+        params: { origen, origenId, tipoEvento },
+        skipGlobalError: true,
+      },
+    )
+    return data
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return null
+    throw error
+  }
 }
 
 export async function generarTodoExogena(empresaId: number, solicitud: SolicitudGenerarTodoExogena) {

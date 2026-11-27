@@ -34,7 +34,8 @@ import java.util.Set;
 public class ServicioAsientos {
 
     private static final Set<String> TIPOS_PERMITIDOS =
-            Set.of("MANUAL", "AJUSTE", "REVERSION", "CIERRE", "APERTURA", "VENTA");
+            Set.of("MANUAL", "AJUSTE", "REVERSION", "CIERRE", "APERTURA",
+                    "VENTA", "COMPRA", "PAGO", "COBRO");
     private static final String CUENTA_CIERRE = "399999";
     private static final String CUENTA_RESULTADO = "320505";
     private static final BigDecimal CERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -111,6 +112,9 @@ public class ServicioAsientos {
         PeriodoContableJpa periodo = periodoRepository.findById(periodoId)
                 .filter(entidad -> empresaId.equals(entidad.getEmpresaId()))
                 .orElseThrow(() -> new IllegalArgumentException("Periodo contable no encontrado."));
+        if (entityManager != null) {
+            entityManager.find(PeriodoContableJpa.class, periodoId, LockModeType.PESSIMISTIC_WRITE);
+        }
         if (!"ABIERTO".equals(periodo.getEstado())) {
             throw new IllegalArgumentException("El periodo contable ya está cerrado.");
         }

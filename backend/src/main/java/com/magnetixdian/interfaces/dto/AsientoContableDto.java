@@ -14,6 +14,8 @@ public record AsientoContableDto(
         String documentoTipo,
         Long documentoId,
         String tipoEvento,
+        String origen,
+        Long origenId,
         String estado,
         BigDecimal totalDebito,
         BigDecimal totalCredito,

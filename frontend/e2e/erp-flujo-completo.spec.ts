@@ -225,17 +225,22 @@ async function mockApi(page: Page, opciones: OpcionesMock = {}) {
         errores: [],
       })
     }
-    if (ruta === `/empresas/${empresaId}/contabilidad/asientos` && metodo === 'POST') {
-      return responder(route, {
-        id: 55,
-        numero: 'AS-77',
-        fecha: new Date().toISOString().slice(0, 10),
-        tipoEvento: 'EMISION_FACTURA',
-        descripcion: 'Asiento de la factura FV 0001',
-        totalDebito: 1000000,
-        totalCredito: 1000000,
-        lineas: [],
-      })
+    if (ruta === `/empresas/${empresaId}/contabilidad/asientos/origen` && metodo === 'GET') {
+      if (url.searchParams.get('origen') === 'FACTURA' && url.searchParams.get('origenId') === '77') {
+        return responder(route, {
+          id: 55,
+          numero: 'AS-77',
+          fecha: new Date().toISOString().slice(0, 10),
+          tipoEvento: 'VENTA',
+          origen: 'FACTURA',
+          origenId: 77,
+          descripcion: 'Asiento de la factura FV 0001',
+          totalDebito: 1000000,
+          totalCredito: 1000000,
+          lineas: [],
+        })
+      }
+      return responder(route, null, 404)
     }
     if (ruta === `/empresas/${empresaId}/exogena/formatos` && metodo === 'GET') {
       return responder(route, [])
@@ -319,8 +324,7 @@ test.describe('Flujo ERP completo', () => {
     await page.getByRole('button', { name: 'Emitir factura' }).click()
     await expect(page.getByText('Estado: EMITIDO')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Asentar factura' }).click()
-    await expect(page.getByText('Asiento AS-77 generado')).toBeVisible()
+    await expect(page.getByText(/Asiento AS-77 generado automáticamente/)).toBeVisible()
     await page.getByRole('link', { name: 'Generar exógena 1001' }).click()
 
     await expect(page.getByRole('heading', { name: 'Información exógena' })).toBeVisible()

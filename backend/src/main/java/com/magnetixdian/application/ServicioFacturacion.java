@@ -121,6 +121,7 @@ public class ServicioFacturacion {
     private final TerceroContableRepository terceroRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ServicioVentas ventas;
+    private ValidadorPeriodoAbierto validadorPeriodoAbierto;
 
     @FunctionalInterface
     public interface HookEntregaFactura {
@@ -223,6 +224,11 @@ public class ServicioFacturacion {
         this.ventas = ventas;
     }
 
+    @Autowired(required = false)
+    public void setValidadorPeriodoAbierto(ValidadorPeriodoAbierto validadorPeriodoAbierto) {
+        this.validadorPeriodoAbierto = validadorPeriodoAbierto;
+    }
+
     public List<ErrorValidacionDto> validar(Long empresaId, FacturaRequest req) {
         EmpresaJpa empresa = empresa(empresaId);
         EmpresaFeConfigJpa config = config(empresaId);
@@ -248,6 +254,9 @@ public class ServicioFacturacion {
         TipoDocumento tipo = TipoDocumento.porCodigo(req.tipoDocumento());
 
         FacturaDatos preliminar = construirDatos(empresa, config, req, 0L, "");
+        if (validadorPeriodoAbierto != null) {
+            validadorPeriodoAbierto.verificar(empresaId, preliminar.fechaEmision());
+        }
         List<ResultadoRegla> resultados = validador.validar(new ContextoFactura(preliminar, config));
         if (validador.tieneErrores(resultados)) {
             auditoria.registrar(AuditoriaService.usuarioActual(), "FACTURA_RECHAZADA_VALIDACION", "empresa",

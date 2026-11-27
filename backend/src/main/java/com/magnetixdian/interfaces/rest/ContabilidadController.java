@@ -181,6 +181,17 @@ public class ContabilidadController {
         return ResponseEntity.ok(servicioContabilizacion.listar(empresaId));
     }
 
+    @GetMapping("/asientos/origen")
+    public ResponseEntity<AsientoContableDto> asientoPorOrigen(@PathVariable Long empresaId,
+                                                               @RequestParam String origen,
+                                                               @RequestParam Long origenId,
+                                                               @RequestParam String tipoEvento,
+                                                               Authentication authentication) {
+        autorizacion.verificar(empresaId, authentication);
+        return ResponseEntity.of(servicioContabilizacion.buscarPorOrigen(
+                empresaId, origen, origenId, tipoEvento));
+    }
+
     @PostMapping("/asientos")
     public ResponseEntity<AsientoContableDto> crearAsiento(@PathVariable Long empresaId,
                                                            @RequestBody SolicitudAsientoDto solicitud,
