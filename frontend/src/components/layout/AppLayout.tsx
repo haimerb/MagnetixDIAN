@@ -4,6 +4,7 @@ import AppBar from '@mui/material/AppBar'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ClickAwayListener from '@mui/material/ClickAwayListener'
 import Collapse from '@mui/material/Collapse'
 import Container from '@mui/material/Container'
 import Divider from '@mui/material/Divider'
@@ -14,6 +15,7 @@ import ListItemButton from '@mui/material/ListItemButton'
 import ListItemText from '@mui/material/ListItemText'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
+import Paper from '@mui/material/Paper'
 import Toolbar from '@mui/material/Toolbar'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
@@ -59,11 +61,9 @@ export default function AppLayout() {
   const { mode, alternar, branding } = useThemeMode()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
-  const [erpAnchor, setErpAnchor] = useState<HTMLElement | null>(null)
   const [erpAbierto, setErpAbierto] = useState(false)
 
   useEffect(() => {
-    setErpAnchor(null)
     setErpAbierto(false)
   }, [location.pathname])
 
@@ -78,7 +78,6 @@ export default function AppLayout() {
 
   const navegar = (to: string) => {
     navigate(to)
-    setErpAnchor(null)
     setDrawerOpen(false)
     setErpAbierto(false)
   }
@@ -156,50 +155,85 @@ export default function AppLayout() {
                 const active = isActive(item.to)
                 if (item.to === '/app/erp') {
                   return (
-                    <Button
-                      key={item.to}
-                      disableRipple
-                      onClick={(event) => {
-                        const objetivo = event.currentTarget
-                        setErpAnchor((ancla) => (ancla ? null : objetivo))
-                      }}
-                      aria-haspopup="menu"
-                      aria-controls="erp-menu"
-                      aria-expanded={Boolean(erpAnchor)}
-                      sx={{
-                        px: 1.5,
-                        position: 'relative',
-                        display: 'inline-flex',
-                        gap: 0.5,
-                        color: active ? 'primary.main' : 'text.secondary',
-                        fontWeight: active ? 700 : 500,
-                        '&:hover': {
-                          color: 'primary.main',
-                          bgcolor: (t) => alpha(t.palette.primary.main, 0.06),
-                        },
-                        '&::after': active
-                          ? {
-                              content: '""',
-                              position: 'absolute',
-                              left: 12,
-                              right: 12,
-                              bottom: 4,
-                              height: 2,
-                              borderRadius: 1,
-                              bgcolor: 'secondary.main',
-                            }
-                          : {},
-                      }}
-                    >
-                      {item.label}
-                      <ExpandMoreIcon
-                        fontSize="small"
+                    <Box key={item.to} sx={{ position: 'relative' }}>
+                      <Button
+                        disableRipple
+                        onClick={() => setErpAbierto((abierto) => !abierto)}
+                        aria-haspopup="menu"
+                        aria-controls="erp-menu"
+                        aria-expanded={erpAbierto}
                         sx={{
-                          transform: erpAnchor ? 'rotate(180deg)' : 'none',
-                          transition: 'transform 150ms ease',
+                          px: 1.5,
+                          position: 'relative',
+                          display: 'inline-flex',
+                          gap: 0.5,
+                          color: active ? 'primary.main' : 'text.secondary',
+                          fontWeight: active ? 700 : 500,
+                          '&:hover': {
+                            color: 'primary.main',
+                            bgcolor: (t) => alpha(t.palette.primary.main, 0.06),
+                          },
+                          '&::after': active
+                            ? {
+                                content: '""',
+                                position: 'absolute',
+                                left: 12,
+                                right: 12,
+                                bottom: 4,
+                                height: 2,
+                                borderRadius: 1,
+                                bgcolor: 'secondary.main',
+                              }
+                            : {},
                         }}
-                      />
-                    </Button>
+                      >
+                        {item.label}
+                        <ExpandMoreIcon
+                          fontSize="small"
+                          sx={{
+                            transform: erpAbierto ? 'rotate(180deg)' : 'none',
+                            transition: 'transform 150ms ease',
+                          }}
+                        />
+                      </Button>
+                      {erpAbierto && (
+                        <ClickAwayListener onClickAway={() => setErpAbierto(false)}>
+                          <Paper
+                            component="ul"
+                            id="erp-menu"
+                            role="menu"
+                            aria-label="Submenú ERP"
+                            elevation={8}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Escape') setErpAbierto(false)
+                            }}
+                            sx={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: 0,
+                              mt: 1,
+                              minWidth: 200,
+                              m: 0,
+                              p: 0,
+                              listStyle: 'none',
+                              zIndex: (t) => t.zIndex.modal + 1,
+                            }}
+                          >
+                            {ERP_ITEMS.map((erpItem) => (
+                              <MenuItem
+                                key={erpItem.to}
+                                component="li"
+                                selected={isActive(erpItem.to)}
+                                aria-current={isActive(erpItem.to) ? 'page' : undefined}
+                                onClick={() => navegar(erpItem.to)}
+                              >
+                                {erpItem.label}
+                              </MenuItem>
+                            ))}
+                          </Paper>
+                        </ClickAwayListener>
+                      )}
+                    </Box>
                   )
                 }
                 return (
@@ -277,27 +311,6 @@ export default function AppLayout() {
           </Toolbar>
         </Container>
       </AppBar>
-
-      <Menu
-        id="erp-menu"
-        anchorEl={erpAnchor}
-        open={Boolean(erpAnchor)}
-        onClose={() => setErpAnchor(null)}
-        aria-label="Submenú ERP"
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-      >
-        {ERP_ITEMS.map((item) => (
-          <MenuItem
-            key={item.to}
-            selected={isActive(item.to)}
-            aria-current={isActive(item.to) ? 'page' : undefined}
-            onClick={() => navegar(item.to)}
-          >
-            {item.label}
-          </MenuItem>
-        ))}
-      </Menu>
 
       <Menu
         anchorEl={menuAnchor}

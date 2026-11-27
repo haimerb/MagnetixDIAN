@@ -1780,33 +1780,207 @@ export type PedidoErp = {
   observaciones: string | null
 }
 
+export type CompraErpRequest = {
+  numero: string
+  proveedorId: string | null
+  proveedorNombre: string
+  fecha: string
+  subtotal: number
+  impuestos: number
+  total: number
+  observaciones: string | null
+}
+
 export type CompraErp = {
   id: number
-  consecutivo: string
-  proveedor: string
+  empresaId: number
+  numero: string
+  proveedorId: string | null
+  proveedorNombre: string
+  fecha: string
+  estado: string
+  subtotal: number
+  impuestos: number
+  total: number
+  observaciones: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type RecepcionLineaErpRequest = {
+  productoId: string
+  descripcion: string | null
+  cantidad: number
+  costoUnitario: number
+}
+
+export type RecepcionErpRequest = {
+  numero: string
+  fecha: string
+  bodega: string
+  observaciones: string | null
+  lineas: RecepcionLineaErpRequest[]
+}
+
+export type RecepcionLineaErp = {
+  id: number
+  productoId: string
+  descripcion: string | null
+  cantidad: number
+  costoUnitario: number
+  total: number
+}
+
+export type RecepcionErp = {
+  id: number
+  empresaId: number
+  compraId: number
+  numero: string
+  fecha: string
+  bodega: string
   estado: string
   total: number
+  observaciones: string | null
+  createdAt: string
+  updatedAt: string
+  lineas: RecepcionLineaErp[]
+}
+
+export type MovimientoInventarioErpRequest = {
+  tipo: 'ENTRADA' | 'SALIDA'
+  bodega: string
+  productoId: string
+  descripcion: string | null
+  cantidad: number
+  costoUnitario: number | null
   fecha: string
+  referenciaTipo: string | null
+  referenciaId: string | null
+  observaciones: string | null
 }
 
 export type MovimientoInventarioErp = {
   id: number
-  producto: string
-  bodega: string
+  empresaId: number
   tipo: string
+  bodega: string
+  productoId: string
+  descripcion: string | null
   cantidad: number
-  saldo: number
+  costoUnitario: number | null
+  costoPromedio: number
+  existenciaAnterior: number
+  existenciaNueva: number
   fecha: string
+  referenciaTipo: string | null
+  referenciaId: string | null
+  estado: string
+  observaciones: string | null
+  createdAt: string
+}
+
+export type ExistenciaInventarioErp = {
+  empresaId: number
+  bodega: string
+  productoId: string
+  existencia: number
+  costoPromedio: number
+  updatedAt: string
+}
+
+export type CuentaBancariaErpRequest = {
+  banco: string
+  numeroCuenta: string
+  tipoCuenta: string
+  moneda: string
+  saldoInicial: number
+  activa: boolean
+}
+
+export type CuentaBancariaErp = {
+  id: number
+  empresaId: number
+  banco: string
+  numeroCuenta: string
+  tipoCuenta: string
+  moneda: string
+  saldo: number
+  activa: boolean
+  estado: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type PagoProveedorErpRequest = {
+  compraId: number | null
+  cuentaBancariaId: number
+  proveedorId: string | null
+  proveedorNombre: string | null
+  fecha: string
+  valor: number
+  medioPago: string | null
+  referencia: string | null
+  observaciones: string | null
+}
+
+export type PagoProveedorErp = {
+  id: number
+  empresaId: number
+  compraId: number | null
+  cuentaBancariaId: number
+  proveedorId: string | null
+  proveedorNombre: string | null
+  fecha: string
+  valor: number
+  medioPago: string | null
+  referencia: string | null
+  estado: string
+  observaciones: string | null
+  createdAt: string
+}
+
+export type CobroClienteErpRequest = {
+  pedidoId: number | null
+  cuentaBancariaId: number
+  clienteId: string | null
+  clienteNombre: string | null
+  fecha: string
+  valor: number
+  medioPago: string | null
+  referencia: string | null
+  observaciones: string | null
+}
+
+export type CobroClienteErp = {
+  id: number
+  empresaId: number
+  pedidoId: number | null
+  cuentaBancariaId: number
+  clienteId: string | null
+  clienteNombre: string | null
+  fecha: string
+  valor: number
+  medioPago: string | null
+  referencia: string | null
+  estado: string
+  observaciones: string | null
+  createdAt: string
 }
 
 export type MovimientoTesoreriaErp = {
   id: number
-  cuenta: string
-  descripcion: string
-  tipo: 'INGRESO' | 'EGRESO'
-  valor: number
-  saldo: number
+  empresaId: number
+  cuentaBancariaId: number
+  tipo: string
   fecha: string
+  valor: number
+  saldoAnterior: number
+  saldoNuevo: number
+  referenciaTipo: string | null
+  referenciaId: string | null
+  estado: string
+  descripcion: string | null
+  createdAt: string
 }
 
 export async function crearCheckoutBilling(solicitud: CheckoutBillingRequest) {
@@ -1965,5 +2139,91 @@ export async function listarInventarioErp(empresaId: number) {
 
 export async function listarTesoreriaErp(empresaId: number) {
   const { data } = await api.get<MovimientoTesoreriaErp[]>(`/empresas/${empresaId}/erp/tesoreria/movimientos`)
+  return data
+}
+
+export async function crearCompraErp(empresaId: number, solicitud: CompraErpRequest) {
+  const { data } = await api.post<CompraErp>(`/empresas/${empresaId}/erp/compras/ordenes`, solicitud)
+  return data
+}
+
+export async function recibirCompraErp(
+  empresaId: number,
+  compraId: number,
+  solicitud: RecepcionErpRequest,
+) {
+  const { data } = await api.post<RecepcionErp>(
+    `/empresas/${empresaId}/erp/compras/ordenes/${compraId}/recepciones`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarRecepcionesErp(empresaId: number) {
+  const { data } = await api.get<RecepcionErp[]>(`/empresas/${empresaId}/erp/compras/recepciones`)
+  return data
+}
+
+export async function registrarMovimientoInventarioErp(
+  empresaId: number,
+  solicitud: MovimientoInventarioErpRequest,
+) {
+  const { data } = await api.post<MovimientoInventarioErp>(
+    `/empresas/${empresaId}/erp/inventario/movimientos`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarExistenciasErp(empresaId: number) {
+  const { data } = await api.get<ExistenciaInventarioErp[]>(`/empresas/${empresaId}/erp/inventario/existencias`)
+  return data
+}
+
+export async function crearCuentaBancariaErp(
+  empresaId: number,
+  solicitud: CuentaBancariaErpRequest,
+) {
+  const { data } = await api.post<CuentaBancariaErp>(
+    `/empresas/${empresaId}/erp/tesoreria/cuentas-bancarias`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarCuentasBancariasErp(empresaId: number) {
+  const { data } = await api.get<CuentaBancariaErp[]>(`/empresas/${empresaId}/erp/tesoreria/cuentas-bancarias`)
+  return data
+}
+
+export async function registrarPagoProveedorErp(
+  empresaId: number,
+  solicitud: PagoProveedorErpRequest,
+) {
+  const { data } = await api.post<PagoProveedorErp>(
+    `/empresas/${empresaId}/erp/tesoreria/pagos-proveedor`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarPagosProveedorErp(empresaId: number) {
+  const { data } = await api.get<PagoProveedorErp[]>(`/empresas/${empresaId}/erp/tesoreria/pagos-proveedor`)
+  return data
+}
+
+export async function registrarCobroClienteErp(
+  empresaId: number,
+  solicitud: CobroClienteErpRequest,
+) {
+  const { data } = await api.post<CobroClienteErp>(
+    `/empresas/${empresaId}/erp/tesoreria/cobros-cliente`,
+    solicitud,
+  )
+  return data
+}
+
+export async function listarCobrosClienteErp(empresaId: number) {
+  const { data } = await api.get<CobroClienteErp[]>(`/empresas/${empresaId}/erp/tesoreria/cobros-cliente`)
   return data
 }
