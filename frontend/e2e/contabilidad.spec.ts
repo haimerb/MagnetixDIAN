@@ -71,6 +71,39 @@ const CONCILIACION = {
   ],
 }
 
+const ACTIVO = {
+  id: 5,
+  empresaId: 1,
+  codigo: 'ACT-0001',
+  nombre: 'Computador oficina',
+  categoria: 'Equipo de oficina',
+  fechaAlta: '2026-03-01',
+  valorAdquisicion: 1000000,
+  valorResidual: 100000,
+  vidaUtilMeses: 60,
+  depreciacionAcumulada: 15000,
+  valorLibros: 985000,
+  estado: 'ACTIVO',
+  fechaBaja: null,
+  observaciones: null,
+  createdAt: '2026-03-01T08:00:00.000Z',
+  updatedAt: '2026-03-01T08:00:00.000Z',
+}
+
+const DEPRECIACION = {
+  id: 9,
+  empresaId: 1,
+  activoId: 5,
+  codigoActivo: 'ACT-0001',
+  periodo: '2026-03',
+  fecha: '2026-03-31',
+  valor: 15000,
+  depreciacionAcumulada: 15000,
+  valorLibros: 985000,
+  estado: 'REGISTRADO',
+  createdAt: '2026-03-31T08:00:00.000Z',
+}
+
 const FORMATO_1125 = {
   codigo: '1125',
   descripcion: 'Información de compras y ventas',
@@ -170,6 +203,22 @@ test.describe('Contabilidad', () => {
 
     await page.getByRole('tab', { name: 'Periodos' }).click()
     await expect(page.getByRole('heading', { name: 'Periodos contables', exact: true, level: 1 })).toBeVisible()
+  })
+
+  test('lista activos fijos y depreciaciones en la pestaña de contabilidad', async ({ page }) => {
+    await page.route('**/api/empresas/1/erp/activos', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([ACTIVO]) }),
+    )
+    await page.route('**/api/empresas/1/erp/activos/depreciaciones', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([DEPRECIACION]) }),
+    )
+
+    await loginAdmin(page)
+    await page.goto('/app/contabilidad?tab=activos')
+
+    await expect(page.getByRole('heading', { name: 'Activos fijos y depreciación', level: 1 })).toBeVisible()
+    await expect(page.getByRole('table', { name: 'Activos fijos' })).toContainText('ACT-0001')
+    await expect(page.getByRole('table', { name: 'Depreciaciones' })).toContainText('2026-03')
   })
 
   test('genera y valida XML exógeno del formato 1125', async ({ page }) => {

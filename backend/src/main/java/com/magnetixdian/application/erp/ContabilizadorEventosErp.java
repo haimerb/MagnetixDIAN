@@ -5,6 +5,7 @@ import com.magnetixdian.application.ServicioAsientosPendientes;
 import com.magnetixdian.domain.contabilidad.PlanCuentas;
 import com.magnetixdian.domain.erp.evento.CobroClienteEvent;
 import com.magnetixdian.domain.erp.evento.CompraRecibidaEvent;
+import com.magnetixdian.domain.erp.evento.DepreciacionCalculadaEvent;
 import com.magnetixdian.domain.erp.evento.PagoProveedorEvent;
 import com.magnetixdian.interfaces.dto.FacturaEmitidaEvent;
 import com.magnetixdian.interfaces.dto.SolicitudAsientoDto;
@@ -33,11 +34,13 @@ public class ContabilizadorEventosErp {
     public static final String ORIGEN_COMPRA = "COMPRA";
     public static final String ORIGEN_PAGO = "PAGO";
     public static final String ORIGEN_COBRO = "COBRO";
+    public static final String ORIGEN_DEPRECIACION = "DEPRECIACION";
 
     public static final String TIPO_VENTA = "VENTA";
     public static final String TIPO_COMPRA = "COMPRA";
     public static final String TIPO_PAGO = "PAGO";
     public static final String TIPO_COBRO = "COBRO";
+    public static final String TIPO_DEPRECIACION = "DEPRECIACION";
 
     private static final Set<String> ESTADOS_RECHAZADOS = Set.of(
             "RECHAZADO", "RECHAZADA", "ANULADO", "ANULADA");
@@ -173,6 +176,28 @@ public class ContabilizadorEventosErp {
                         "Cobro cliente " + cliente, CERO, valor, null, null, valor, null));
         crearAsiento(evento.empresaId(), fecha, "Contabilización cobro cliente",
                 TIPO_COBRO, ORIGEN_COBRO, evento.cobroId(), lineas);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void contabilizarDepreciacion(DepreciacionCalculadaEvent evento) {
+        if (evento == null || evento.empresaId() == null || evento.depreciacionId() == null) {
+            return;
+        }
+        BigDecimal valor = escala(evento.valor());
+        if (valor.signum() <= 0) {
+            return;
+        }
+        String codigoActivo = texto(evento.codigoActivo(), String.valueOf(evento.activoId()));
+        String periodo = texto(evento.periodo(), "sin periodo");
+        LocalDate fecha = evento.fecha() != null ? evento.fecha() : LocalDate.now();
+        List<SolicitudLineaAsientoDto> lineas = List.of(
+                new SolicitudLineaAsientoDto(PlanCuentas.GASTO_DEPRECIACION,
+                        "Depreciación activo " + codigoActivo + " " + periodo, valor, CERO, null, null, valor, null),
+                new SolicitudLineaAsientoDto(PlanCuentas.DEPRECIACION_ACUMULADA,
+                        "Depreciación acumulada activo " + codigoActivo + " " + periodo, CERO, valor, null, null, valor, null));
+        crearAsiento(evento.empresaId(), fecha, "Contabilización depreciación " + codigoActivo + " " + periodo,
+                TIPO_DEPRECIACION, ORIGEN_DEPRECIACION, evento.depreciacionId(), lineas);
     }
 
     private void crearAsiento(Long empresaId, LocalDate fecha, String descripcion, String tipoEvento,

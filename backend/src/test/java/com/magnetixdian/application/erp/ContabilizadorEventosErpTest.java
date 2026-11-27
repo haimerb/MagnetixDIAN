@@ -5,6 +5,7 @@ import com.magnetixdian.application.ServicioAsientosPendientes;
 import com.magnetixdian.application.ServicioPlanCuentas;
 import com.magnetixdian.domain.erp.evento.CobroClienteEvent;
 import com.magnetixdian.domain.erp.evento.CompraRecibidaEvent;
+import com.magnetixdian.domain.erp.evento.DepreciacionCalculadaEvent;
 import com.magnetixdian.domain.erp.evento.PagoProveedorEvent;
 import com.magnetixdian.infrastructure.persistence.AsientoContableJpa;
 import com.magnetixdian.infrastructure.persistence.AsientoContableRepository;
@@ -140,6 +141,25 @@ class ContabilizadorEventosErpTest {
     }
 
     @Test
+    void contabilizaDepreciacionCalculada() {
+        prepararGuardado(ContabilizadorEventosErp.ORIGEN_DEPRECIACION, 88L,
+                ContabilizadorEventosErp.TIPO_DEPRECIACION);
+
+        contabilizador.contabilizarDepreciacion(depreciacion());
+
+        AsientoContableJpa guardado = capturarAsiento();
+        assertEquals("DEPRECIACION", guardado.getTipoEvento());
+        assertEquals(ContabilizadorEventosErp.ORIGEN_DEPRECIACION, guardado.getOrigen());
+        assertEquals(88L, guardado.getOrigenId());
+        assertEquals(new BigDecimal("250.00"), guardado.getTotalDebito());
+        assertEquals(new BigDecimal("250.00"), guardado.getTotalCredito());
+        assertEquals("516015", guardado.getLineas().get(0).getCuentaContable().getCodigo());
+        assertEquals(new BigDecimal("250.00"), guardado.getLineas().get(0).getDebito());
+        assertEquals("159215", guardado.getLineas().get(1).getCuentaContable().getCodigo());
+        assertEquals(new BigDecimal("250.00"), guardado.getLineas().get(1).getCredito());
+    }
+
+    @Test
     void eventoDuplicadoNoCreaSegundoAsiento() {
         when(asientoRepository.findByEmpresaIdAndOrigenAndOrigenIdAndTipoEvento(
                 1L, ContabilizadorEventosErp.ORIGEN_PAGO, 31L,
@@ -211,6 +231,12 @@ class ContabilizadorEventosErpTest {
                 OffsetDateTime.parse("2026-03-15T12:00:00Z"));
     }
 
+    private static DepreciacionCalculadaEvent depreciacion() {
+        return new DepreciacionCalculadaEvent(1L, 5L, 88L, "ACT-0005", "2026-03", FECHA,
+                new BigDecimal("250"), new BigDecimal("750"), new BigDecimal("4250"),
+                OffsetDateTime.parse("2026-03-15T13:00:00Z"));
+    }
+
     private static PeriodoContableJpa periodo() {
         PeriodoContableJpa periodo = new PeriodoContableJpa();
         periodo.setId(2L);
@@ -234,6 +260,8 @@ class ContabilizadorEventosErpTest {
         cuentas.put("240805", cuenta("240805", "IVA generado", "PASIVO", "ACREEDORA"));
         cuentas.put("413505", cuenta("413505", "Ventas", "INGRESO", "ACREEDORA"));
         cuentas.put("519505", cuenta("519505", "Compras", "EGRESO", "DEUDORA"));
+        cuentas.put("159215", cuenta("159215", "Depreciación acumulada", "ACTIVO", "ACREEDORA"));
+        cuentas.put("516015", cuenta("516015", "Gasto por depreciación", "EGRESO", "DEUDORA"));
         return cuentas;
     }
 

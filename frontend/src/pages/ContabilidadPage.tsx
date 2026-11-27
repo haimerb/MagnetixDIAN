@@ -3,6 +3,7 @@ import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import { useSearchParams } from 'react-router-dom'
+import ActivosTab from '../features/contabilidad/ActivosTab'
 import AsientosTab from '../features/contabilidad/AsientosTab'
 import BalancesTab from '../features/contabilidad/BalancesTab'
 import CatalogosTab from '../features/contabilidad/CatalogosTab'
@@ -16,6 +17,7 @@ const SECCIONES = [
   { value: 'asientos', label: 'Asientos', titulo: 'Asientos contables' },
   { value: 'puc', label: 'PUC', titulo: 'Plan único de cuentas' },
   { value: 'periodos', label: 'Periodos', titulo: 'Periodos contables' },
+  { value: 'activos', label: 'Activos fijos', titulo: 'Activos fijos y depreciación' },
   { value: 'exogena', label: 'Exógena', titulo: 'Información exógena' },
   { value: 'libros', label: 'Libros', titulo: 'Libros contables' },
   { value: 'balances', label: 'Balances', titulo: 'Balances contables' },
@@ -54,6 +56,7 @@ export default function ContabilidadPage() {
         <CatalogosTab titulo="Plan único de cuentas" descripcion="Catálogo sin consulta pública" />
       )}
       {tab === 'periodos' && <PeriodosTab empresaId={empresaId} cargandoEmpresa={cargandoEmpresa} />}
+      {tab === 'activos' && <ActivosTab empresaId={empresaId} cargandoEmpresa={cargandoEmpresa} />}
       {tab === 'exogena' && <ExogenaTab empresaId={empresaId} cargandoEmpresa={cargandoEmpresa} />}
       {tab === 'libros' && <LibrosTab empresaId={empresaId} cargandoEmpresa={cargandoEmpresa} />}
       {tab === 'balances' && <BalancesTab empresaId={empresaId} cargandoEmpresa={cargandoEmpresa} />}
