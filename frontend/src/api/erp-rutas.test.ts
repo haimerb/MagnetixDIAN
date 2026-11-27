@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import { api } from './client'
 import {
+  crearActivoErp,
   crearCompraErp,
   crearCuentaBancariaErp,
+  darBajaActivoErp,
+  depreciarActivoErp,
+  listarActivosErp,
   listarCobrosClienteErp,
   listarComprasErp,
+  listarDepreciacionesErp,
   listarCuentasBancariasErp,
   listarExistenciasErp,
   listarInventarioErp,
@@ -29,6 +34,8 @@ describe('rutas del ERP', () => {
     await listarCuentasBancariasErp(1)
     await listarPagosProveedorErp(1)
     await listarCobrosClienteErp(1)
+    await listarActivosErp(1)
+    await listarDepreciacionesErp(1)
 
     expect(get.mock.calls.map(([url]) => url)).toEqual([
       '/empresas/1/erp/compras/ordenes',
@@ -39,6 +46,8 @@ describe('rutas del ERP', () => {
       '/empresas/1/erp/tesoreria/cuentas-bancarias',
       '/empresas/1/erp/tesoreria/pagos-proveedor',
       '/empresas/1/erp/tesoreria/cobros-cliente',
+      '/empresas/1/erp/activos',
+      '/empresas/1/erp/activos/depreciaciones',
     ])
   })
 
@@ -51,6 +60,9 @@ describe('rutas del ERP', () => {
     await crearCuentaBancariaErp(1, {} as never)
     await registrarPagoProveedorErp(1, {} as never)
     await registrarCobroClienteErp(1, {} as never)
+    await crearActivoErp(1, {} as never)
+    await depreciarActivoErp(1, 5, {} as never)
+    await darBajaActivoErp(1, 5, {} as never)
 
     expect(post.mock.calls.map(([url]) => url)).toEqual([
       '/empresas/1/erp/compras/ordenes',
@@ -59,6 +71,9 @@ describe('rutas del ERP', () => {
       '/empresas/1/erp/tesoreria/cuentas-bancarias',
       '/empresas/1/erp/tesoreria/pagos-proveedor',
       '/empresas/1/erp/tesoreria/cobros-cliente',
+      '/empresas/1/erp/activos',
+      '/empresas/1/erp/activos/5/depreciaciones',
+      '/empresas/1/erp/activos/5/baja',
     ])
   })
 })
