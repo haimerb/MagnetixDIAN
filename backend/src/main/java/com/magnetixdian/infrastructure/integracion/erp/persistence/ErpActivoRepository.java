@@ -5,4 +5,5 @@ import java.util.Optional;
 public interface ErpActivoRepository extends JpaRepository<ErpActivoJpa, Long> {
     List<ErpActivoJpa> findByEmpresaIdOrderByIdDesc(Long empresaId);
     Optional<ErpActivoJpa> findByIdAndEmpresaId(Long id, Long empresaId);
+    boolean existsByEmpresaIdAndCodigo(Long empresaId, String codigo);
 }

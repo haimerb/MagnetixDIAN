@@ -11,6 +11,7 @@ import com.magnetixdian.interfaces.dto.erp.ActivoRequestDto;
 import com.magnetixdian.interfaces.dto.erp.BajaActivoRequestDto;
 import com.magnetixdian.interfaces.dto.erp.DepreciacionDto;
 import com.magnetixdian.interfaces.dto.erp.DepreciacionRequestDto;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,9 +43,12 @@ public class ServicioActivos {
         if (r.vidaUtilMeses() == null || r.vidaUtilMeses() <= 0) throw new IllegalArgumentException("Vida útil inválida");
         BigDecimal residual = r.valorResidual() == null ? BigDecimal.ZERO : r.valorResidual();
         if (residual.compareTo(BigDecimal.ZERO) < 0 || residual.compareTo(r.valorAdquisicion()) >= 0) throw new IllegalArgumentException("Valor residual inválido");
+        String codigo = r.codigo().trim();
+        String mensajeCodigoDuplicado = "Ya existe un activo con el código " + codigo + " para la empresa";
+        if (activos.existsByEmpresaIdAndCodigo(empresaId, codigo)) throw new IllegalArgumentException(mensajeCodigoDuplicado);
         ErpActivoJpa e = new ErpActivoJpa();
         e.setEmpresaId(empresaId);
-        e.setCodigo(r.codigo().trim());
+        e.setCodigo(codigo);
         e.setNombre(r.nombre().trim());
         e.setCategoria(r.categoria());
         e.setFechaAlta(r.fechaAlta() == null ? LocalDate.now() : r.fechaAlta());
@@ -55,7 +59,13 @@ public class ServicioActivos {
         e.setValorLibros(e.getValorAdquisicion());
         e.setEstado(EstadoErp.ACTIVO.name());
         e.setObservaciones(r.observaciones());
-        return toDto(activos.save(e));
+        try {
+            return toDto(activos.save(e));
+        } catch (DataIntegrityViolationException ex) {
+            String causa = ex.getMostSpecificCause().getMessage();
+            if (causa != null && causa.contains("uq_erp_activo_empresa_codigo")) throw new IllegalArgumentException(mensajeCodigoDuplicado);
+            throw ex;
+        }
     }
 
     @Transactional(readOnly = true)
