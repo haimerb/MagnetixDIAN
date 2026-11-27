@@ -98,6 +98,14 @@ public class ServicioContabilizacion {
                 .map(ServicioContabilizacion::mapear).toList();
     }
 
+    @Transactional(readOnly = true)
+    public Optional<AsientoContableDto> buscarPorOrigen(Long empresaId, String origen, Long origenId,
+                                                        String tipoEvento) {
+        return asientoRepository.findByEmpresaIdAndOrigenAndOrigenIdAndTipoEvento(
+                        empresaId, origen, origenId, tipoEvento)
+                .map(ServicioContabilizacion::mapear);
+    }
+
     public static AsientoContableDto mapear(AsientoContableJpa asiento) {
         List<AsientoContableLineaDto> lineas = asiento.getLineas().stream()
                 .map(linea -> new AsientoContableLineaDto(
@@ -117,6 +125,8 @@ public class ServicioContabilizacion {
                 asiento.getDocumentoTipo(),
                 asiento.getDocumentoId(),
                 asiento.getTipoEvento(),
+                asiento.getOrigen(),
+                asiento.getOrigenId(),
                 asiento.getEstado(),
                 asiento.getTotalDebito(),
                 asiento.getTotalCredito(),

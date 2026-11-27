@@ -300,9 +300,9 @@ public class ServicioReportesContables {
                 .reduce(CERO, BigDecimal::add);
         return new AsientoContableDto(asiento.getId(), asiento.getEmpresaId(), asiento.getNumero(),
                 asiento.getFecha(), asiento.getDescripcion(), asiento.getDocumentoTipo(),
-                asiento.getDocumentoId(), asiento.getTipoEvento(), asiento.getEstado(),
-                debito, credito, asiento.getValorTotal(), asiento.getValorImpuestos(),
-                asiento.getValorRetenciones(), asiento.getCreatedAt(), lineas);
+                asiento.getDocumentoId(), asiento.getTipoEvento(), asiento.getOrigen(),
+                asiento.getOrigenId(), asiento.getEstado(), debito, credito, asiento.getValorTotal(),
+                asiento.getValorImpuestos(), asiento.getValorRetenciones(), asiento.getCreatedAt(), lineas);
     }
 
     private static boolean enRango(LocalDate fecha, LocalDate fechaDesde, LocalDate fechaHasta) {

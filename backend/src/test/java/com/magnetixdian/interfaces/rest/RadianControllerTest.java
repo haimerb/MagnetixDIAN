@@ -129,7 +129,7 @@ class RadianControllerTest {
         when(servicioContabilizacion.contabilizar(1L, 5L))
                 .thenReturn(new AsientoContableDto(20L, 1L, "AS-1-5-CAUSACION",
                         LocalDate.of(2026, 2, 20), "Causación RADIAN F-001", "RADIAN", 5L,
-                        "CAUSACION", "CONTABILIZADO", new BigDecimal("1190.00"),
+                        "CAUSACION", "RADIAN", 5L, "CONTABILIZADO", new BigDecimal("1190.00"),
                         new BigDecimal("1190.00"), new BigDecimal("1190.00"),
                         new BigDecimal("190.00"), new BigDecimal("50.00"),
                         OffsetDateTime.now(), List.of()));

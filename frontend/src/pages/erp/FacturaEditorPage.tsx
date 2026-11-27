@@ -10,9 +10,8 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import { api } from '../../api/client'
+import { api, buscarAsientoPorOrigen } from '../../api/client'
 import type { AsientoContable, ErrorValidacion, FacturaRequest, ResultadoEmision } from '../../api/client'
-import { asentarFactura } from '../../api/erp/contabilidad'
 import EmptyState from '../../components/ui/EmptyState'
 import PageHeader from '../../components/ui/PageHeader'
 import SectionCard from '../../components/ui/SectionCard'
@@ -46,6 +45,7 @@ export default function FacturaEditorPage() {
   const [errores, setErrores] = useState<ErrorValidacion[]>([])
   const [emision, setEmision] = useState<ResultadoEmision | null>(null)
   const [asiento, setAsiento] = useState<AsientoContable | null>(null)
+  const [asientoPendiente, setAsientoPendiente] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [procesando, setProcesando] = useState(false)
 
@@ -125,29 +125,26 @@ export default function FacturaEditorPage() {
     setProcesando(true)
     setError(null)
     setErrores([])
+    setAsiento(null)
+    setAsientoPendiente(false)
     try {
       const { data } = await api.post<ResultadoEmision>(`/facturacion/${empresaId}/emitir`, construirSolicitud())
       setEmision(data)
       if (!data.exitoso) {
         setErrores(data.errores)
         setError(data.mensaje ?? 'La DIAN rechazó el documento.')
+        return
+      }
+      if (data.id != null) {
+        const asientoGenerado = await buscarAsientoPorOrigen(empresaId, 'FACTURA', data.id, 'VENTA')
+        if (asientoGenerado) {
+          setAsiento(asientoGenerado)
+        } else {
+          setAsientoPendiente(true)
+        }
       }
     } catch {
       setError('No se pudo emitir el documento.')
-    } finally {
-      setProcesando(false)
-    }
-  }
-
-  const asentar = async () => {
-    if (empresaId == null || emision?.id == null) return
-    setProcesando(true)
-    setError(null)
-    try {
-      setAsiento(await asentarFactura(empresaId, { facturaId: emision.id, nota: null }))
-      notificar('Asiento contable generado.', 'success')
-    } catch {
-      setError('No se pudo generar el asiento contable de la factura.')
     } finally {
       setProcesando(false)
     }
@@ -302,7 +299,6 @@ export default function FacturaEditorPage() {
             <Typography>CUFE: {emision.cufe ?? 'pendiente'}</Typography>
             {emision.exitoso && (
               <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
-                <Button variant="contained" loading={procesando} onClick={() => void asentar()}>Asentar factura</Button>
                 <Button component={RouterLink} to="/app/contabilidad?tab=asientos" variant="outlined">
                   Asientos contables
                 </Button>
@@ -311,7 +307,16 @@ export default function FacturaEditorPage() {
                 </Button>
               </Stack>
             )}
-            {asiento && <Alert severity="success">Asiento {asiento.numero} generado por {money(asiento.totalDebito)}.</Alert>}
+            {asiento && (
+              <Alert severity="success">
+                Asiento {asiento.numero} generado automáticamente por {money(asiento.totalDebito)}.
+              </Alert>
+            )}
+            {asientoPendiente && (
+              <Alert severity="info">
+                El asiento se generará automáticamente cuando exista un periodo contable abierto para la fecha de la factura.
+              </Alert>
+            )}
           </Stack>
         </SectionCard>
       )}
