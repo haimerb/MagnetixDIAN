@@ -5,6 +5,7 @@ import com.magnetixdian.domain.pago.ConsultorPagoRemoto;
 import com.magnetixdian.domain.pago.EventoPago;
 import com.magnetixdian.domain.pago.MetodoPago;
 import com.magnetixdian.domain.pago.PasarelaPago;
+import com.magnetixdian.domain.pago.ProveedorPago;
 import com.magnetixdian.domain.pago.SolicitudPago;
 import com.magnetixdian.infrastructure.persistence.EmpresaRepository;
 import com.magnetixdian.infrastructure.persistence.PagoJpa;
@@ -115,12 +116,13 @@ public class ServicioPagos {
         if (!pasarela.configurada()) {
             throw new IllegalStateException("La pasarela " + pasarela.proveedor() + " no está configurada.");
         }
+        MetodoPago metodo = request.metodo() == null ? MetodoPago.CARD : request.metodo();
+        validarMetodo(pasarela.proveedor(), metodo, request.aceptaTerminos());
 
         PagoJpa pago = new PagoJpa();
         pago.setEmpresa(empresa);
         pago.setPlanCodigo(plan.getCodigo());
         pago.setProveedor(pasarela.proveedor());
-        MetodoPago metodo = request.metodo() == null ? MetodoPago.CARD : request.metodo();
         pago.setMetodo(metodo.name());
         pago.setReferencia(pasarela.proveedor() + "-" + UUID.randomUUID());
         pago.setMonto(plan.getPrecioMensual());
@@ -172,6 +174,17 @@ public class ServicioPagos {
         pagoRepo.save(pago);
         auditoria.registrar(AuditoriaService.usuarioActual(), "PAGO_WEBHOOK", "pago", pago.getId(),
                 proveedor + " " + evento.estado());
+    }
+
+    private static void validarMetodo(String proveedor, MetodoPago metodo, boolean aceptaTerminos) {
+        if ((metodo == MetodoPago.BREB_QR || metodo == MetodoPago.DAVIPLATA)
+                && !ProveedorPago.WOMPI.name().equalsIgnoreCase(proveedor)) {
+            throw new IllegalArgumentException("El método " + metodo + " requiere la pasarela WOMPI.");
+        }
+        if ((metodo == MetodoPago.BREB_QR || metodo == MetodoPago.DAVIPLATA) && !aceptaTerminos) {
+            throw new IllegalArgumentException(
+                    "Debe aceptar los términos y el tratamiento de datos personales de Wompi.");
+        }
     }
 
     private void aplicarPlan(PagoJpa pago) {

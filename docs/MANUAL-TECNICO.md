@@ -118,6 +118,14 @@ Webhooks: firma HMAC-SHA-256 sobre `timestamp + "." + body`, tolerancia
 `PAGOS_WEBHOOK_TOLERANCE_SECONDS=300`, ids de evento idempotentes. En Render,
 `PAGOS_EXIGIR_FIRMA_WEBHOOK=true` e `INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK=true`.
 
+Métodos Wompi: `BREB_QR` y `DAVIPLATA` usan `POST /v1/transactions` con
+`acceptance_token` de `GET /merchants/info`, `signature` y `aceptaTerminos=true`.
+`BREB_QR` hace polling de `GET /v1/transactions/{id}` hasta `qr_image`/`qr_id` en
+`payment_method` o `payment_method.extra`; la imagen se entrega en `qrImage` y la referencia
+persistida es `wompi-qr:{qrId}`.
+Daviplata redirige a `payment_method.extra.url` (OTP alojado por Wompi). El
+`payment_description` de Daviplata se recorta a 30 caracteres y el de QR a 64.
+
 ## 6. Base de datos y migraciones
 
 Flyway V1–V25. V1 esquema, V2 UVT/reglas/calendario, V3 admin + empresa demo,
@@ -173,7 +181,7 @@ Ver [`DEPLOY-FREE.md`](DEPLOY-FREE.md). Resumen:
 | --- | --- |
 | BD | `DB_URL`, `DB_USER`, `DB_PASSWORD` |
 | Seguridad | `JWT_SECRET`, `JWT_EXPIRATION_MS`, `JWT_REFRESH_EXPIRATION_MS`, `CRYPTO_KEY`, `CRYPTO_KEY_ID`, `CRYPTO_EXTRA_KEYS`, `SEGURIDAD_FAIL_FAST`, `AUTH_EXPOSE_TOKEN`, `CORS_ORIGINS`, `FRONTEND_URL` |
-| Pagos | `WOMPI_PUBLIC_KEY`, `WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENTS_SECRET`, `WOMPI_API_TOKEN`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `PAGOS_EXIGIR_FIRMA_WEBHOOK`, `PAGOS_WEBHOOK_TOLERANCE_SECONDS` |
+| Pagos | `WOMPI_PUBLIC_KEY`, `WOMPI_INTEGRITY_SECRET`, `WOMPI_EVENTS_SECRET`, `WOMPI_API_TOKEN`, `WOMPI_CHECKOUT_URL`, `WOMPI_API_URL`, `WOMPI_QR_POLL_ATTEMPTS`, `WOMPI_QR_POLL_INTERVAL_MS`, `WOMPI_BREB_QR_SANDBOX_STATUS`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `PAGOS_EXIGIR_FIRMA_WEBHOOK`, `PAGOS_WEBHOOK_TOLERANCE_SECONDS` |
 | Integraciones | `INTEGRACIONES_EXIGIR_FIRMA_WEBHOOK`, timeouts y reintentos |
 | DIAN | `DIAN_URL_HABILITACION`, `DIAN_URL_PRODUCCION`, timeouts, `DIAN_CATALOGO_*` |
 | Correo/PWA | `MAIL_*`, `BRANDING_*`, `WHATSAPP_*`, `NOTIFICATIONS_ENABLED` |

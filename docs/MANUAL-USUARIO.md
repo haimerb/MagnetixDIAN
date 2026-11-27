@@ -28,11 +28,13 @@ Tecnológico (PT) se requiere habilitación ante la DIAN; ese trámite es extern
 ## 2. Venta y pago (checkout)
 
 1. En **Empresa → Suscripción** revise el plan y los límites.
-2. Seleccione **Cambiar plan** y el método: Wompi (tarjeta, Nequi, PSE, QR Bre-B) o
-   MercadoPago. En instalaciones locales se puede usar el modo **SIMULADO**; en producción
+2. Seleccione **Cambiar plan** y el método: Wompi (tarjeta, Nequi, PSE, QR Bre-B o Daviplata)
+   o MercadoPago. En instalaciones locales se puede usar el modo **SIMULADO**; en producción
    ese modo está deshabilitado.
-3. El pago se confirma mediante webhook firmado. No recargue la página ni cierre la ventana
-   hasta ver el estado **Pagado / Suscripción activa**.
+3. Para QR Bre-B y Daviplata acepte las políticas de Wompi antes de pagar. Daviplata además
+   solicita tipo/número de documento y abre una página OTP alojada por Wompi. El pago se
+   confirma mediante webhook firmado. No recargue la página ni cierre la ventana hasta ver
+   el estado **Pagado / Suscripción activa**.
 4. Si el pago no aparece, use **Verificar pago** (o el enlace de verificación enviado por correo).
    Los eventos son idempotentes: un reenvío no genera doble cobro ni doble activación.
 

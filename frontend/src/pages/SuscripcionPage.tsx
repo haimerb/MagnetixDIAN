@@ -2,15 +2,18 @@ import { useCallback, useEffect, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import Grid from '@mui/material/Grid2'
 import InputLabel from '@mui/material/InputLabel'
 import LinearProgress from '@mui/material/LinearProgress'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
 import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import PageHeader from '../components/ui/PageHeader'
@@ -25,9 +28,11 @@ import {
   iniciarCheckout,
   listarPlanes,
   obtenerSuscripcion,
+  type MetodoPago,
   type Plan,
   type Suscripcion,
 } from '../api/client'
+import { METODOS_CHECKOUT, requiereDatosWompi } from '../api/erp/pagos'
 
 const PASARELAS = [
   { valor: 'SIMULADO', etiqueta: 'Simulada (pruebas)' },
@@ -84,6 +89,11 @@ export default function SuscripcionPage({ ocultarEncabezado = false }: { ocultar
   const [cargando, setCargando] = useState(true)
   const [procesando, setProcesando] = useState<string | null>(null)
   const [proveedor, setProveedor] = useState('SIMULADO')
+  const [metodo, setMetodo] = useState<MetodoPago>('CARD')
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
+  const [celular, setCelular] = useState('')
+  const [tipoDocumento, setTipoDocumento] = useState('CC')
+  const [numeroDocumento, setNumeroDocumento] = useState('')
   const [refrescoPagos, setRefrescoPagos] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
@@ -115,11 +125,26 @@ export default function SuscripcionPage({ ocultarEncabezado = false }: { ocultar
 
   const onCambiar = async (codigo: string) => {
     if (empresaId == null) return
+    if (requiereDatosWompi(metodo) && !aceptaTerminos) {
+      setError('Debe aceptar los términos y el tratamiento de datos personales de Wompi.')
+      return
+    }
+    if (metodo === 'DAVIPLATA' && (!tipoDocumento.trim() || !numeroDocumento.trim())) {
+      setError('Debe indicar el tipo y número de documento para Daviplata.')
+      return
+    }
     setProcesando(codigo)
     setError(null)
     setOk(null)
     try {
-      const pago = await iniciarCheckout(empresaId, codigo, proveedor)
+      const pago = await iniciarCheckout(empresaId, codigo, proveedor, metodo, {
+        aceptaTerminos,
+        ...(celular.trim() ? { celular: celular.trim() } : {}),
+        ...(metodo === 'DAVIPLATA' ? {
+          documentType: tipoDocumento.trim(),
+          documentNumber: numeroDocumento.trim(),
+        } : {}),
+      })
       if (pago.url) {
         window.location.href = pago.url
         return
@@ -231,23 +256,94 @@ export default function SuscripcionPage({ ocultarEncabezado = false }: { ocultar
         title="Planes disponibles"
         padded={false}
         actions={
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel id="pasarela-label">Pasarela de pago</InputLabel>
-            <Select
-              labelId="pasarela-label"
-              label="Pasarela de pago"
-              value={proveedor}
-              onChange={(e) => setProveedor(e.target.value)}
-            >
-              {PASARELAS.map((p) => (
-                <MenuItem key={p.valor} value={p.valor}>
-                  {p.etiqueta}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: 180 }}>
+              <InputLabel id="pasarela-label">Pasarela de pago</InputLabel>
+              <Select
+                labelId="pasarela-label"
+                label="Pasarela de pago"
+                value={proveedor}
+                onChange={(e) => {
+                  const siguiente = e.target.value
+                  setProveedor(siguiente)
+                  if (siguiente !== 'WOMPI' && requiereDatosWompi(metodo)) setMetodo('CARD')
+                }}
+              >
+                {PASARELAS.map((p) => (
+                  <MenuItem key={p.valor} value={p.valor}>
+                    {p.etiqueta}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel id="metodo-label">Método de pago</InputLabel>
+              <Select
+                labelId="metodo-label"
+                label="Método de pago"
+                value={metodo}
+                onChange={(e) => setMetodo(e.target.value as MetodoPago)}
+              >
+                {METODOS_CHECKOUT.map((opcion) => (
+                  <MenuItem
+                    key={opcion.value}
+                    value={opcion.value}
+                    disabled={proveedor !== 'WOMPI' && requiereDatosWompi(opcion.value)}
+                  >
+                    {opcion.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
         }
       >
+        {requiereDatosWompi(metodo) && (
+          <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 3 } }}>
+            <Stack spacing={2}>
+              {metodo === 'DAVIPLATA' && (
+                <>
+                  <TextField
+                    select
+                    size="small"
+                    label="Tipo de documento"
+                    value={tipoDocumento}
+                    onChange={(e) => setTipoDocumento(e.target.value)}
+                    sx={{ maxWidth: 260 }}
+                  >
+                    <MenuItem value="CC">Cédula de ciudadanía</MenuItem>
+                    <MenuItem value="CE">Cédula de extranjería</MenuItem>
+                    <MenuItem value="TI">Tarjeta de identidad</MenuItem>
+                  </TextField>
+                  <TextField
+                    size="small"
+                    label="Número de documento"
+                    value={numeroDocumento}
+                    onChange={(e) => setNumeroDocumento(e.target.value)}
+                    sx={{ maxWidth: 260 }}
+                  />
+                </>
+              )}
+              <TextField
+                size="small"
+                label="Celular"
+                value={celular}
+                onChange={(e) => setCelular(e.target.value)}
+                placeholder="3107654321"
+                sx={{ maxWidth: 260 }}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={aceptaTerminos}
+                    onChange={(e) => setAceptaTerminos(e.target.checked)}
+                  />
+                }
+                label="Acepto las políticas de privacidad y el tratamiento de datos personales de Wompi"
+              />
+            </Stack>
+          </Box>
+        )}
         <Grid container spacing={2} sx={{ p: { xs: 2, md: 3 } }}>
           {planes.map((plan) => {
             const actual = suscripcion?.plan.codigo === plan.codigo

@@ -3,6 +3,8 @@ import { Link as RouterLink, useSearchParams } from 'react-router-dom'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import Grid from '@mui/material/Grid2'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
@@ -14,9 +16,16 @@ import type { Plan } from '../../api/client'
 import {
   crearCheckoutBilling,
   estadoWebhookPago,
+  METODOS_CHECKOUT,
   PROVEEDORES_CHECKOUT,
+  requiereDatosWompi,
 } from '../../api/erp/pagos'
-import type { CheckoutBillingResponse, EstadoWebhookPago, ProveedorCheckout } from '../../api/erp/pagos'
+import type {
+  CheckoutBillingResponse,
+  EstadoWebhookPago,
+  MetodoPago,
+  ProveedorCheckout,
+} from '../../api/erp/pagos'
 import EmptyState from '../../components/ui/EmptyState'
 import LoadingState from '../../components/ui/LoadingState'
 import Logo from '../../components/ui/Logo'
@@ -28,6 +37,15 @@ function mensajeServidor(error: unknown, respaldo: string) {
   return respuesta.response?.data?.message ?? respaldo
 }
 
+function urlImagenQr(valor: string | null | undefined) {
+  if (!valor) return null
+  return valor.startsWith('data:') ? valor : `data:image/svg+xml;base64,${valor}`
+}
+
+function metodoPermitido(proveedor: ProveedorCheckout, metodo: MetodoPago) {
+  return proveedor === 'WOMPI' || !requiereDatosWompi(metodo)
+}
+
 export default function CheckoutPage() {
   const [params] = useSearchParams()
   const empresaIdParam = Number(params.get('empresa'))
@@ -35,7 +53,13 @@ export default function CheckoutPage() {
   const [planes, setPlanes] = useState<Plan[]>([])
   const [planCodigo, setPlanCodigo] = useState(params.get('plan') ?? '')
   const [proveedor, setProveedor] = useState<ProveedorCheckout>('WOMPI')
+  const [metodo, setMetodo] = useState<MetodoPago>('CARD')
   const [email, setEmail] = useState(params.get('email') ?? '')
+  const [celular, setCelular] = useState('')
+  const [tipoDocumento, setTipoDocumento] = useState('CC')
+  const [numeroDocumento, setNumeroDocumento] = useState('')
+  const [nombrePagador, setNombrePagador] = useState('')
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [checkout, setCheckout] = useState<CheckoutBillingResponse | null>(null)
   const [webhook, setWebhook] = useState<EstadoWebhookPago | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -62,9 +86,18 @@ export default function CheckoutPage() {
   }, [])
 
   const planSeleccionado = planes.find((plan) => plan.codigo === planCodigo) ?? null
+  const imagenQr = urlImagenQr(checkout?.qrImage)
 
   const onPagar = useCallback(async () => {
     if (!planCodigo || !email.trim()) return
+    if (requiereDatosWompi(metodo) && !aceptaTerminos) {
+      setError('Debe aceptar los términos y el tratamiento de datos personales de Wompi.')
+      return
+    }
+    if (metodo === 'DAVIPLATA' && (!tipoDocumento.trim() || !numeroDocumento.trim())) {
+      setError('Debe indicar el tipo y número de documento para Daviplata.')
+      return
+    }
     setProcesando(true)
     setError(null)
     setWebhook(null)
@@ -74,6 +107,14 @@ export default function CheckoutPage() {
         planCodigo,
         proveedor,
         correo: email.trim(),
+        metodo,
+        aceptaTerminos,
+        ...(celular.trim() ? { celular: celular.trim() } : {}),
+        ...(nombrePagador.trim() ? { payerName: nombrePagador.trim() } : {}),
+        ...(metodo === 'DAVIPLATA' ? {
+          documentType: tipoDocumento.trim(),
+          documentNumber: numeroDocumento.trim(),
+        } : {}),
         ...(empresaId == null ? {} : { empresaId }),
       }))
     } catch (errorPago) {
@@ -81,7 +122,7 @@ export default function CheckoutPage() {
     } finally {
       setProcesando(false)
     }
-  }, [email, empresaId, planCodigo, proveedor])
+  }, [aceptaTerminos, celular, email, empresaId, metodo, nombrePagador, numeroDocumento, planCodigo, proveedor, tipoDocumento])
 
   const onConsultarWebhook = useCallback(async () => {
     if (!checkout) return
@@ -138,11 +179,32 @@ export default function CheckoutPage() {
                 select
                 label="Pasarela de pago"
                 value={proveedor}
-                onChange={(evento) => setProveedor(evento.target.value as ProveedorCheckout)}
+                onChange={(evento) => {
+                  const siguiente = evento.target.value as ProveedorCheckout
+                  setProveedor(siguiente)
+                  if (!metodoPermitido(siguiente, metodo)) setMetodo('CARD')
+                }}
                 fullWidth
               >
                 {PROVEEDORES_CHECKOUT.map((opcion) => (
                   <MenuItem key={opcion.value} value={opcion.value}>
+                    {opcion.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Método de pago"
+                value={metodo}
+                onChange={(evento) => setMetodo(evento.target.value as MetodoPago)}
+                fullWidth
+              >
+                {METODOS_CHECKOUT.map((opcion) => (
+                  <MenuItem
+                    key={opcion.value}
+                    value={opcion.value}
+                    disabled={!metodoPermitido(proveedor, opcion.value)}
+                  >
                     {opcion.label}
                   </MenuItem>
                 ))}
@@ -156,6 +218,55 @@ export default function CheckoutPage() {
                 helperText="Debe coincidir con el correo usado al registrar la empresa."
                 fullWidth
               />
+              {metodo === 'DAVIPLATA' && (
+                <>
+                  <TextField
+                    select
+                    label="Tipo de documento"
+                    value={tipoDocumento}
+                    onChange={(evento) => setTipoDocumento(evento.target.value)}
+                    fullWidth
+                  >
+                    <MenuItem value="CC">Cédula de ciudadanía</MenuItem>
+                    <MenuItem value="CE">Cédula de extranjería</MenuItem>
+                    <MenuItem value="TI">Tarjeta de identidad</MenuItem>
+                  </TextField>
+                  <TextField
+                    label="Número de documento"
+                    value={numeroDocumento}
+                    onChange={(evento) => setNumeroDocumento(evento.target.value)}
+                    fullWidth
+                  />
+                </>
+              )}
+              {(metodo === 'DAVIPLATA' || metodo === 'NEQUI' || metodo === 'PSE') && (
+                <>
+                  <TextField
+                    label="Nombre del pagador"
+                    value={nombrePagador}
+                    onChange={(evento) => setNombrePagador(evento.target.value)}
+                    fullWidth
+                  />
+                  <TextField
+                    label="Celular"
+                    value={celular}
+                    onChange={(evento) => setCelular(evento.target.value)}
+                    placeholder="3107654321"
+                    fullWidth
+                  />
+                </>
+              )}
+              {requiereDatosWompi(metodo) && (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={aceptaTerminos}
+                      onChange={(evento) => setAceptaTerminos(evento.target.checked)}
+                    />
+                  }
+                  label="Acepto las políticas de privacidad y el tratamiento de datos personales de Wompi"
+                />
+              )}
               <Alert severity="info">
                 El pago se confirma con webhook firmado. La suscripción se activa automáticamente y podrá descargar
                 el comprobante desde el estado del pago.
@@ -164,7 +275,13 @@ export default function CheckoutPage() {
                 variant="contained"
                 size="large"
                 loading={procesando}
-                disabled={!planCodigo || !email.trim() || procesando}
+                disabled={
+                  !planCodigo
+                  || !email.trim()
+                  || procesando
+                  || (requiereDatosWompi(metodo) && !aceptaTerminos)
+                  || (metodo === 'DAVIPLATA' && (!tipoDocumento.trim() || !numeroDocumento.trim()))
+                }
                 onClick={() => void onPagar()}
               >
                 Continuar al pago
@@ -200,10 +317,38 @@ export default function CheckoutPage() {
               <Typography>Referencia: {checkout.referencia}</Typography>
               <Typography>Estado: {checkout.estado}</Typography>
               <Typography>Monto: {money(checkout.monto)}</Typography>
+              {checkout.tipo === 'QR' && imagenQr && (
+                <Stack spacing={1} sx={{ alignItems: 'center', py: 2 }}>
+                  <Box
+                    component="img"
+                    src={imagenQr}
+                    alt={`QR de pago ${checkout.referencia}`}
+                    sx={{
+                      width: 220,
+                      height: 220,
+                      p: 1,
+                      bgcolor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                    }}
+                  />
+                  <Typography variant="body2" color="text.secondary">
+                    Escanea el QR con la app de Bancolombia o Nequi.
+                  </Typography>
+                  {checkout.qrId && (
+                    <Typography variant="caption" color="text.secondary">
+                      ID QR: {checkout.qrId}
+                    </Typography>
+                  )}
+                </Stack>
+              )}
               <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
-                <Button component="a" href={checkout.checkoutUrl} target="_blank" rel="noreferrer" variant="contained">
-                  Ir al checkout de {proveedor}
-                </Button>
+                {checkout.tipo !== 'QR' && (
+                  <Button component="a" href={checkout.checkoutUrl} target="_blank" rel="noreferrer" variant="contained">
+                    {checkout.tipo === 'OTP' ? 'Continuar a Daviplata (OTP)' : `Ir al checkout de ${proveedor}`}
+                  </Button>
+                )}
                 <Button variant="outlined" onClick={() => void onConsultarWebhook()}>
                   Consultar estado del webhook
                 </Button>

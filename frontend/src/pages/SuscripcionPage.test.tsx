@@ -87,7 +87,13 @@ describe('SuscripcionPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Cambiar a este plan' }))
 
-    await waitFor(() => expect(mockCheckout).toHaveBeenCalledWith(1, 'PRO', 'SIMULADO'))
+    await waitFor(() => expect(mockCheckout).toHaveBeenCalledWith(
+      1,
+      'PRO',
+      'SIMULADO',
+      'CARD',
+      { aceptaTerminos: false },
+    ))
     expect(await screen.findByText('Pago aprobado. Plan PRO activado.')).toBeInTheDocument()
   })
 

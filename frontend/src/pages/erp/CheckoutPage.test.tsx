@@ -19,6 +19,14 @@ vi.mock('../../api/erp/pagos', () => ({
     { value: 'WOMPI', label: 'Wompi' },
     { value: 'MERCADOPAGO', label: 'Mercado Pago' },
   ],
+  METODOS_CHECKOUT: [
+    { value: 'CARD', label: 'Tarjeta de crédito o débito' },
+    { value: 'NEQUI', label: 'Nequi' },
+    { value: 'PSE', label: 'PSE' },
+    { value: 'BREB_QR', label: 'BRE-B QR (Bancolombia)' },
+    { value: 'DAVIPLATA', label: 'Daviplata' },
+  ],
+  requiereDatosWompi: (metodo: string) => metodo === 'BREB_QR' || metodo === 'DAVIPLATA',
 }))
 
 const mockListarPlanes = vi.mocked(listarPlanes)
@@ -82,6 +90,8 @@ describe('CheckoutPage', () => {
         planCodigo: 'PRO',
         proveedor: 'WOMPI',
         correo: 'cliente@ejemplo.com',
+        metodo: 'CARD',
+        aceptaTerminos: false,
       }),
     )
     expect(await screen.findByText('Referencia: WOMPI-REF')).toBeInTheDocument()
@@ -106,5 +116,40 @@ describe('CheckoutPage', () => {
     await user.click(screen.getByRole('button', { name: 'Continuar al pago' }))
 
     expect(await screen.findByText('La pasarela WOMPI no está configurada.')).toBeInTheDocument()
+  })
+
+  it('muestra el QR de BRE-B cuando el backend devuelve la imagen', async () => {
+    mockCrearCheckout.mockResolvedValue({
+      checkoutUrl: 'wompi-qr:qr-1',
+      referencia: 'WOMPI-REF',
+      monto: 99000,
+      moneda: 'COP',
+      estado: 'PENDIENTE',
+      metodo: 'BREB_QR',
+      tipo: 'QR',
+      qrImage: 'PHN2Zy8+',
+      qrId: 'qr-1',
+      transaccionId: 'trx-1',
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => expect(mockListarPlanes).toHaveBeenCalled())
+    await user.click(screen.getByRole('combobox', { name: 'Método de pago' }))
+    await user.click(await screen.findByRole('option', { name: 'BRE-B QR (Bancolombia)' }))
+    await user.click(screen.getByRole('checkbox', { name: /Acepto las políticas/ }))
+    await user.click(screen.getByRole('button', { name: 'Continuar al pago' }))
+
+    await waitFor(() =>
+      expect(mockCrearCheckout).toHaveBeenCalledWith({
+        planCodigo: 'PRO',
+        proveedor: 'WOMPI',
+        correo: 'cliente@ejemplo.com',
+        metodo: 'BREB_QR',
+        aceptaTerminos: true,
+      }),
+    )
+    expect(await screen.findByAltText('QR de pago WOMPI-REF')).toBeInTheDocument()
+    expect(screen.getByText('ID QR: qr-1')).toBeInTheDocument()
   })
 })
