@@ -1,5 +1,6 @@
 package com.magnetixdian.application.erp;
 
+import com.magnetixdian.application.ValidadorPeriodoAbierto;
 import com.magnetixdian.domain.erp.evento.CobroClienteEvent;
 import com.magnetixdian.domain.erp.evento.PagoProveedorEvent;
 import com.magnetixdian.domain.erp.modelo.EstadoErp;
@@ -23,14 +24,17 @@ public class ServicioTesoreria {
     private final ErpPagoProveedorRepository pagos;
     private final ErpCobroClienteRepository cobros;
     private final PublicadorEventosErp publicador;
+    private final ValidadorPeriodoAbierto validadorPeriodo;
 
     public ServicioTesoreria(ErpCuentaBancariaRepository cuentas, ErpMovimientoTesoreriaRepository movimientos,
-                             ErpPagoProveedorRepository pagos, ErpCobroClienteRepository cobros, PublicadorEventosErp publicador) {
+                             ErpPagoProveedorRepository pagos, ErpCobroClienteRepository cobros,
+                             PublicadorEventosErp publicador, ValidadorPeriodoAbierto validadorPeriodo) {
         this.cuentas = cuentas;
         this.movimientos = movimientos;
         this.pagos = pagos;
         this.cobros = cobros;
         this.publicador = publicador;
+        this.validadorPeriodo = validadorPeriodo;
     }
 
     public CuentaBancariaDto crearCuenta(Long empresaId, CuentaBancariaRequestDto r) {
@@ -61,6 +65,8 @@ public class ServicioTesoreria {
     public PagoProveedorDto registrarPagoProveedor(Long empresaId, PagoProveedorRequestDto r) {
         ErpCuentaBancariaJpa cuenta = cuentaActiva(empresaId, r.cuentaBancariaId());
         BigDecimal valor = monto(r.valor());
+        LocalDate fecha = r.fecha() == null ? LocalDate.now() : r.fecha();
+        validadorPeriodo.verificar(empresaId, fecha);
         if (cuenta.getSaldo().compareTo(valor) < 0) throw new IllegalArgumentException("Saldo insuficiente en la cuenta bancaria");
         BigDecimal saldoAnterior = cuenta.getSaldo();
         BigDecimal saldoNuevo = saldoAnterior.subtract(valor);
@@ -72,7 +78,7 @@ public class ServicioTesoreria {
         e.setCuentaBancariaId(cuenta.getId());
         e.setProveedorId(r.proveedorId());
         e.setProveedorNombre(r.proveedorNombre());
-        e.setFecha(r.fecha() == null ? LocalDate.now() : r.fecha());
+        e.setFecha(fecha);
         e.setValor(valor);
         e.setMedioPago(r.medioPago());
         e.setReferencia(r.referencia());
@@ -92,6 +98,8 @@ public class ServicioTesoreria {
     public CobroClienteDto registrarCobroCliente(Long empresaId, CobroClienteRequestDto r) {
         ErpCuentaBancariaJpa cuenta = cuentaActiva(empresaId, r.cuentaBancariaId());
         BigDecimal valor = monto(r.valor());
+        LocalDate fecha = r.fecha() == null ? LocalDate.now() : r.fecha();
+        validadorPeriodo.verificar(empresaId, fecha);
         BigDecimal saldoAnterior = cuenta.getSaldo();
         BigDecimal saldoNuevo = saldoAnterior.add(valor);
         cuenta.setSaldo(saldoNuevo);
@@ -102,7 +110,7 @@ public class ServicioTesoreria {
         e.setCuentaBancariaId(cuenta.getId());
         e.setClienteId(r.clienteId());
         e.setClienteNombre(r.clienteNombre());
-        e.setFecha(r.fecha() == null ? LocalDate.now() : r.fecha());
+        e.setFecha(fecha);
         e.setValor(valor);
         e.setMedioPago(r.medioPago());
         e.setReferencia(r.referencia());

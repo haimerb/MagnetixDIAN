@@ -112,6 +112,9 @@ public class ServicioAsientos {
         PeriodoContableJpa periodo = periodoRepository.findById(periodoId)
                 .filter(entidad -> empresaId.equals(entidad.getEmpresaId()))
                 .orElseThrow(() -> new IllegalArgumentException("Periodo contable no encontrado."));
+        if (entityManager != null) {
+            entityManager.find(PeriodoContableJpa.class, periodoId, LockModeType.PESSIMISTIC_WRITE);
+        }
         if (!"ABIERTO".equals(periodo.getEstado())) {
             throw new IllegalArgumentException("El periodo contable ya está cerrado.");
         }
