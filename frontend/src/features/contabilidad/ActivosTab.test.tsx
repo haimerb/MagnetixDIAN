@@ -97,4 +97,30 @@ describe('ActivosTab', () => {
       })
     })
   })
+
+  async function completarAlta(codigo: string) {
+    renderTab()
+    await screen.findAllByText('ACT-0001')
+    await userEvent.type(screen.getByLabelText('Código'), codigo)
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Computador oficina')
+    await userEvent.type(screen.getByLabelText('Valor de adquisición'), '1000')
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar activo' }))
+  }
+
+  it('muestra el mensaje del backend al registrar un código duplicado', async () => {
+    const mensaje = 'Ya existe un activo con el código ACT-NUEVO para la empresa'
+    vi.mocked(crearActivoErp).mockRejectedValue({ response: { data: { message: mensaje } } })
+
+    await completarAlta('ACT-NUEVO')
+
+    expect(await screen.findByText(mensaje)).toBeTruthy()
+  })
+
+  it('usa el mensaje genérico si el backend no devuelve detalle', async () => {
+    vi.mocked(crearActivoErp).mockRejectedValue({ response: { data: {} } })
+
+    await completarAlta('ACT-NUEVO')
+
+    expect(await screen.findByText('No se pudo registrar el activo fijo.')).toBeTruthy()
+  })
 })
