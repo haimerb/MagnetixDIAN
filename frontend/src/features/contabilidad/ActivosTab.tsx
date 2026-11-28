@@ -56,6 +56,15 @@ function numero(valor: string): number | null {
   return Number.isFinite(resultado) ? resultado : null
 }
 
+function mensajeBackend(error: unknown, respaldo: string): string {
+  const datos = (error as { response?: { data?: unknown } }).response?.data
+  if (datos && typeof datos === 'object') {
+    const mensaje = (datos as { message?: unknown }).message
+    if (typeof mensaje === 'string' && mensaje.trim()) return mensaje
+  }
+  return respaldo
+}
+
 export default function ActivosTab({ empresaId, cargandoEmpresa }: ActivosTabProps) {
   const { notificar } = useNotificaciones()
   const [activos, setActivos] = useState<ActivoErp[]>([])
@@ -168,8 +177,8 @@ export default function ActivosTab({ empresaId, cargandoEmpresa }: ActivosTabPro
       setSeleccionadoId(creado.id)
       await cargarDatos()
       notificar(`Activo ${creado.codigo} registrado.`, 'success')
-    } catch {
-      setError('No se pudo registrar el activo fijo.')
+    } catch (error) {
+      setError(mensajeBackend(error, 'No se pudo registrar el activo fijo.'))
     } finally {
       setGuardando(false)
     }
