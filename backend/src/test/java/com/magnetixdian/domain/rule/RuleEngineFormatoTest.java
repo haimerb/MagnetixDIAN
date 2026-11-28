@@ -16,6 +16,9 @@ class RuleEngineFormatoTest {
     private final RuleEngine engine = new RuleEngine(List.of(
             new ObligatoriedadCampoRegla(),
             new ObligatoriedadCampo1002Regla(),
+            new ValorMovimiento1002Regla(),
+            new ConsistenciaValores1002Regla(),
+            new ClaveTercero1002Regla(),
             new ConceptoValidoRegla()));
 
     private ContextoValidacion contexto(String formato) {
