@@ -102,7 +102,7 @@ Tests: `backend/src/test/java/com/magnetixdian/seguridad/`
 
 | Área | Endpoints |
 | --- | --- |
-| Medios magnéticos | `POST /api/empresas/{id}/medios`, `/validar`, `/reporte`, `/xml`, `/presentado` |
+| Medios magnéticos | Bajo `/api/mediomagnetico`: `GET /formatos`, `/plantilla`, `/empresa/{id}[/paginado]`; `POST /{empresaId}/cargar`, `/{empresaId}/importar-multiformato`; `POST /{medioMagneticoId}/validar`, `/validar-datos-json`, `/generar-xml`, `/presentar`, `/aplicar-dv`; `GET /{medioMagneticoId}/reporte`, `/terceros`, `/xml` |
 | Facturación | `/api/empresas/{id}/facturas/*`, `POST /factura-rapida`, entrega WhatsApp |
 | RADIAN | `/api/empresas/{id}/radian/documentos` (importar/listar/causar/contabilizar) |
 | Contabilidad | `/api/empresas/{id}/contabilidad/asientos`, `/conciliacion`, `/impuestos/*`, `/exogena/*` |
@@ -128,9 +128,12 @@ Daviplata redirige a `payment_method.extra.url` (OTP alojado por Wompi). El
 
 ## 6. Base de datos y migraciones
 
-Flyway V1–V25. V1 esquema, V2 UVT/reglas/calendario, V3 admin + empresa demo,
+Flyway V1–V33. V1 esquema, V2 UVT/reglas/calendario, V3 admin + empresa demo,
 V17 datos JSON, V18 RADIAN, V19 contabilidad, V20 migración contable, V21 mapeo,
-V22 branding, V23 seguridad/auditoría, V24–V25 núcleo contable e impuestos.
+V22 branding, V23 seguridad/auditoría, V24–V25 núcleo contable e impuestos,
+V26 billing/comercial, V27 onboarding, V28 ERP transaccional, V29 motor tributario/exógena,
+V30 núcleo contable oficial, V31 firma de webhook billing, V32 asientos pendientes,
+V33 activos fijos y depreciación.
 
 ```bash
 cd docker && docker compose up -d db
